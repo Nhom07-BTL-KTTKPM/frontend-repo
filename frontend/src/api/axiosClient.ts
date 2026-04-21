@@ -1,6 +1,7 @@
-import axios, { AxiosError, InternalAxiosRequestConfig } from 'axios';
+import axios, { AxiosError } from 'axios';
+import type { InternalAxiosRequestConfig } from 'axios';
 import { useAuthStore } from '../store/authStore';
-import { ApiResponse, AuthTokenResponse, ApiError } from '../types/api';
+import type { ApiResponse, AuthTokenResponse, ApiError } from '../types/api';
 
 const baseURL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080/api/v1';
 
@@ -65,7 +66,7 @@ axiosClient.interceptors.response.use(
   },
   async (error: AxiosError<ApiError>) => {
     const originalRequest = error.config as InternalAxiosRequestConfig & { _retry?: boolean };
-    
+
     // Normalize Error: Nếu sập mạng hoặc không có response, chuẩn hóa nó thành form ApiError
     const normalizedError: ApiError = error.response?.data || {
       code: error.response?.status || 500,
@@ -74,10 +75,10 @@ axiosClient.interceptors.response.use(
     };
 
     // Định vị các Endpoint gốc liên quan tới Auth để không chặn lỗi hay trigger Refresh
-    const isAuthEndpoint = originalRequest.url?.includes('/auth/login') || 
-                           originalRequest.url?.includes('/auth/register');
+    const isAuthEndpoint = originalRequest.url?.includes('/auth/login') ||
+      originalRequest.url?.includes('/auth/register');
     const isRefreshEndpoint = originalRequest.url?.includes('/auth/refresh');
-    
+
     // Đảm bảo chỉ refresh nếu request gốc có mang theo Token (nghĩa là đang trong session)
     const hasAuthHeader = !!originalRequest.headers?.Authorization;
 
@@ -109,24 +110,24 @@ axiosClient.interceptors.response.use(
       try {
         const response = await rawAxios.post<ApiResponse<AuthTokenResponse>>('/auth/refresh');
         const newAccessToken = response.data.data.accessToken;
-        
+
         // Đảo processQueue lên trước setAccessToken để queue chạy ngay trước khi Component trigger re-render
         processQueue(null, newAccessToken);
         useAuthStore.getState().setAccessToken(newAccessToken);
-        
+
         if (originalRequest.headers) {
           originalRequest.headers.Authorization = `Bearer ${newAccessToken}`;
         }
-        
+
         processQueue(null, newAccessToken);
         return axiosClient(originalRequest);
       } catch (err) {
         processQueue(err, null);
         useAuthStore.getState().logout();
-        
+
         const refreshError: ApiError = (err as AxiosError<ApiError>).response?.data || {
-            code: 401,
-            message: 'Session expired. Please login again.',
+          code: 401,
+          message: 'Session expired. Please login again.',
         };
         return Promise.reject(refreshError);
       } finally {

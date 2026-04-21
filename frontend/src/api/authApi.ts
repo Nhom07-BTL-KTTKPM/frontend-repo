@@ -1,6 +1,6 @@
 import { axiosClient } from './axiosClient';
-import { ApiResponse, AuthTokenResponse, UserProfileInfo } from '../types/api';
-import { LoginRequest, RegisterRequest, RegisterResponse } from '../types/auth';
+import type { ApiResponse, AuthTokenResponse, UserProfileInfo } from '../types/api';
+import type { LoginRequest, RegisterRequest, RegisterResponse } from '../types/auth';
 
 export const authApi = {
   // Thực hiện đăng nhập
