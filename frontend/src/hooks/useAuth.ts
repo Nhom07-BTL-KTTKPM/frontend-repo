@@ -1,8 +1,8 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { authApi } from '../api/authApi';
 import { useAuthStore } from '../store/authStore';
-import { LoginRequest, RegisterRequest } from '../types/auth';
-import { ApiError } from '../types/api';
+import type { LoginRequest, RegisterRequest } from '../types/auth';
+import type { ApiError } from '../types/api';
 
 export const useAuth = () => {
   const queryClient = useQueryClient();
@@ -24,13 +24,13 @@ export const useAuth = () => {
     onSuccess: async (res) => {
       // 1. Phản hồi api có mang theo AccessToken
       const token = res.data.accessToken;
-      
+
       // 2. Chờ tải thông tin Profile ngay sau khi login
       try {
         // Ta set tạm Token vào store để trigger Header cho request `/me` sắp tới
-        useAuthStore.getState().setAccessToken(token); 
+        useAuthStore.getState().setAccessToken(token);
         const profileRes = await authApi.getProfile();
-        
+
         // 3. Batch toàn bộ Session vào Zustand cùng lúc
         setCredentials(profileRes.data, token);
       } catch (e) {
@@ -52,19 +52,28 @@ export const useAuth = () => {
     }
   });
 
-  // Một helper chạy ẩn để Init App (thường để ở Main Layout)
   const initSession = async () => {
     try {
-      // Gọi /me. Nếu còn Session/Cookie, axios interceptor sẽ lo liệu refesh token -> gỡ rối 401
+      let token = useAuthStore.getState().accessToken;
+
+      // Nếu bộ nhớ RAM đang không có Token (Vừa F5 tải lại trang), ta CHỦ ĐỘNG đi xin lại bằng Refresh API
+      // Thay vì gọi ngang /me và bị Interceptor vứt bỏ do thiếu AccessToken.
+      if (!token) {
+        const refreshRes = await authApi.refresh();
+        // axiosClient interceptor đã unwrap response.data rồi,
+        // nên refreshRes là ApiResponse<AuthTokenResponse> trực tiếp (không phải AxiosResponse)
+        token = refreshRes.data.accessToken;
+        useAuthStore.getState().setAccessToken(token); // Tạm ghi nhận để axios gửi tiếp call /me
+      }
+
+      // Lúc này chắc chắn có accessToken rồi, gọi lấy Profile
       const res = await authApi.getProfile();
-      
-      // Cập nhật profile (accessToken lúc này sẽ do interceptor tự động restore nếu có)
-      const token = useAuthStore.getState().accessToken;
+
       if (token) {
-         setCredentials(res.data, token);
+        setCredentials(res.data, token);
       }
     } catch (e) {
-      // Văng lỗi tức session trắng
+      // Văng lỗi tức session trắng (Hết cả 2 token)
       logout();
     } finally {
       setInitialized();
