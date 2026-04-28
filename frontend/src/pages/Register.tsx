@@ -18,7 +18,7 @@ export const Register = () => {
                 toast.success('Đăng ký thành công. Vui lòng đăng nhập.');
                 navigate('/login');
             },
-            onError: (err: any) => {
+            onError: (err: Error) => {
                 toast.error(err.message || 'Đăng ký thất bại');
             }
         });

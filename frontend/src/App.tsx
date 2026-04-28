@@ -21,7 +21,7 @@ function App() {
 
   useEffect(() => {
     initSession();
-  }, []);
+  }, [initSession]);
 
   // Hiển thị vòng xoáy (Loading screen) hoặc logo trong lúc chờ khôi phục session từ Backend
   if (!isInitialized) {

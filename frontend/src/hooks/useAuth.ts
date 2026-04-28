@@ -2,7 +2,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { authApi } from '../api/authApi';
 import { useAuthStore } from '../store/authStore';
 import type { LoginRequest, RegisterRequest } from '../types/auth';
-import type { ApiError } from '../types/api';
+
 
 export const useAuth = () => {
   const queryClient = useQueryClient();
@@ -33,7 +33,7 @@ export const useAuth = () => {
 
         // 3. Batch toàn bộ Session vào Zustand cùng lúc
         setCredentials(profileRes.data, token);
-      } catch (e) {
+      } catch {
         logout(); // Nếu lấy profile fail
       }
     },
@@ -72,7 +72,7 @@ export const useAuth = () => {
       if (token) {
         setCredentials(res.data, token);
       }
-    } catch (e) {
+    } catch {
       // Văng lỗi tức session trắng (Hết cả 2 token)
       logout();
     } finally {

@@ -16,7 +16,7 @@ export const Login = () => {
                 toast.success('Đăng nhập thành công');
                 navigate('/');
             },
-            onError: (err: any) => {
+            onError: (err: Error) => {
                 toast.error(err.message || 'Đăng nhập thất bại');
             }
         });
