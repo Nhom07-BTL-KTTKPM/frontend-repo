@@ -5,26 +5,26 @@ import type { LoginRequest, RegisterRequest, RegisterResponse } from '../types/a
 export const authApi = {
   // Thực hiện đăng nhập
   login: (data: LoginRequest) => {
-    return axiosClient.post<any, ApiResponse<AuthTokenResponse>>('/auth/login', data);
+    return axiosClient.post<unknown, ApiResponse<AuthTokenResponse>>('/auth/login', data);
   },
 
   // Thực hiện đăng ký
   register: (data: RegisterRequest) => {
-    return axiosClient.post<any, ApiResponse<RegisterResponse>>('/auth/register', data);
+    return axiosClient.post<unknown, ApiResponse<RegisterResponse>>('/auth/register', data);
   },
 
   // Tải lại Access token (dùng cho trường hợp chủ động)
   refresh: () => {
-    return axiosClient.post<any, ApiResponse<AuthTokenResponse>>('/auth/refresh');
+    return axiosClient.post<unknown, ApiResponse<AuthTokenResponse>>('/auth/refresh');
   },
 
   // Đăng xuất và clear refresh-cookie trên Backend
   logout: () => {
-    return axiosClient.post<any, ApiResponse<void>>('/auth/logout');
+    return axiosClient.post<unknown, ApiResponse<void>>('/auth/logout');
   },
 
   // Truy vấn thông tin tài khoản đang đăng nhập
   getProfile: () => {
-    return axiosClient.get<any, ApiResponse<UserProfileInfo>>('/auth/me');
+    return axiosClient.get<unknown, ApiResponse<UserProfileInfo>>('/auth/me');
   },
 };
