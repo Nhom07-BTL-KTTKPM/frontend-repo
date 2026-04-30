@@ -24,7 +24,7 @@ export const Profile = () => {
                 year: 'numeric', month: '2-digit', day: '2-digit',
                 hour: '2-digit', minute: '2-digit'
             }).format(date);
-        } catch (e) {
+        } catch {
             return dateString;
         }
     };
@@ -35,7 +35,7 @@ export const Profile = () => {
                 toast.success('Đã gửi mã OTP đến email của bạn.');
                 setOtpRequested(true);
             },
-            onError: (err: any) => {
+            onError: (err: Error) => {
                 toast.error(err.message || 'Lỗi khi yêu cầu đổi mật khẩu.');
             }
         });
@@ -60,7 +60,7 @@ export const Profile = () => {
                 setNewPassword('');
                 setConfirmPassword('');
             },
-            onError: (err: any) => {
+            onError: (err: Error) => {
                 toast.error(err.message || 'Lỗi khi đổi mật khẩu. Vui lòng kiểm tra lại OTP hoặc mật khẩu cũ.');
             }
         });

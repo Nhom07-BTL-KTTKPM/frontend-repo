@@ -67,6 +67,6 @@ export const Dashboard = () => {
     );
 };
 
-export * from './VerifyEmail';
-export * from './ForgotPassword';
-export * from './ResetPassword';
+export { VerifyEmail } from './VerifyEmail';
+export { ForgotPassword } from './ForgotPassword';
+export { ResetPassword } from './ResetPassword';

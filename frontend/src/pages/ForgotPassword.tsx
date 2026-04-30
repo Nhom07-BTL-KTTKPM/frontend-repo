@@ -18,7 +18,7 @@ export const ForgotPassword = () => {
                 // Chuyển hướng sang trang reset password và truyền email
                 navigate('/reset-password', { state: { email } });
             },
-            onError: (err: any) => {
+            onError: (err: Error) => {
                 toast.error(err.message || 'Có lỗi xảy ra khi gửi yêu cầu.');
             }
         });

@@ -14,7 +14,6 @@ export const VerifyEmail = () => {
 
     useEffect(() => {
         if (!token) {
-            setStatus('no-token');
             return;
         }
 
@@ -27,7 +26,7 @@ export const VerifyEmail = () => {
                 setStatus('success');
                 toast.success('Xác thực email thành công!');
             })
-            .catch((err: any) => {
+            .catch((err: Error) => {
                 setStatus('error');
                 toast.error(err.message || 'Xác thực email thất bại.');
             });

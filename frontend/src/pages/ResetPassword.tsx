@@ -36,7 +36,7 @@ export const ResetPassword = () => {
                 toast.success('Đặt lại mật khẩu thành công! Vui lòng đăng nhập bằng mật khẩu mới.');
                 navigate('/login');
             },
-            onError: (err: any) => {
+            onError: (err: Error) => {
                 toast.error(err.message || 'Có lỗi xảy ra khi đặt lại mật khẩu. Vui lòng kiểm tra lại mã OTP.');
             }
         });
