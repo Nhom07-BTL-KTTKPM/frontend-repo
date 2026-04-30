@@ -25,6 +25,14 @@ export interface UserProfileInfo {
   accountId: string;
   email: string;
   role: string;
+  fullName?: string;
+  phoneNumber?: string;
+  avatarUrl?: string;
+  status?: string;
+  provider?: string;
+  emailVerified?: boolean;
+  lastLoginAt?: string;
+  createdAt?: string;
   issuedAt: string;
   expiresAt: string;
 }
