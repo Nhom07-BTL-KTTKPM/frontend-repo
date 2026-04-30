@@ -2,22 +2,50 @@ import { useState } from 'react';
 import { useAuth } from '../hooks/useAuth';
 import { useNavigate, Link } from 'react-router-dom';
 import { toast } from 'sonner';
+import type { ApiError } from '../types/api';
 
 export const Login = () => {
     const { loginMutation } = useAuth();
     const navigate = useNavigate();
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
+    const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
+
+        // Client-side validation
+        const errors: Record<string, string> = {};
+        if (!email.trim()) {
+            errors.email = 'Vui lòng nhập email';
+        } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+            errors.email = 'Email không hợp lệ';
+        }
+
+        if (!password) {
+            errors.password = 'Vui lòng nhập mật khẩu';
+        } else if (password.length < 8) {
+            errors.password = 'Mật khẩu phải từ 8 ký tự';
+        }
+
+        if (Object.keys(errors).length > 0) {
+            setFieldErrors(errors);
+            return;
+        }
+
+        setFieldErrors({});
         loginMutation.mutate({ email, password }, {
             onSuccess: () => {
                 toast.success('Đăng nhập thành công');
                 navigate('/');
             },
-            onError: (err: Error) => {
-                toast.error(err.message || 'Đăng nhập thất bại');
+            onError: (err: unknown) => {
+                const apiErr = err as ApiError;
+                if (apiErr.errors && Object.keys(apiErr.errors).length > 0) {
+                    setFieldErrors(apiErr.errors);
+                } else {
+                    toast.error(apiErr.message || 'Đăng nhập thất bại');
+                }
             }
         });
     };
@@ -30,16 +58,16 @@ export const Login = () => {
                 <form className="auth-modal__form" onSubmit={handleSubmit}>
                     <div className="form-group" style={{ marginBottom: '1rem' }}>
                         <label className="form-group__label" style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, marginBottom: '0.5rem' }}>Email</label>
-                        <input value={email} onChange={e => setEmail(e.target.value)} type="email" required className="form-group__input" placeholder="example@email.com" style={{ width: '100%', padding: '10px', border: '1px solid var(--color-gray-300)', borderRadius: '4px' }}/>
+                        <input value={email} onChange={e => { setEmail(e.target.value); setFieldErrors(prev => ({...prev, email: ''})); }} type="email" className="form-group__input" placeholder="example@email.com" style={{ width: '100%', padding: '10px', border: `1px solid ${fieldErrors.email ? 'var(--color-error)' : 'var(--color-gray-300)'}`, borderRadius: '4px' }}/>
+                        {fieldErrors.email && <span style={{ color: 'var(--color-error)', fontSize: '0.75rem', marginTop: '4px', display: 'block' }}>{fieldErrors.email}</span>}
                     </div>
                     <div className="form-group" style={{ marginBottom: '1rem', position: 'relative' }}>
                         <label className="form-group__label" style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, marginBottom: '0.5rem' }}>Mật khẩu</label>
-                        <input value={password} onChange={e => setPassword(e.target.value)} type="password" required className="form-group__input" placeholder="••••••••" style={{ width: '100%', padding: '10px', border: '1px solid var(--color-gray-300)', borderRadius: '4px' }}/>
+                        <input value={password} onChange={e => { setPassword(e.target.value); setFieldErrors(prev => ({...prev, password: ''})); }} type="password" className="form-group__input" placeholder="••••••••" style={{ width: '100%', padding: '10px', border: `1px solid ${fieldErrors.password ? 'var(--color-error)' : 'var(--color-gray-300)'}`, borderRadius: '4px' }}/>
+                        {fieldErrors.password && <span style={{ color: 'var(--color-error)', fontSize: '0.75rem', marginTop: '4px', display: 'block' }}>{fieldErrors.password}</span>}
                     </div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
-                        <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.8rem', color: 'var(--color-gray-500)', cursor: 'pointer' }}>
-                            <input type="checkbox" style={{ accentColor: 'var(--color-gold)' }}/> Ghi nhớ đăng nhập
-                        </label>
+                    <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', marginBottom: '1.5rem' }}>
+                        <Link to="/forgot-password" style={{ fontSize: '0.8rem', color: 'var(--color-gold)', fontWeight: 'bold' }}>Quên mật khẩu?</Link>
                     </div>
                     <button type="submit" disabled={loginMutation.isPending} className="btn btn--primary" style={{ width: '100%', padding: '12px', background: 'linear-gradient(135deg, var(--color-gold), var(--color-gold-dark))', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold' }}>
                         {loginMutation.isPending ? 'Đang đăng nhập...' : 'Đăng nhập'}
