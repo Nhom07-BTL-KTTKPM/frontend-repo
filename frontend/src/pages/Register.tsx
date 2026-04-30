@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useAuth } from '../hooks/useAuth';
 import { useNavigate, Link } from 'react-router-dom';
 import { toast } from 'sonner';
+import type { ApiError } from '../types/api';
 
 export const Register = () => {
     const { registerMutation } = useAuth();
@@ -11,8 +12,38 @@ export const Register = () => {
     const [fullName, setFullName] = useState('');
     const [phoneNumber, setPhoneNumber] = useState('');
 
+    const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
+
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
+
+        // Client-side validation
+        const errors: Record<string, string> = {};
+        if (!fullName.trim()) {
+            errors.fullName = 'Vui lòng nhập họ và tên';
+        }
+        if (!phoneNumber.trim()) {
+            errors.phoneNumber = 'Vui lòng nhập số điện thoại';
+        } else if (!/^(0|\+84)[3|5|7|8|9][0-9]{8}$/.test(phoneNumber)) {
+            errors.phoneNumber = 'Số điện thoại không hợp lệ';
+        }
+        if (!email.trim()) {
+            errors.email = 'Vui lòng nhập email';
+        } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+            errors.email = 'Email không hợp lệ';
+        }
+        if (!password) {
+            errors.password = 'Vui lòng nhập mật khẩu';
+        } else if (password.length < 8) {
+            errors.password = 'Mật khẩu phải từ 8 ký tự';
+        }
+
+        if (Object.keys(errors).length > 0) {
+            setFieldErrors(errors);
+            return;
+        }
+
+        setFieldErrors({});
         registerMutation.mutate({ email, password, fullName, phoneNumber }, {
             onSuccess: () => {
                 toast.success('Đăng ký thành công! Vui lòng kiểm tra email để xác thực tài khoản trước khi đăng nhập.', {
@@ -20,8 +51,13 @@ export const Register = () => {
                 });
                 navigate('/login');
             },
-            onError: (err: Error) => {
-                toast.error(err.message || 'Đăng ký thất bại');
+            onError: (err: unknown) => {
+                const apiErr = err as ApiError;
+                if (apiErr.errors && Object.keys(apiErr.errors).length > 0) {
+                    setFieldErrors(apiErr.errors);
+                } else {
+                    toast.error(apiErr.message || 'Đăng ký thất bại');
+                }
             }
         });
     };
@@ -34,19 +70,23 @@ export const Register = () => {
                 <form className="auth-modal__form" onSubmit={handleSubmit}>
                     <div className="form-group" style={{ marginBottom: '1rem' }}>
                         <label className="form-group__label" style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, marginBottom: '0.5rem' }}>Họ và tên</label>
-                        <input value={fullName} onChange={e => setFullName(e.target.value)} type="text" required className="form-group__input" placeholder="Nguyễn Văn A" style={{ width: '100%', padding: '10px', border: '1px solid var(--color-gray-300)', borderRadius: '4px' }}/>
+                        <input value={fullName} onChange={e => { setFullName(e.target.value); setFieldErrors(prev => ({...prev, fullName: ''})); }} type="text" className="form-group__input" placeholder="Nguyễn Văn A" style={{ width: '100%', padding: '10px', border: `1px solid ${fieldErrors.fullName ? 'var(--color-error)' : 'var(--color-gray-300)'}`, borderRadius: '4px' }}/>
+                        {fieldErrors.fullName && <span style={{ color: 'var(--color-error)', fontSize: '0.75rem', marginTop: '4px', display: 'block' }}>{fieldErrors.fullName}</span>}
                     </div>
                     <div className="form-group" style={{ marginBottom: '1rem' }}>
                         <label className="form-group__label" style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, marginBottom: '0.5rem' }}>Số điện thoại</label>
-                        <input value={phoneNumber} onChange={e => setPhoneNumber(e.target.value)} type="tel" required className="form-group__input" placeholder="0901234567" style={{ width: '100%', padding: '10px', border: '1px solid var(--color-gray-300)', borderRadius: '4px' }}/>
+                        <input value={phoneNumber} onChange={e => { setPhoneNumber(e.target.value); setFieldErrors(prev => ({...prev, phoneNumber: ''})); }} type="tel" className="form-group__input" placeholder="0901234567" style={{ width: '100%', padding: '10px', border: `1px solid ${fieldErrors.phoneNumber ? 'var(--color-error)' : 'var(--color-gray-300)'}`, borderRadius: '4px' }}/>
+                        {fieldErrors.phoneNumber && <span style={{ color: 'var(--color-error)', fontSize: '0.75rem', marginTop: '4px', display: 'block' }}>{fieldErrors.phoneNumber}</span>}
                     </div>
                     <div className="form-group" style={{ marginBottom: '1rem' }}>
                         <label className="form-group__label" style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, marginBottom: '0.5rem' }}>Email</label>
-                        <input value={email} onChange={e => setEmail(e.target.value)} type="email" required className="form-group__input" placeholder="example@email.com" style={{ width: '100%', padding: '10px', border: '1px solid var(--color-gray-300)', borderRadius: '4px' }}/>
+                        <input value={email} onChange={e => { setEmail(e.target.value); setFieldErrors(prev => ({...prev, email: ''})); }} type="email" className="form-group__input" placeholder="example@email.com" style={{ width: '100%', padding: '10px', border: `1px solid ${fieldErrors.email ? 'var(--color-error)' : 'var(--color-gray-300)'}`, borderRadius: '4px' }}/>
+                        {fieldErrors.email && <span style={{ color: 'var(--color-error)', fontSize: '0.75rem', marginTop: '4px', display: 'block' }}>{fieldErrors.email}</span>}
                     </div>
                     <div className="form-group" style={{ marginBottom: '1.5rem' }}>
                         <label className="form-group__label" style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, marginBottom: '0.5rem' }}>Mật khẩu</label>
-                        <input value={password} onChange={e => setPassword(e.target.value)} type="password" required className="form-group__input" placeholder="••••••••" style={{ width: '100%', padding: '10px', border: '1px solid var(--color-gray-300)', borderRadius: '4px' }}/>
+                        <input value={password} onChange={e => { setPassword(e.target.value); setFieldErrors(prev => ({...prev, password: ''})); }} type="password" className="form-group__input" placeholder="••••••••" style={{ width: '100%', padding: '10px', border: `1px solid ${fieldErrors.password ? 'var(--color-error)' : 'var(--color-gray-300)'}`, borderRadius: '4px' }}/>
+                        {fieldErrors.password && <span style={{ color: 'var(--color-error)', fontSize: '0.75rem', marginTop: '4px', display: 'block' }}>{fieldErrors.password}</span>}
                     </div>
                     <button type="submit" disabled={registerMutation.isPending} className="btn btn--primary" style={{ width: '100%', padding: '12px', background: 'linear-gradient(135deg, var(--color-gold), var(--color-gold-dark))', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold' }}>
                         {registerMutation.isPending ? 'Đang xử lý...' : 'Đăng ký'}

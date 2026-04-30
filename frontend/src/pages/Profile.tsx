@@ -3,6 +3,7 @@ import { useAuthStore } from '../store/authStore';
 import { useAuth } from '../hooks/useAuth';
 import { User, Mail, Phone, ShieldCheck, Calendar, Activity, CheckCircle, XCircle, Key } from 'lucide-react';
 import { toast } from 'sonner';
+import type { ApiError } from '../types/api';
 
 export const Profile = () => {
     const user = useAuthStore(state => state.user);
@@ -15,6 +16,8 @@ export const Profile = () => {
     const [oldPassword, setOldPassword] = useState('');
     const [newPassword, setNewPassword] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');
+
+    const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
 
     const formatDate = (dateString?: string) => {
         if (!dateString) return 'Chưa có thông tin';
@@ -43,11 +46,37 @@ export const Profile = () => {
 
     const handleConfirmChangePassword = (e: React.FormEvent) => {
         e.preventDefault();
-        
-        if (newPassword !== confirmPassword) {
-            toast.error('Mật khẩu xác nhận không khớp!');
+
+        // Client validation
+        const errors: Record<string, string> = {};
+        if (!otp.trim()) {
+            errors.otp = 'Vui lòng nhập mã OTP';
+        } else if (otp.trim().length !== 6) {
+            errors.otp = 'Mã OTP phải gồm 6 ký tự';
+        }
+
+        if (!oldPassword) {
+            errors.oldPassword = 'Vui lòng nhập mật khẩu hiện tại';
+        }
+
+        if (!newPassword) {
+            errors.newPassword = 'Vui lòng nhập mật khẩu mới';
+        } else if (newPassword.length < 8) {
+            errors.newPassword = 'Mật khẩu phải từ 8 ký tự';
+        }
+
+        if (!confirmPassword) {
+            errors.confirmPassword = 'Vui lòng xác nhận mật khẩu';
+        } else if (newPassword !== confirmPassword) {
+            errors.confirmPassword = 'Mật khẩu xác nhận không khớp!';
+        }
+
+        if (Object.keys(errors).length > 0) {
+            setFieldErrors(errors);
             return;
         }
+
+        setFieldErrors({});
 
         confirmChangePasswordMutation.mutate({ otp, oldPassword, newPassword }, {
             onSuccess: () => {
@@ -60,8 +89,13 @@ export const Profile = () => {
                 setNewPassword('');
                 setConfirmPassword('');
             },
-            onError: (err: Error) => {
-                toast.error(err.message || 'Lỗi khi đổi mật khẩu. Vui lòng kiểm tra lại OTP hoặc mật khẩu cũ.');
+            onError: (err: unknown) => {
+                const apiErr = err as ApiError;
+                if (apiErr.errors && Object.keys(apiErr.errors).length > 0) {
+                    setFieldErrors(apiErr.errors);
+                } else {
+                    toast.error(apiErr.message || 'Lỗi khi đổi mật khẩu. Vui lòng kiểm tra lại OTP hoặc mật khẩu cũ.');
+                }
             }
         });
     };
@@ -78,17 +112,17 @@ export const Profile = () => {
     return (
         <div className="container" style={{ padding: '4rem 0', minHeight: '80vh' }}>
             <div style={{ maxWidth: '700px', margin: '0 auto' }}>
-                <h2 style={{ fontFamily: 'var(--font-display)', fontSize: '2.5rem', marginBottom: '2rem', textAlign: 'center', color: 'var(--color-primary-dark)' }}>Hồ sơ tài khoản</h2>
-                
+                <h2 style={{ fontFamily: 'var(--font-body)', fontSize: '2rem', fontWeight: 600, marginBottom: '2rem', textAlign: 'center', color: 'var(--color-black)' }}>Hồ sơ tài khoản</h2>
+
                 <div style={{ background: '#fff', borderRadius: '12px', boxShadow: '0 10px 25px rgba(0,0,0,0.05)', overflow: 'hidden', marginBottom: '2rem' }}>
                     {/* Header Banner */}
                     <div style={{ background: 'linear-gradient(135deg, var(--color-primary-light, #fcd34d), var(--color-primary, #fbbf24))', height: '120px', position: 'relative' }}>
                     </div>
-                    
+
                     {/* Avatar & Basic Info */}
                     <div style={{ padding: '0 2rem', marginTop: '-50px', display: 'flex', alignItems: 'flex-end', gap: '1.5rem', marginBottom: '2rem', position: 'relative', zIndex: 10 }}>
-                        <div style={{ 
-                            width: '100px', height: '100px', borderRadius: '50%', background: '#fff', 
+                        <div style={{
+                            width: '100px', height: '100px', borderRadius: '50%', background: '#fff',
                             padding: '4px', boxShadow: '0 4px 10px rgba(0,0,0,0.1)', position: 'relative', flexShrink: 0
                         }}>
                             {user?.avatarUrl ? (
@@ -102,7 +136,7 @@ export const Profile = () => {
                         <div style={{ paddingBottom: '10px' }}>
                             <h3 style={{ fontSize: '1.8rem', fontWeight: 700, margin: 0 }}>{user?.fullName || 'Người dùng'}</h3>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--color-gray-500, #6b7280)', marginTop: '4px' }}>
-                                <span style={{ 
+                                <span style={{
                                     background: user?.role === 'ADMIN' ? '#fee2e2' : user?.role === 'EMPLOYEE' ? '#fef3c7' : '#e0e7ff',
                                     color: user?.role === 'ADMIN' ? '#ef4444' : user?.role === 'EMPLOYEE' ? '#f59e0b' : '#6366f1',
                                     padding: '2px 8px', borderRadius: '12px', fontSize: '0.75rem', fontWeight: 600
@@ -129,8 +163,8 @@ export const Profile = () => {
                                     </div>
                                     <div style={{ fontWeight: 600, fontSize: '1.05rem', display: 'flex', alignItems: 'center', gap: '8px' }}>
                                         <span style={{ wordBreak: 'break-all' }}>{user?.email}</span>
-                                        {user?.emailVerified ? 
-                                            <span title="Đã xác thực" style={{ color: '#10b981', display: 'flex', flexShrink: 0 }}><CheckCircle size={16} /></span> : 
+                                        {user?.emailVerified ?
+                                            <span title="Đã xác thực" style={{ color: '#10b981', display: 'flex', flexShrink: 0 }}><CheckCircle size={16} /></span> :
                                             <span title="Chưa xác thực" style={{ color: '#f59e0b', display: 'flex', flexShrink: 0 }}><XCircle size={16} /></span>
                                         }
                                     </div>
@@ -150,7 +184,7 @@ export const Profile = () => {
                                     </div>
                                 </div>
                             </div>
-                            
+
                             {/* Column 2 */}
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
                                 <div>
@@ -158,8 +192,8 @@ export const Profile = () => {
                                         <Activity size={16} /> Trạng thái tài khoản
                                     </div>
                                     <div style={{ fontWeight: 600, fontSize: '1.05rem' }}>
-                                        {user?.status === 'ACTIVE' ? 'Đang hoạt động' : 
-                                         user?.status === 'DISABLED' ? 'Đã bị khóa' : 'Chờ xác thực'}
+                                        {user?.status === 'ACTIVE' ? 'Đang hoạt động' :
+                                            user?.status === 'DISABLED' ? 'Đã bị khóa' : 'Chờ xác thực'}
                                     </div>
                                 </div>
                                 <div>
@@ -186,7 +220,7 @@ export const Profile = () => {
                             <Key size={20} color="var(--color-primary)" /> Đổi mật khẩu
                         </h3>
                         {!isChangingPassword && (
-                            <button 
+                            <button
                                 onClick={() => setIsChangingPassword(true)}
                                 className="btn btn--outline"
                                 style={{ padding: '8px 16px', borderRadius: '6px', border: '1px solid var(--color-gray-300)', background: 'transparent', cursor: 'pointer', fontWeight: 500 }}
@@ -204,7 +238,7 @@ export const Profile = () => {
                                         Để bảo mật, hệ thống sẽ gửi một mã OTP đến email <strong>{user?.email}</strong>. Vui lòng nhấn nút bên dưới để nhận mã.
                                     </p>
                                     <div style={{ display: 'flex', gap: '10px' }}>
-                                        <button 
+                                        <button
                                             onClick={handleRequestChangePassword}
                                             disabled={requestChangePasswordMutation.isPending}
                                             className="btn btn--primary"
@@ -212,7 +246,7 @@ export const Profile = () => {
                                         >
                                             {requestChangePasswordMutation.isPending ? 'Đang gửi...' : 'Gửi mã OTP'}
                                         </button>
-                                        <button 
+                                        <button
                                             onClick={cancelChangePassword}
                                             className="btn"
                                             style={{ padding: '10px 20px', background: 'var(--color-gray-200)', color: 'var(--color-gray-700)', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: 500 }}
@@ -225,50 +259,50 @@ export const Profile = () => {
                                 <form onSubmit={handleConfirmChangePassword} style={{ maxWidth: '400px' }}>
                                     <div style={{ marginBottom: '1rem' }}>
                                         <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, marginBottom: '0.5rem', color: 'var(--color-gray-700)' }}>Mã OTP (từ email)</label>
-                                        <input 
-                                            type="text" 
-                                            value={otp} 
-                                            onChange={(e) => setOtp(e.target.value)} 
-                                            required 
-                                            style={{ width: '100%', padding: '10px', border: '1px solid var(--color-gray-300)', borderRadius: '6px' }} 
+                                        <input
+                                            type="text"
+                                            value={otp}
+                                            onChange={(e) => { setOtp(e.target.value); setFieldErrors(prev => ({...prev, otp: ''})); }}
+                                            style={{ width: '100%', padding: '10px', border: `1px solid ${fieldErrors.otp ? 'var(--color-error)' : 'var(--color-gray-300)'}`, borderRadius: '6px' }}
                                             placeholder="Nhập 6 số"
                                         />
+                                        {fieldErrors.otp && <span style={{ color: 'var(--color-error)', fontSize: '0.75rem', marginTop: '4px', display: 'block' }}>{fieldErrors.otp}</span>}
                                     </div>
                                     <div style={{ marginBottom: '1rem' }}>
                                         <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, marginBottom: '0.5rem', color: 'var(--color-gray-700)' }}>Mật khẩu hiện tại</label>
-                                        <input 
-                                            type="password" 
-                                            value={oldPassword} 
-                                            onChange={(e) => setOldPassword(e.target.value)} 
-                                            required 
-                                            style={{ width: '100%', padding: '10px', border: '1px solid var(--color-gray-300)', borderRadius: '6px' }} 
+                                        <input
+                                            type="password"
+                                            value={oldPassword}
+                                            onChange={(e) => { setOldPassword(e.target.value); setFieldErrors(prev => ({...prev, oldPassword: ''})); }}
+                                            style={{ width: '100%', padding: '10px', border: `1px solid ${fieldErrors.oldPassword ? 'var(--color-error)' : 'var(--color-gray-300)'}`, borderRadius: '6px' }}
                                             placeholder="••••••••"
                                         />
+                                        {fieldErrors.oldPassword && <span style={{ color: 'var(--color-error)', fontSize: '0.75rem', marginTop: '4px', display: 'block' }}>{fieldErrors.oldPassword}</span>}
                                     </div>
                                     <div style={{ marginBottom: '1rem' }}>
                                         <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, marginBottom: '0.5rem', color: 'var(--color-gray-700)' }}>Mật khẩu mới</label>
-                                        <input 
-                                            type="password" 
-                                            value={newPassword} 
-                                            onChange={(e) => setNewPassword(e.target.value)} 
-                                            required 
-                                            style={{ width: '100%', padding: '10px', border: '1px solid var(--color-gray-300)', borderRadius: '6px' }} 
+                                        <input
+                                            type="password"
+                                            value={newPassword}
+                                            onChange={(e) => { setNewPassword(e.target.value); setFieldErrors(prev => ({...prev, newPassword: ''})); }}
+                                            style={{ width: '100%', padding: '10px', border: `1px solid ${fieldErrors.newPassword ? 'var(--color-error)' : 'var(--color-gray-300)'}`, borderRadius: '6px' }}
                                             placeholder="••••••••"
                                         />
+                                        {fieldErrors.newPassword && <span style={{ color: 'var(--color-error)', fontSize: '0.75rem', marginTop: '4px', display: 'block' }}>{fieldErrors.newPassword}</span>}
                                     </div>
                                     <div style={{ marginBottom: '1.5rem' }}>
                                         <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, marginBottom: '0.5rem', color: 'var(--color-gray-700)' }}>Xác nhận mật khẩu mới</label>
-                                        <input 
-                                            type="password" 
-                                            value={confirmPassword} 
-                                            onChange={(e) => setConfirmPassword(e.target.value)} 
-                                            required 
-                                            style={{ width: '100%', padding: '10px', border: '1px solid var(--color-gray-300)', borderRadius: '6px' }} 
+                                        <input
+                                            type="password"
+                                            value={confirmPassword}
+                                            onChange={(e) => { setConfirmPassword(e.target.value); setFieldErrors(prev => ({...prev, confirmPassword: ''})); }}
+                                            style={{ width: '100%', padding: '10px', border: `1px solid ${fieldErrors.confirmPassword ? 'var(--color-error)' : 'var(--color-gray-300)'}`, borderRadius: '6px' }}
                                             placeholder="••••••••"
                                         />
+                                        {fieldErrors.confirmPassword && <span style={{ color: 'var(--color-error)', fontSize: '0.75rem', marginTop: '4px', display: 'block' }}>{fieldErrors.confirmPassword}</span>}
                                     </div>
                                     <div style={{ display: 'flex', gap: '10px' }}>
-                                        <button 
+                                        <button
                                             type="submit"
                                             disabled={confirmChangePasswordMutation.isPending || !otp || !oldPassword || !newPassword}
                                             className="btn btn--primary"
@@ -276,7 +310,7 @@ export const Profile = () => {
                                         >
                                             {confirmChangePasswordMutation.isPending ? 'Đang xử lý...' : 'Xác nhận đổi'}
                                         </button>
-                                        <button 
+                                        <button
                                             type="button"
                                             onClick={cancelChangePassword}
                                             className="btn"
