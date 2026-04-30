@@ -13,7 +13,7 @@ import { EmployeeRoute } from './routes/EmployeeRoute';
 import { Login } from './pages/Login';
 import { Register } from './pages/Register';
 import { Profile } from './pages/Profile';
-import { Home, ProductList, ProductDetail, Cart, Checkout, Payment, Dashboard } from './pages';
+import { Home, ProductList, ProductDetail, Cart, Checkout, Payment, Dashboard, VerifyEmail, ForgotPassword, ResetPassword } from './pages';
 
 function App() {
   const { initSession } = useAuth();
@@ -46,11 +46,14 @@ function App() {
           <Route path="/cart" element={<Cart />} />
           <Route path="/checkout" element={<Checkout />} />
           <Route path="/payment" element={<Payment />} />
+          <Route path="/verify-email" element={<VerifyEmail />} />
 
           {/* Guest Routes (Chỉ người CHƯA đăng nhập) */}
           <Route element={<GuestRoute />}>
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />
+            <Route path="/forgot-password" element={<ForgotPassword />} />
+            <Route path="/reset-password" element={<ResetPassword />} />
           </Route>
 
           {/* Protected Routes (Chỉ người ĐÃ đăng nhập) */}

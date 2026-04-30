@@ -1,6 +1,6 @@
 import { axiosClient } from './axiosClient';
 import type { ApiResponse, AuthTokenResponse, UserProfileInfo } from '../types/api';
-import type { LoginRequest, RegisterRequest, RegisterResponse } from '../types/auth';
+import type { LoginRequest, RegisterRequest, RegisterResponse, ForgotPasswordRequest, ResetPasswordRequest, ChangePasswordRequest } from '../types/auth';
 
 export const authApi = {
   // Thực hiện đăng nhập
@@ -26,5 +26,30 @@ export const authApi = {
   // Truy vấn thông tin tài khoản đang đăng nhập
   getProfile: () => {
     return axiosClient.get<unknown, ApiResponse<UserProfileInfo>>('/auth/me');
+  },
+
+  // Xác thực email
+  verifyEmail: (token: string) => {
+    return axiosClient.get<unknown, ApiResponse<void>>(`/auth/verify-email?token=${token}`);
+  },
+
+  // Quên mật khẩu
+  forgotPassword: (data: ForgotPasswordRequest) => {
+    return axiosClient.post<unknown, ApiResponse<void>>('/auth/forgot-password', data);
+  },
+
+  // Đặt lại mật khẩu
+  resetPassword: (data: ResetPasswordRequest) => {
+    return axiosClient.post<unknown, ApiResponse<void>>('/auth/reset-password', data);
+  },
+
+  // Yêu cầu đổi mật khẩu
+  requestChangePassword: () => {
+    return axiosClient.post<unknown, ApiResponse<void>>('/auth/change-password/request');
+  },
+
+  // Xác nhận đổi mật khẩu
+  confirmChangePassword: (data: ChangePasswordRequest) => {
+    return axiosClient.post<unknown, ApiResponse<void>>('/auth/change-password/confirm', data);
   },
 };

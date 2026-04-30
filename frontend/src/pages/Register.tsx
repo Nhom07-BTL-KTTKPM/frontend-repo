@@ -15,7 +15,9 @@ export const Register = () => {
         e.preventDefault();
         registerMutation.mutate({ email, password, fullName, phoneNumber }, {
             onSuccess: () => {
-                toast.success('Đăng ký thành công. Vui lòng đăng nhập.');
+                toast.success('Đăng ký thành công! Vui lòng kiểm tra email để xác thực tài khoản trước khi đăng nhập.', {
+                    duration: 6000,
+                });
                 navigate('/login');
             },
             onError: (err: Error) => {

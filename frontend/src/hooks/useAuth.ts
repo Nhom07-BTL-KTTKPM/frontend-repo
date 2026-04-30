@@ -1,8 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { authApi } from '../api/authApi';
 import { useAuthStore } from '../store/authStore';
-import type { LoginRequest, RegisterRequest } from '../types/auth';
-
+import type { LoginRequest, RegisterRequest, ForgotPasswordRequest, ResetPasswordRequest, ChangePasswordRequest } from '../types/auth';
 
 export const useAuth = () => {
   const queryClient = useQueryClient();
@@ -52,6 +51,26 @@ export const useAuth = () => {
     }
   });
 
+  const verifyEmailMutation = useMutation({
+    mutationFn: (token: string) => authApi.verifyEmail(token)
+  });
+
+  const forgotPasswordMutation = useMutation({
+    mutationFn: (data: ForgotPasswordRequest) => authApi.forgotPassword(data)
+  });
+
+  const resetPasswordMutation = useMutation({
+    mutationFn: (data: ResetPasswordRequest) => authApi.resetPassword(data)
+  });
+
+  const requestChangePasswordMutation = useMutation({
+    mutationFn: () => authApi.requestChangePassword()
+  });
+
+  const confirmChangePasswordMutation = useMutation({
+    mutationFn: (data: ChangePasswordRequest) => authApi.confirmChangePassword(data)
+  });
+
   const initSession = async () => {
     try {
       let token = useAuthStore.getState().accessToken;
@@ -85,6 +104,11 @@ export const useAuth = () => {
     loginMutation,
     registerMutation,
     logoutMutation,
+    verifyEmailMutation,
+    forgotPasswordMutation,
+    resetPasswordMutation,
+    requestChangePasswordMutation,
+    confirmChangePasswordMutation,
     initSession
   };
 };

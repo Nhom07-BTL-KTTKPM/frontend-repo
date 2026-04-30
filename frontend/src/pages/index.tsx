@@ -66,3 +66,7 @@ export const Dashboard = () => {
         </div>
     );
 };
+
+export * from './VerifyEmail';
+export * from './ForgotPassword';
+export * from './ResetPassword';

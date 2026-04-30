@@ -15,3 +15,19 @@ export interface RegisterResponse {
   email: string;
   role: string;
 }
+
+export interface ForgotPasswordRequest {
+  email: string;
+}
+
+export interface ResetPasswordRequest {
+  email: string;
+  otp: string;
+  newPassword?: string;
+}
+
+export interface ChangePasswordRequest {
+  otp: string;
+  oldPassword?: string;
+  newPassword?: string;
+}
