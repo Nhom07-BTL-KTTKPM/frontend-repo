@@ -8,6 +8,11 @@ export const authApi = {
     return axiosClient.post<unknown, ApiResponse<AuthTokenResponse>>('/auth/login', data);
   },
 
+  // Thực hiện đăng nhập bằng Google
+  googleLogin: (idToken: string) => {
+    return axiosClient.post<unknown, ApiResponse<AuthTokenResponse>>('/auth/google', { idToken });
+  },
+
   // Thực hiện đăng ký
   register: (data: RegisterRequest) => {
     return axiosClient.post<unknown, ApiResponse<RegisterResponse>>('/auth/register', data);

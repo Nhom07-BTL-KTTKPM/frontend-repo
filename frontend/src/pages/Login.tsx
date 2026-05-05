@@ -2,10 +2,11 @@ import { useState } from 'react';
 import { useAuth } from '../hooks/useAuth';
 import { useNavigate, Link } from 'react-router-dom';
 import { toast } from 'sonner';
+import { GoogleLogin } from '@react-oauth/google';
 import type { ApiError } from '../types/api';
 
 export const Login = () => {
-    const { loginMutation } = useAuth();
+    const { loginMutation, googleLoginMutation } = useAuth();
     const navigate = useNavigate();
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
@@ -69,10 +70,39 @@ export const Login = () => {
                     <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', marginBottom: '1.5rem' }}>
                         <Link to="/forgot-password" style={{ fontSize: '0.8rem', color: 'var(--color-gold)', fontWeight: 'bold' }}>Quên mật khẩu?</Link>
                     </div>
-                    <button type="submit" disabled={loginMutation.isPending} className="btn btn--primary" style={{ width: '100%', padding: '12px', background: 'linear-gradient(135deg, var(--color-gold), var(--color-gold-dark))', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold' }}>
+                    <button type="submit" disabled={loginMutation.isPending || googleLoginMutation.isPending} className="btn btn--primary" style={{ width: '100%', padding: '12px', background: 'linear-gradient(135deg, var(--color-gold), var(--color-gold-dark))', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold' }}>
                         {loginMutation.isPending ? 'Đang đăng nhập...' : 'Đăng nhập'}
                     </button>
                 </form>
+
+                <div style={{ display: 'flex', alignItems: 'center', margin: '1.5rem 0' }}>
+                    <div style={{ flex: 1, height: '1px', backgroundColor: 'var(--color-gray-300)' }}></div>
+                    <span style={{ padding: '0 10px', color: 'var(--color-gray-500)', fontSize: '0.85rem' }}>Hoặc</span>
+                    <div style={{ flex: 1, height: '1px', backgroundColor: 'var(--color-gray-300)' }}></div>
+                </div>
+
+                <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '1.5rem' }}>
+                    <GoogleLogin
+                        onSuccess={credentialResponse => {
+                            if (credentialResponse.credential) {
+                                googleLoginMutation.mutate(credentialResponse.credential, {
+                                    onSuccess: () => {
+                                        toast.success('Đăng nhập bằng Google thành công');
+                                        navigate('/');
+                                    },
+                                    onError: (err: unknown) => {
+                                        const apiErr = err as ApiError;
+                                        toast.error(apiErr.message || 'Đăng nhập Google thất bại');
+                                    }
+                                });
+                            }
+                        }}
+                        onError={() => {
+                            toast.error('Đăng nhập Google thất bại');
+                        }}
+                    />
+                </div>
+
                 <p style={{ textAlign: 'center', marginTop: '1rem', fontSize: '0.85rem' }}>
                     Chưa có tài khoản? <Link to="/register" style={{ color: 'var(--color-gold)', fontWeight: 'bold' }}>Đăng ký ngay</Link>
                 </p>

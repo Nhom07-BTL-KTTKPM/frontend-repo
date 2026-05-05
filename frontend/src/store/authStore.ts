@@ -1,53 +1,60 @@
 import { create } from 'zustand';
+import { persist, createJSONStorage } from 'zustand/middleware';
 import type { UserProfileInfo } from '../types/api';
 
 interface AuthState {
   accessToken: string | null;
   user: UserProfileInfo | null;
-
-  // Trạng thái kiểm tra xem ứng dụng đã load xong session tĩnh chưa (dùng cho Splash Screen/Loading ban đầu)
+  hasEverLoggedIn: boolean;
   isInitialized: boolean;
   isAuthenticated: boolean;
 
-  // Actions
   setAccessToken: (token: string | null) => void;
   setUser: (user: UserProfileInfo | null) => void;
-
-  // Set toàn bộ dữ liệu cùng lúc khi Login thành công để tránh Re-render nhiều lần
   setCredentials: (user: UserProfileInfo, token: string) => void;
-
-  // Đánh dấu app đã khởi tạo xong state (Thường gọi ở App.tsx sau khi call /me hoặc silent refresh)
   setInitialized: () => void;
-
   logout: () => void;
 }
 
-export const useAuthStore = create<AuthState>((set) => ({
-  accessToken: null,
-  user: null,
-  isInitialized: false,
-  isAuthenticated: false,
+export const useAuthStore = create<AuthState>()(
+  persist(
+    (set) => ({
+      accessToken: null,
+      user: null,
+      hasEverLoggedIn: false,
+      isInitialized: false,
+      isAuthenticated: false,
 
-  setAccessToken: (token) => set({ accessToken: token, isAuthenticated: !!token }),
+      setAccessToken: (token) => set({ accessToken: token, isAuthenticated: !!token }),
 
-  setUser: (user) => set({ user }),
+      setUser: (user) => set({ user }),
 
-  setCredentials: (user, token) => set({
-    user,
-    accessToken: token,
-    isAuthenticated: true
-  }),
+      setCredentials: (user, token) => set({
+        user,
+        accessToken: token,
+        isAuthenticated: true,
+        hasEverLoggedIn: true,
+      }),
 
-  setInitialized: () => set({ isInitialized: true }),
+      setInitialized: () => set({ isInitialized: true }),
 
-  logout: () => set({
-    accessToken: null,
-    user: null,
-    isAuthenticated: false
-  }),
-}));
+      logout: () => set({
+        accessToken: null,
+        user: null,
+        isAuthenticated: false,
+      }),
+    }),
+    {
+      name: 'auth-session',
+      storage: createJSONStorage(() => sessionStorage),
+      partialize: (state) => ({
+        accessToken: state.accessToken,
+        hasEverLoggedIn: state.hasEverLoggedIn,
+      } as AuthState), // Ép kiểu ở đây để đánh lừa TS rằng object này sẽ được trộn vào state gốc
+    }
+  )
+);
 
-// Thêm các Custom Selectors tiện lợi để Component dùng thẳng không cần viết lại Logic
 export const useIsAdmin = () => useAuthStore((state) => state.user?.role === 'ADMIN');
 export const useIsEmployee = () => useAuthStore((state) => state.user?.role === 'EMPLOYEE');
 export const useIsCustomer = () => useAuthStore((state) => state.user?.role === 'CUSTOMER');
