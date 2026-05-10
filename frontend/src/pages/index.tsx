@@ -1,4 +1,6 @@
 import { useNavigate } from 'react-router-dom';
+export { ProductList } from './ProductList';
+export { ProductDetail } from './ProductDetail';
 
 export const Home = () => {
     return (
@@ -9,23 +11,7 @@ export const Home = () => {
     );
 };
 
-export const ProductList = () => {
-    return (
-        <div style={{ padding: '4rem', textAlign: 'center' }}>
-            <h1 style={{ fontFamily: 'var(--font-display)', fontSize: '3rem', color: 'var(--color-gold)' }}>Danh sách sản phẩm</h1>
-            <p>Hiển thị các sản phẩm filter</p>
-        </div>
-    );
-};
-
-export const ProductDetail = () => {
-    return (
-        <div style={{ padding: '4rem', textAlign: 'center' }}>
-            <h1 style={{ fontFamily: 'var(--font-display)', fontSize: '3rem', color: 'var(--color-gold)' }}>Chi tiết sản phẩm</h1>
-            <p>Product ID: ...</p>
-        </div>
-    );
-};
+// ProductList and ProductDetail are moved to their own files
 
 export const Cart = () => {
     const navigate = useNavigate();
