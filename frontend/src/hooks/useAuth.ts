@@ -1,7 +1,9 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { authApi } from '../api/authApi';
+import { userApi } from '../api/userApi';
 import { useAuthStore } from '../store/authStore';
 import type { LoginRequest, RegisterRequest, ForgotPasswordRequest, ResetPasswordRequest, ChangePasswordRequest } from '../types/auth';
+import type { UserProfileInfo } from '../types/api';
 
 export const useAuth = () => {
   const queryClient = useQueryClient();
@@ -9,9 +11,32 @@ export const useAuth = () => {
   const logout = useAuthStore((state) => state.logout);
   const setInitialized = useAuthStore((state) => state.setInitialized);
 
+  const fetchProfileWithCustomer = async (): Promise<UserProfileInfo> => {
+    const profileRes = await authApi.getProfile();
+    const authProfile = profileRes.data;
+
+    try {
+      const customerRes = await userApi.getCustomerByAccountId(authProfile.accountId);
+      const customer = customerRes.data;
+
+      return {
+        ...authProfile,
+        fullName: customer.fullName ?? authProfile.fullName,
+        phoneNumber: customer.phoneNumber ?? authProfile.phoneNumber,
+        dateOfBirth: customer.dateOfBirth ?? authProfile.dateOfBirth,
+        gender: customer.gender ?? authProfile.gender,
+        skinType: customer.skinType ?? authProfile.skinType,
+        loyaltyPoints: customer.loyaltyPoints ?? authProfile.loyaltyPoints,
+        skinConcerns: customer.skinConcerns ?? authProfile.skinConcerns,
+      };
+    } catch {
+      return authProfile;
+    }
+  };
+
   const useMeQuery = (enabled = true) => useQuery({
     queryKey: ['auth', 'me'],
-    queryFn: () => authApi.getProfile(),
+    queryFn: () => fetchProfileWithCustomer(),
     enabled,
     retry: false,
     staleTime: 5 * 60 * 1000,
@@ -23,8 +48,8 @@ export const useAuth = () => {
       const token = res.data.accessToken;
       try {
         useAuthStore.getState().setAccessToken(token);
-        const profileRes = await authApi.getProfile();
-        setCredentials(profileRes.data, token);
+        const profile = await fetchProfileWithCustomer();
+        setCredentials(profile, token);
       } catch {
         logout();
       }
@@ -37,8 +62,8 @@ export const useAuth = () => {
       const token = res.data.accessToken;
       try {
         useAuthStore.getState().setAccessToken(token);
-        const profileRes = await authApi.getProfile();
-        setCredentials(profileRes.data, token);
+        const profile = await fetchProfileWithCustomer();
+        setCredentials(profile, token);
       } catch {
         logout();
       }
@@ -92,9 +117,9 @@ export const useAuth = () => {
         useAuthStore.getState().setAccessToken(token);
       }
 
-      const res = await authApi.getProfile();
+      const res = await fetchProfileWithCustomer();
       if (token) {
-        setCredentials(res.data, token);
+        setCredentials(res, token);
       }
     } catch {
       logout();
