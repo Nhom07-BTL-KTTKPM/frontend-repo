@@ -1,14 +1,9 @@
 import { useNavigate } from 'react-router-dom';
 export { ProductList } from './ProductList';
 export { ProductDetail } from './ProductDetail';
-export const Home = () => {
-    return (
-        <div style={{ padding: '4rem', textAlign: 'center' }}>
-            <h1 style={{ fontFamily: 'var(--font-display)', fontSize: '3rem', color: 'var(--color-gold)' }}>Home Page</h1>
-            <p>Trang chủ - Trưng bày sản phẩm</p>
-        </div>
-    );
-};
+export { HomePage as Home } from './HomePage';
+export { CategoryDetailPage } from './CategoryDetailPage';
+export { BrandDetailPage } from './BrandDetailPage';
 
 
 export const Cart = () => {
@@ -54,3 +49,4 @@ export const Dashboard = () => {
 export { VerifyEmail } from './VerifyEmail';
 export { ForgotPassword } from './ForgotPassword';
 export { ResetPassword } from './ResetPassword';
+export { HomePage } from './HomePage';

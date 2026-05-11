@@ -33,6 +33,17 @@
             --font-body: 'Inter', 'Helvetica Neue', sans-serif;
             --font-accent: 'Cormorant Garamond', 'Georgia', serif;
 
+            /* Font Sizes (Base: 13px) */
+            --font-xs: 0.8125rem;        /* 10.56px */
+            --font-sm: 0.9375rem;        /* 12.19px */
+            --font-base: 1rem;           /* 13px */
+            --font-lg: 1.15rem;          /* 14.95px */
+            --font-xl: 1.3rem;           /* 16.9px */
+            --font-2xl: 1.5rem;          /* 19.5px */
+            --font-3xl: 1.875rem;        /* 24.375px */
+            --font-4xl: 2.25rem;         /* 29.25px */
+            --font-5xl: 3rem;            /* 39px */
+
             /* Spacing */
             --space-xs: 0.25rem;
             --space-sm: 0.5rem;
@@ -82,7 +93,7 @@
 
         html {
             scroll-behavior: smooth;
-            font-size: 16px;
+            font-size: 13px;
             -webkit-font-smoothing: antialiased;
             -moz-osx-font-smoothing: grayscale;
         }
@@ -725,7 +736,7 @@
            ============================================ */
         .hero {
             position: relative;
-            min-height: 100vh;
+            min-height: 300px;
             display: flex;
             align-items: center;
             overflow: hidden;
@@ -1031,7 +1042,7 @@
 
         .categories__grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
             gap: var(--space-xl);
         }
 
@@ -1039,8 +1050,10 @@
             position: relative;
             border-radius: var(--radius-lg);
             overflow: hidden;
-            aspect-ratio: 4/5;
+            height: 150px;
+            width: 100px;
             cursor: pointer;
+            margin: 0 auto;
             group: true;
         }
 
@@ -1429,7 +1442,6 @@
             display: flex;
             flex-direction: column;
             justify-content: center;
-            padding: var(--space-4xl);
             position: relative;
             z-index: 1;
         }
@@ -2765,7 +2777,7 @@
             }
 
             .promo-banner__image {
-                min-height: 300px;
+                min-height: 200px;
             }
 
             .ai-section__inner {

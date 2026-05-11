@@ -48,6 +48,14 @@ const processQueue = (error: unknown, token: string | null = null) => {
 
 axiosClient.interceptors.request.use(
   (config: InternalAxiosRequestConfig) => {
+    const isPublicCatalogEndpoint =
+      config.url?.includes('/catalog/categories') ||
+      config.url?.includes('/catalog/brands');
+
+    if (isPublicCatalogEndpoint) {
+      return config;
+    }
+
     const token = useAuthStore.getState().accessToken;
     if (token && config.headers) {
       config.headers.Authorization = `Bearer ${token}`;
