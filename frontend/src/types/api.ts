@@ -27,6 +27,11 @@ export interface UserProfileInfo {
   role: string;
   fullName?: string;
   phoneNumber?: string;
+  dateOfBirth?: string;
+  gender?: string;
+  skinType?: string;
+  loyaltyPoints?: number;
+  skinConcerns?: string[];
   avatarUrl?: string;
   status?: string;
   provider?: string;
@@ -35,4 +40,17 @@ export interface UserProfileInfo {
   createdAt?: string;
   issuedAt: string;
   expiresAt: string;
+}
+
+export interface CustomerProfileInfo {
+  id?: string;
+  accountId: string;
+  email?: string;
+  fullName?: string;
+  phoneNumber?: string;
+  dateOfBirth?: string;
+  gender?: string;
+  skinType?: string;
+  loyaltyPoints?: number;
+  skinConcerns?: string[];
 }
