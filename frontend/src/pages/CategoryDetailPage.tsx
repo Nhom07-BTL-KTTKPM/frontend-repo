@@ -1,9 +1,12 @@
-import React, { useCallback } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { categoryApi } from '../api/categoryApi';
+import { productApi } from '../api/productApi';
 import { useApi } from '../hooks/useApi';
+import ProductCard from '../components/ProductCard';
 import type { CategoryResponse } from '../types/catalog';
-import './CategoryDetailPage.css';
+import type { Product } from '../types/product';
+import type { PageResponse } from '../types/api';
 
 const MOCK_CATEGORY: CategoryResponse = {
   id: '1',
@@ -16,11 +19,63 @@ const MOCK_CATEGORY: CategoryResponse = {
 export const CategoryDetailPage: React.FC = () => {
   const { slug } = useParams<{ slug: string }>();
   const navigate = useNavigate();
-  
+
   if (!slug) return <div>Không tìm thấy phân loại</div>;
 
   const apiCall = useCallback(() => categoryApi.getCategoryBySlug(slug), [slug]);
   const { data: category, isUsingFallback, loading } = useApi(apiCall, MOCK_CATEGORY);
+
+  const [subs, setSubs] = useState<CategoryResponse[]>([]);
+  const [activeSubId, setActiveSubId] = useState<string | null>(null);
+  const [products, setProducts] = useState<Product[]>([]);
+  const [productsLoading, setProductsLoading] = useState(false);
+
+  useEffect(() => {
+    if (!category?.id) return;
+    let isMounted = true;
+    categoryApi
+      .getChildCategories(category.id)
+      .then((list) => {
+        if (isMounted) setSubs(Array.isArray(list) ? list : []);
+      })
+      .catch(() => {
+        if (isMounted) setSubs([]);
+      });
+    return () => {
+      isMounted = false;
+    };
+  }, [category?.id]);
+
+  useEffect(() => {
+    const targetId = activeSubId ?? category?.id;
+    if (!targetId) return;
+    let isMounted = true;
+    setProductsLoading(true);
+    productApi
+      .getProductsByCategoryRoot(targetId, { size: 24 })
+      .then((res) => {
+        if (!isMounted) return;
+        const list = Array.isArray(res)
+          ? (res as Product[])
+          : ((res as PageResponse<Product>).content ?? []);
+        setProducts(list);
+      })
+      .catch((err) => {
+        console.warn('Failed to load products by category:', err);
+        if (isMounted) setProducts([]);
+      })
+      .finally(() => {
+        if (isMounted) setProductsLoading(false);
+      });
+    return () => {
+      isMounted = false;
+    };
+  }, [category?.id, activeSubId]);
+
+  const resultsLabel = useMemo(
+    () => `${products.length} sản phẩm`,
+    [products.length]
+  );
 
   if (loading) {
     return <div className="loading">Đang tải...</div>;
@@ -43,19 +98,54 @@ export const CategoryDetailPage: React.FC = () => {
           </div>
         )}
 
-        <div className="category-detail">
+        <header className="category-detail__header">
           <h1 className="category-detail__title">{category.name}</h1>
           {category.description && (
             <p className="category-detail__description">{category.description}</p>
           )}
+        </header>
 
-          <div className="category-detail__content">
-            <div className="products-section">
-              <h2>Sản phẩm trong danh mục này</h2>
-              <p className="placeholder">Danh sách sản phẩm sẽ được hiển thị ở đây</p>
-            </div>
-          </div>
+        <div className="category-detail__toolbar">
+          <span>{resultsLabel}</span>
+          <span>Bộ lọc</span>
+          <span>Sắp xếp / phổ biến</span>
         </div>
+
+        {subs.length > 0 && (
+          <div className="category-detail__subs">
+            <button
+              className={`category-detail__sub-chip${activeSubId === null ? ' active' : ''}`}
+              onClick={() => setActiveSubId(null)}
+            >
+              Tất cả
+            </button>
+            {subs.map((sub) => (
+              <button
+                key={sub.id}
+                className={`category-detail__sub-chip${activeSubId === sub.id ? ' active' : ''}`}
+                onClick={() => setActiveSubId(sub.id)}
+              >
+                {sub.name}
+              </button>
+            ))}
+          </div>
+        )}
+
+        {productsLoading ? (
+          <div className="category-detail__loading">Đang tải sản phẩm...</div>
+        ) : products.length === 0 ? (
+          <div className="category-detail__empty">
+            Hiện chưa có sản phẩm nào trong phân loại này.
+          </div>
+        ) : (
+          <div className="category-detail__grid">
+            {products.map((p) => (
+              <div key={p.id} className="category-detail__grid-item">
+                <ProductCard product={p} />
+              </div>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );

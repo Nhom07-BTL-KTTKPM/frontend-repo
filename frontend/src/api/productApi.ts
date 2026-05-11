@@ -19,4 +19,20 @@ export const productApi = {
   getProductBySlug: (slug: string) => {
     return axiosClient.get<unknown, Product>(`${catalogProductsPath}/slug/${slug}`);
   },
+
+  // GET /api/v1/catalog/products/brand/:brandId
+  getProductsByBrand: (brandId: string, params?: Record<string, unknown>) => {
+    return axiosClient.get<unknown, PageResponse<Product> | Product[]>(
+      `${catalogProductsPath}/brand/${brandId}`,
+      { params }
+    );
+  },
+
+  // GET /api/v1/catalog/products/category/root/:categoryId
+  getProductsByCategoryRoot: (categoryId: string, params?: Record<string, unknown>) => {
+    return axiosClient.get<unknown, PageResponse<Product> | Product[]>(
+      `${catalogProductsPath}/category/root/${categoryId}`,
+      { params }
+    );
+  },
 };

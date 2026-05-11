@@ -2,8 +2,6 @@ import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { CategoriesList } from '../components/CategoriesList';
 import { BrandsList } from '../components/BrandsList';
-import './HomePage.css';
-
 export const HomePage: React.FC = () => {
   const navigate = useNavigate();
 
