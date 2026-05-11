@@ -5,12 +5,12 @@ import { productApi } from '../api/productApi';
 import type { Product } from '../types/product';
 
 export const ProductDetail: React.FC = () => {
-  const { id } = useParams();
+  const { slug } = useParams<{ slug: string }>();
 
   const { data, isLoading, error } = useQuery({
-    queryKey: ['product', id],
-    queryFn: () => id ? productApi.getProduct(id) : Promise.resolve(null),
-    enabled: !!id,
+    queryKey: ['product', slug],
+    queryFn: () => slug ? productApi.getProductBySlug(slug) : Promise.resolve(null),
+    enabled: !!slug,
   });
 
   if (isLoading) return <div style={{ padding: '4rem' }}>Đang tải...</div>;
