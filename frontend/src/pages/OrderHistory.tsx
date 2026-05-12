@@ -2,8 +2,7 @@ import { useState, useEffect } from 'react';
 import { useAuthStore } from '../store/authStore';
 import { orderApi } from '../api/orderApi';
 import { userApi } from '../api/userApi';
-import type { OrderResponse } from '../types/order';
-import { OrderStatus, PaymentStatus } from '../types/order';
+import type { OrderResponse, OrderStatus, PaymentStatus } from '../types/order';
 import { toast } from 'sonner';
 import { Package, Clock, CheckCircle, Truck, XCircle } from 'lucide-react';
 
@@ -33,19 +32,19 @@ const formatDate = (dateString?: string) => {
 
 const getStatusConfig = (status: OrderStatus) => {
     switch (status) {
-        case OrderStatus.PENDING:
+        case 'PENDING':
             return { color: '#f59e0b', label: 'Chờ xác nhận', icon: <Clock size={16} /> };
-        case OrderStatus.CONFIRMED:
+        case 'CONFIRMED':
             return { color: '#3b82f6', label: 'Đã xác nhận', icon: <CheckCircle size={16} /> };
-        case OrderStatus.PROCESSING:
+        case 'PROCESSING':
             return { color: '#8b5cf6', label: 'Đang xử lý', icon: <Package size={16} /> };
-        case OrderStatus.SHIPPING:
+        case 'SHIPPING':
             return { color: '#0ea5e9', label: 'Đang giao hàng', icon: <Truck size={16} /> };
-        case OrderStatus.DELIVERED:
+        case 'DELIVERED':
             return { color: '#10b981', label: 'Đã giao thành công', icon: <CheckCircle size={16} /> };
-        case OrderStatus.CANCELLED:
+        case 'CANCELLED':
             return { color: '#ef4444', label: 'Đã hủy', icon: <XCircle size={16} /> };
-        case OrderStatus.REFUNDED:
+        case 'REFUNDED':
             return { color: '#64748b', label: 'Đã hoàn tiền', icon: <XCircle size={16} /> };
         default:
             return { color: '#6b7280', label: status, icon: <Clock size={16} /> };
@@ -54,10 +53,10 @@ const getStatusConfig = (status: OrderStatus) => {
 
 const getPaymentStatusLabel = (status: PaymentStatus) => {
     switch (status) {
-        case PaymentStatus.PENDING: return 'Chưa thanh toán';
-        case PaymentStatus.PAID: return 'Đã thanh toán';
-        case PaymentStatus.FAILED: return 'Thanh toán thất bại';
-        case PaymentStatus.REFUNDED: return 'Đã hoàn tiền';
+        case 'PENDING': return 'Chưa thanh toán';
+        case 'PAID': return 'Đã thanh toán';
+        case 'FAILED': return 'Thanh toán thất bại';
+        case 'REFUNDED': return 'Đã hoàn tiền';
         default: return status;
     }
 };
@@ -73,8 +72,8 @@ export const OrderHistory = () => {
             try {
                 // 1. Get customerId
                 const userRes = await userApi.getCustomerByAccountId(user.accountId);
-                const payload = userRes as unknown as Record<string, unknown>;
-                const cId = ((payload.data as Record<string, unknown>)?.id ?? payload.id) as string;
+                const payload = userRes as unknown as { data?: { id?: string }, id?: string };
+                const cId = payload.data?.id ?? payload.id;
                 
                 if (!cId) {
                     toast.error('Không tìm thấy thông tin khách hàng');
@@ -83,7 +82,7 @@ export const OrderHistory = () => {
 
                 // 2. Get orders
                 const ordersRes = await orderApi.getOrdersByCustomerId(cId);
-                const data = (ordersRes as unknown as Record<string, unknown>).data ?? ordersRes;
+                const data = ((ordersRes as unknown as { data?: OrderResponse[] }).data ?? ordersRes) as OrderResponse[];
                 setOrderList(Array.isArray(data) ? data : []);
             } catch {
                 toast.error('Lỗi khi tải danh sách đơn hàng');

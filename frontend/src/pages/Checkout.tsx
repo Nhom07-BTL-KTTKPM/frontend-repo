@@ -6,7 +6,7 @@ import { catalogApi } from '../api/catalogApi';
 import { orderApi } from '../api/orderApi';
 import { addressApi } from '../api/addressApi';
 import { userApi } from '../api/userApi';
-import { PaymentMethod } from '../types/order';
+import type { PaymentMethod } from '../types/order';
 import type { CartResponse } from '../types/cart';
 import type { CatalogProductVariant } from '../types/catalog';
 import { toast } from 'sonner';
@@ -38,7 +38,7 @@ export const Checkout = () => {
     const [phone, setPhone] = useState('');
     const [shippingAddress, setShippingAddress] = useState('');
     const [note, setNote] = useState('');
-    const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>(PaymentMethod.COD);
+    const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('COD');
 
     useEffect(() => {
         if (!isAuthenticated) {
@@ -51,8 +51,8 @@ export const Checkout = () => {
             try {
                 // 1. Get customerId
                 const userRes = await userApi.getCustomerByAccountId(user!.accountId);
-                const payload = userRes as unknown as Record<string, unknown>;
-                const cId = ((payload.data as Record<string, unknown>)?.id ?? payload.id) as string;
+                const payload = userRes as unknown as { data?: { id?: string }, id?: string };
+                const cId = payload.data?.id ?? payload.id;
                 
                 if (!cId) {
                     toast.error('Không tìm thấy thông tin khách hàng');
@@ -63,7 +63,7 @@ export const Checkout = () => {
                 // 2. Fetch default address
                 try {
                     const addressRes = await addressApi.getDefaultAddress(cId);
-                    const addr = (addressRes as unknown as Record<string, unknown>).data ?? addressRes;
+                    const addr = ((addressRes as unknown as { data?: { street?: string, ward?: string, district?: string, city?: string, recipientName?: string, phone?: string } }).data ?? addressRes) as { street?: string, ward?: string, district?: string, city?: string, recipientName?: string, phone?: string };
                     if (addr && addr.street) {
                         setShippingAddress(`${addr.street}, ${addr.ward}, ${addr.district}, ${addr.city}`);
                         if (addr.recipientName) setRecipientName(addr.recipientName);
@@ -80,7 +80,7 @@ export const Checkout = () => {
 
                 // 3. Fetch cart
                 const cartRes = await cartApi.getCartByCustomerId(cId);
-                const cartData = (cartRes as unknown as Record<string, unknown>).data ?? cartRes;
+                const cartData = ((cartRes as unknown as { data?: CartResponse }).data ?? cartRes) as CartResponse;
                 setCart(cartData);
 
                 // 4. Fetch variants
@@ -89,8 +89,8 @@ export const Checkout = () => {
                     for (const item of cartData.items) {
                         try {
                             const vRes = await catalogApi.getVariantById(item.productVariantId);
-                            const vData = (vRes as unknown as Record<string, unknown>).data ?? vRes;
-                            variantData[item.productVariantId] = vData as CatalogProductVariant;
+                            const vData = ((vRes as unknown as { data?: CatalogProductVariant }).data ?? vRes) as CatalogProductVariant;
+                            variantData[item.productVariantId] = vData;
                         } catch {
                             console.error('Failed to fetch variant', item.productVariantId);
                         }
@@ -140,7 +140,7 @@ export const Checkout = () => {
 
             toast.success('Đặt hàng thành công!');
             // Chuyển hướng theo phương thức thanh toán
-            if (paymentMethod === PaymentMethod.COD) {
+            if (paymentMethod === 'COD') {
                 navigate('/orders'); // Redirect to order history
             } else {
                 navigate('/payment'); // Giả lập payment gateway
@@ -206,16 +206,16 @@ export const Checkout = () => {
 
                     <h2 style={{ fontSize: '1.5rem', marginBottom: '1.5rem', color: 'var(--color-black)' }}>Phương thức thanh toán</h2>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                        <label style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '15px', border: `1px solid ${paymentMethod === PaymentMethod.COD ? 'var(--color-gold)' : '#ddd'}`, borderRadius: '8px', cursor: 'pointer', background: paymentMethod === PaymentMethod.COD ? '#fff9f0' : '#fff' }}>
-                            <input type="radio" name="paymentMethod" value={PaymentMethod.COD} checked={paymentMethod === PaymentMethod.COD} onChange={() => setPaymentMethod(PaymentMethod.COD)} style={{ accentColor: 'var(--color-gold)' }} />
+                        <label style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '15px', border: `1px solid ${paymentMethod === 'COD' ? 'var(--color-gold)' : '#ddd'}`, borderRadius: '8px', cursor: 'pointer', background: paymentMethod === 'COD' ? '#fff9f0' : '#fff' }}>
+                            <input type="radio" name="paymentMethod" value="COD" checked={paymentMethod === 'COD'} onChange={() => setPaymentMethod('COD')} style={{ accentColor: 'var(--color-gold)' }} />
                             <span>Thanh toán khi nhận hàng (COD)</span>
                         </label>
-                        <label style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '15px', border: `1px solid ${paymentMethod === PaymentMethod.VNPAY ? 'var(--color-gold)' : '#ddd'}`, borderRadius: '8px', cursor: 'pointer', background: paymentMethod === PaymentMethod.VNPAY ? '#fff9f0' : '#fff' }}>
-                            <input type="radio" name="paymentMethod" value={PaymentMethod.VNPAY} checked={paymentMethod === PaymentMethod.VNPAY} onChange={() => setPaymentMethod(PaymentMethod.VNPAY)} style={{ accentColor: 'var(--color-gold)' }} />
+                        <label style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '15px', border: `1px solid ${paymentMethod === 'VNPAY' ? 'var(--color-gold)' : '#ddd'}`, borderRadius: '8px', cursor: 'pointer', background: paymentMethod === 'VNPAY' ? '#fff9f0' : '#fff' }}>
+                            <input type="radio" name="paymentMethod" value="VNPAY" checked={paymentMethod === 'VNPAY'} onChange={() => setPaymentMethod('VNPAY')} style={{ accentColor: 'var(--color-gold)' }} />
                             <span>Thanh toán qua VNPAY</span>
                         </label>
-                        <label style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '15px', border: `1px solid ${paymentMethod === PaymentMethod.BANK_TRANSFER ? 'var(--color-gold)' : '#ddd'}`, borderRadius: '8px', cursor: 'pointer', background: paymentMethod === PaymentMethod.BANK_TRANSFER ? '#fff9f0' : '#fff' }}>
-                            <input type="radio" name="paymentMethod" value={PaymentMethod.BANK_TRANSFER} checked={paymentMethod === PaymentMethod.BANK_TRANSFER} onChange={() => setPaymentMethod(PaymentMethod.BANK_TRANSFER)} style={{ accentColor: 'var(--color-gold)' }} />
+                        <label style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '15px', border: `1px solid ${paymentMethod === 'BANK_TRANSFER' ? 'var(--color-gold)' : '#ddd'}`, borderRadius: '8px', cursor: 'pointer', background: paymentMethod === 'BANK_TRANSFER' ? '#fff9f0' : '#fff' }}>
+                            <input type="radio" name="paymentMethod" value="BANK_TRANSFER" checked={paymentMethod === 'BANK_TRANSFER'} onChange={() => setPaymentMethod('BANK_TRANSFER')} style={{ accentColor: 'var(--color-gold)' }} />
                             <span>Chuyển khoản ngân hàng</span>
                         </label>
                     </div>

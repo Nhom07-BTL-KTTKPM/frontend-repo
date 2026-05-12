@@ -1,25 +1,8 @@
-export enum OrderStatus {
-  PENDING = 'PENDING',
-  CONFIRMED = 'CONFIRMED',
-  PROCESSING = 'PROCESSING',
-  SHIPPING = 'SHIPPING',
-  DELIVERED = 'DELIVERED',
-  CANCELLED = 'CANCELLED',
-  REFUNDED = 'REFUNDED'
-}
+export type OrderStatus = 'PENDING' | 'CONFIRMED' | 'PROCESSING' | 'SHIPPING' | 'DELIVERED' | 'CANCELLED' | 'REFUNDED';
 
-export enum PaymentMethod {
-  COD = 'COD',
-  VNPAY = 'VNPAY',
-  BANK_TRANSFER = 'BANK_TRANSFER'
-}
+export type PaymentMethod = 'COD' | 'VNPAY' | 'BANK_TRANSFER';
 
-export enum PaymentStatus {
-  PENDING = 'PENDING',
-  PAID = 'PAID',
-  FAILED = 'FAILED',
-  REFUNDED = 'REFUNDED'
-}
+export type PaymentStatus = 'PENDING' | 'PAID' | 'FAILED' | 'REFUNDED';
 
 export interface OrderItemResponse {
   id: string;
