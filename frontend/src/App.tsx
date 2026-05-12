@@ -13,7 +13,8 @@ import { EmployeeRoute } from './routes/EmployeeRoute';
 import { Login } from './pages/Login';
 import { Register } from './pages/Register';
 import { Profile } from './pages/Profile';
-import { Home, ProductList, ProductDetail, Cart, Checkout, OrderHistory, Payment, Dashboard, VerifyEmail, ForgotPassword, ResetPassword } from './pages';
+import { Home, ProductList, ProductDetail, Cart, Checkout, OrderHistory, Payment, Dashboard, VerifyEmail, ForgotPassword, ResetPassword, CategoryDetailPage, BrandDetailPage } from './pages';
+
 
 function App() {
   const { initSession } = useAuth();
@@ -41,8 +42,10 @@ function App() {
           
           {/* Public Routes (Ai cũng xem được) */}
           <Route path="/" element={<Home />} />
+          <Route path="/categories/:slug" element={<CategoryDetailPage />} />
+          <Route path="/brands/:slug" element={<BrandDetailPage />} />
           <Route path="/products" element={<ProductList />} />
-          <Route path="/product/:id" element={<ProductDetail />} />
+          <Route path="/product/:slug" element={<ProductDetail />} />
           <Route path="/cart" element={<Cart />} />
           <Route path="/checkout" element={<Checkout />} />
           <Route path="/payment" element={<Payment />} />

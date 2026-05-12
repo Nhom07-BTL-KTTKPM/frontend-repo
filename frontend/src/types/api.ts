@@ -5,6 +5,14 @@ export interface ApiResponse<T = unknown> {
   traceId?: string;
 }
 
+export interface PageResponse<T> {
+  content: T[];
+  totalElements?: number;
+  totalPages?: number;
+  size?: number;
+  number?: number;
+}
+
 export interface ApiError {
   code: number;
   message: string;

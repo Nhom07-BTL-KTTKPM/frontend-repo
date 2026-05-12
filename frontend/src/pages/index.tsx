@@ -1,3 +1,14 @@
+
+import { useNavigate } from 'react-router-dom';
+export { ProductList } from './ProductList';
+export { ProductDetail } from './ProductDetail';
+export { HomePage as Home } from './HomePage';
+export { CategoryDetailPage } from './CategoryDetailPage';
+export { BrandDetailPage } from './BrandDetailPage';
+export { Cart } from './Cart';
+export { Checkout } from './Checkout';
+export { OrderHistory } from './OrderHistory';
+
 export const Home = () => {
     return (
         <div style={{ padding: '4rem', textAlign: 'center' }}>
@@ -25,10 +36,7 @@ export const ProductDetail = () => {
     );
 };
 
-export { Cart } from './Cart';
 
-export { Checkout } from './Checkout';
-export { OrderHistory } from './OrderHistory';
 
 export const Payment = () => {
     return (
@@ -51,3 +59,4 @@ export const Dashboard = () => {
 export { VerifyEmail } from './VerifyEmail';
 export { ForgotPassword } from './ForgotPassword';
 export { ResetPassword } from './ResetPassword';
+export { HomePage } from './HomePage';
