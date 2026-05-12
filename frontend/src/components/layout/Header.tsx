@@ -1,12 +1,47 @@
 import { Link, useNavigate } from 'react-router-dom';
+import { useEffect, useState } from 'react';
 import { useAuthStore, useIsAdmin, useIsEmployee } from '../../store/authStore';
 import { useAuth } from '../../hooks/useAuth';
+import { cartApi } from '../../api/cartApi';
 import { Search, ShoppingBag, UserCircle } from 'lucide-react';
 
 export const Header = () => {
   const navigate = useNavigate();
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
+  const accountId = useAuthStore((state) => state.user?.accountId);
   const { logoutMutation } = useAuth();
+  const [cartCount, setCartCount] = useState(0);
+  useEffect(() => {
+    let isMounted = true;
+
+    const loadCartCount = async () => {
+      if (!isAuthenticated || !accountId) {
+        setCartCount(0);
+        return;
+      }
+      try {
+        const res = await cartApi.getCartByAccountId(accountId);
+        if (isMounted) {
+          const total = res.items?.reduce((sum, item) => sum + item.quantity, 0) ?? 0;
+          setCartCount(total);
+        }
+      } catch {
+        if (isMounted) {
+          setCartCount(0);
+        }
+      }
+    };
+
+    loadCartCount();
+    const handler = () => loadCartCount();
+    window.addEventListener('cart:updated', handler);
+
+    return () => {
+      isMounted = false;
+      window.removeEventListener('cart:updated', handler);
+    };
+  }, [isAuthenticated, accountId]);
+
 
   const isAdmin = useIsAdmin();
   const isEmployee = useIsEmployee();
@@ -46,7 +81,9 @@ export const Header = () => {
           </button>
           <Link to="/cart" className="header__action-btn" aria-label="Giỏ hàng" style={{ border: 'none', background: 'none', fontSize: '1.1rem', cursor: 'pointer', padding: '10px', position: 'relative' }}>
             <ShoppingBag size={20} />
-            <span className="badge" style={{ position: 'absolute', top: 0, right: 0, background: 'var(--color-gold)', color: '#fff', fontSize: '10px', padding: '2px 6px', borderRadius: '50%' }}>0</span>
+            {cartCount > 0 && (
+              <span className="badge" style={{ position: 'absolute', top: 0, right: 0, background: 'var(--color-gold)', color: '#fff', fontSize: '10px', padding: '2px 6px', borderRadius: '50%' }}>{cartCount}</span>
+            )}
           </Link>
 
           {isAuthenticated ? (
