@@ -38,11 +38,17 @@ export const useAuthStore = create<AuthState>()(
 
       setInitialized: () => set({ isInitialized: true }),
 
-      logout: () => set({
-        accessToken: null,
-        user: null,
-        isAuthenticated: false,
-      }),
+      logout: () => {
+        // Clear chat history when user logs out
+        import('./chatStore').then(({ useChatStore }) => {
+          useChatStore.getState().resetChatState();
+        });
+        set({
+          accessToken: null,
+          user: null,
+          isAuthenticated: false,
+        });
+      },
     }),
     {
       name: 'auth-session',
