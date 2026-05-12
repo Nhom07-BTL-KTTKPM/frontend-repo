@@ -8,6 +8,12 @@ import { useAuthStore } from '../store/authStore';
 import type { CatalogProduct, CatalogProductVariant } from '../types/catalog';
 import type { CartResponse } from '../types/cart';
 
+interface CustomerResponse {
+  data?: { id: string; [key: string]: unknown };
+  id?: string;
+  [key: string]: unknown;
+}
+
 const formatCurrency = (value?: number) => {
     if (value === null || value === undefined) {
         return '--';
@@ -17,6 +23,18 @@ const formatCurrency = (value?: number) => {
         currency: 'VND',
         maximumFractionDigits: 0,
     }).format(value);
+};
+
+const extractCustomer = (res: unknown): { id?: string } => {
+  if (typeof res === 'object' && res !== null) {
+    if ('data' in res) {
+      return (res as Record<string, unknown>).data as { id?: string };
+    }
+    if ('id' in res) {
+      return res as { id?: string };
+    }
+  }
+  return {};
 };
 
 const useCustomerId = () => {
@@ -39,7 +57,7 @@ const useCustomerId = () => {
                 if (isMounted) {
                     // user-service trả Customer trực tiếp (không wrap ApiResponse)
                     // axiosClient interceptor đã unwrap response.data → res = Customer object
-                    const customer = (res as any).data ?? res;
+                    const customer = extractCustomer(res);
                     setCustomerId(customer.id ?? null);
                 }
             } catch {
@@ -225,7 +243,9 @@ export const Cart = () => {
             {!isAuthenticated && (
                 <div style={{ padding: '2rem', borderRadius: '12px', background: 'rgba(201,169,110,0.1)' }}>
                     <p>Vui long dang nhap de xem gio hang.</p>
-                    <button className="btn btn--primary" style={{ marginTop: '1rem', padding: '10px 20px', background: 'var(--color-gold)', border: 'none', borderRadius: '6px', color: 'white', cursor: 'pointer' }} onClick={() => navigate('/login')}>Dang nhap</button>
+                    <button className="btn btn--primary" style={{ marginTop: '1rem', padding: '10px 20px', background: 'var(--color-gold)', border: 'none', borderRadius: '6px', color: 'white', cursor: 'pointer' }} onClick={() => navigate('/login')}>
+                        Đăng nhập
+                    </button>
                 </div>
             )}
 
@@ -253,7 +273,9 @@ export const Cart = () => {
                                         {imageUrl ? (
                                             <img src={imageUrl} alt={productName ?? 'Product'} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                                         ) : (
-                                            <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--color-gray-400)', fontSize: '0.8rem' }}>No image</div>
+                                            <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--color-gray-400)', fontSize: '0.75rem' }}>
+                                                Không có ảnh
+                                            </div>
                                         )}
                                     </div>
                                     <div>
@@ -298,7 +320,7 @@ export const Cart = () => {
                         </div>
                         <button
                             className="btn btn--primary"
-                            style={{ width: '100%', padding: '12px 16px', background: 'linear-gradient(135deg, var(--color-gold), var(--color-gold-dark))', border: 'none', borderRadius: '8px', color: '#fff', cursor: 'pointer' }}
+                            style={{ width: '100%', padding: '12px 16px', background: 'linear-gradient(135deg, var(--color-gold), var(--color-gold-dark))', border: 'none', borderRadius: '8px', color: 'white', cursor: 'pointer' }}
                             onClick={() => navigate('/checkout')}
                         >
                             Tien hanh thanh toan
@@ -316,7 +338,9 @@ export const Checkout = () => {
         <div style={{ padding: '4rem', textAlign: 'center' }}>
             <h1 style={{ fontFamily: 'var(--font-display)', fontSize: '3rem', color: 'var(--color-gold)' }}>Thanh toán</h1>
             <p>Nhập thông tin giao hàng</p>
-            <button className="btn btn--primary" style={{ marginTop: '1rem', padding: '10px 20px', background: 'var(--color-gold)', border: 'none', borderRadius: '4px', color: 'white', cursor: 'pointer' }} onClick={() => navigate('/payment')}>Sang cổng giả lập Payment</button>
+            <button className="btn btn--primary" style={{ marginTop: '1rem', padding: '10px 20px', background: 'var(--color-gold)', border: 'none', borderRadius: '4px', color: 'white', cursor: 'pointer' }} onClick={() => navigate('/')}>
+                Quay lại
+            </button>
         </div>
     );
 };
