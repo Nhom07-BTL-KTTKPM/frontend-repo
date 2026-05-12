@@ -1,5 +1,3 @@
-import { useNavigate } from 'react-router-dom';
-
 export const Home = () => {
     return (
         <div style={{ padding: '4rem', textAlign: 'center' }}>
