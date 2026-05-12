@@ -13,7 +13,7 @@ import { EmployeeRoute } from './routes/EmployeeRoute';
 import { Login } from './pages/Login';
 import { Register } from './pages/Register';
 import { Profile } from './pages/Profile';
-import { Home, ProductList, ProductDetail, Cart, Checkout, OrderHistory, Payment, Dashboard, VerifyEmail, ForgotPassword, ResetPassword, CategoryDetailPage, BrandDetailPage } from './pages';
+import { Home, ProductList, ProductDetail, Cart, Checkout, OrderHistory, Payment, Dashboard, VerifyEmail, ForgotPassword, ResetPassword, CategoryDetailPage, BrandDetailPage, Chat} from './pages';
 
 
 function App() {
@@ -62,6 +62,7 @@ function App() {
           {/* Protected Routes (Chỉ người ĐÃ đăng nhập) */}
         <Route element={<ProtectedRoute />}>
             <Route path="/profile" element={<Profile />} />
+            <Route path="/ai-chat" element={<Chat />} />
             <Route path="/orders" element={<OrderHistory />} />
           </Route>
 

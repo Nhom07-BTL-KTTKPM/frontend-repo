@@ -1,6 +1,7 @@
 import { Outlet } from 'react-router-dom';
 import { Header } from './Header';
 import { Footer } from './Footer';
+import { ChatWidget } from '../chat';
 
 export const MainLayout = () => {
   return (
@@ -9,6 +10,7 @@ export const MainLayout = () => {
       <main style={{ flex: 1 }}>
         <Outlet />
       </main>
+      <ChatWidget />
       <Footer />
     </div>
   );
