@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 
 interface UseApiOptions {
   timeout?: number; // timeout in ms, default 5000
@@ -21,16 +21,16 @@ export const useApi = <T,>(
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
   const [isUsingFallback, setIsUsingFallback] = useState(true);
+  const timeoutRef = useRef<any>(null);
 
   useEffect(() => {
     let isMounted = true;
-    let timeoutId: NodeJS.Timeout | undefined;
 
     const fetchData = async () => {
       try {
-        const timeoutPromise = new Promise<never>((_, reject) =>
-          setTimeout(() => reject(new Error('API timeout')), timeout)
-        );
+        const timeoutPromise = new Promise<never>((_, reject) => {
+          timeoutRef.current = setTimeout(() => reject(new Error('API timeout')), timeout);
+        });
 
         const result = await Promise.race([apiCall(), timeoutPromise]);
 
@@ -57,7 +57,7 @@ export const useApi = <T,>(
 
     return () => {
       isMounted = false;
-      if (timeoutId) clearTimeout(timeoutId);
+      if (timeoutRef.current) clearTimeout(timeoutRef.current);
     };
   }, [apiCall, fallbackData, timeout]);
 

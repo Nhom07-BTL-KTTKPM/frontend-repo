@@ -3,8 +3,9 @@ import { useEffect, useMemo, useState } from 'react';
 import { toast } from 'sonner';
 import { catalogApi } from '../api/catalogApi';
 import { cartApi } from '../api/cartApi';
-import { userApi } from '../api/userApi';
+
 import { useAuthStore } from '../store/authStore';
+import { useCustomerId } from '../hooks/useCustomerId';
 import type { CatalogProduct, CatalogProductVariant } from '../types/catalog';
 import type { CartResponse } from '../types/cart';
 
@@ -19,60 +20,7 @@ const formatCurrency = (value?: number) => {
     }).format(value);
 };
 
-const extractCustomer = (res: unknown): { id?: string } => {
-  if (typeof res === 'object' && res !== null) {
-    if ('data' in res) {
-      return (res as Record<string, unknown>).data as { id?: string };
-    }
-    if ('id' in res) {
-      return res as { id?: string };
-    }
-  }
-  return {};
-};
 
-const useCustomerId = () => {
-    const accountId = useAuthStore((state) => state.user?.accountId);
-    const [customerId, setCustomerId] = useState<string | null>(null);
-    const [loading, setLoading] = useState(false);
-
-    useEffect(() => {
-        let isMounted = true;
-
-        const fetchCustomerId = async () => {
-            if (!accountId) {
-                setCustomerId(null);
-                return;
-            }
-
-            setLoading(true);
-            try {
-                const res = await userApi.getCustomerByAccountId(accountId);
-                if (isMounted) {
-                    // axiosClient interceptor đã unwrap response.data → res = Customer object
-                    const customer = extractCustomer(res);
-                    setCustomerId(customer.id ?? null);
-                }
-            } catch {
-                if (isMounted) {
-                    setCustomerId(null);
-                }
-            } finally {
-                if (isMounted) {
-                    setLoading(false);
-                }
-            }
-        };
-
-        fetchCustomerId();
-
-        return () => {
-            isMounted = false;
-        };
-    }, [accountId]);
-
-    return { customerId, loading };
-};
 
 export const Cart = () => {
     const navigate = useNavigate();

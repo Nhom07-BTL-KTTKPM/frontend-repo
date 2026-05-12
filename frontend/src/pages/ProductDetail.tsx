@@ -1,13 +1,21 @@
 import React, { useState } from 'react';
 import { Link, useParams, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
+import { toast } from 'sonner';
 import { productApi } from '../api/productApi';
+import { cartApi } from '../api/cartApi';
+import { useAuthStore } from '../store/authStore';
+import { useCustomerId } from '../hooks/useCustomerId';
 import type { Product, ProductVariant } from '../types/product';
 
 export const ProductDetail: React.FC = () => {
   const { slug } = useParams<{ slug: string }>();
   const navigate = useNavigate();
   const [selectedVariant, setSelectedVariant] = useState<ProductVariant | null>(null);
+  const [isAdding, setIsAdding] = useState(false);
+
+  const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
+  const { customerId } = useCustomerId();
 
   const { data, isLoading, error } = useQuery({
     queryKey: ['product', slug],
@@ -32,10 +40,35 @@ export const ProductDetail: React.FC = () => {
   const displayPrice = selectedVariant?.price ?? product.minPrice ?? 0;
   const originalPrice = selectedVariant?.originalPrice ?? product.maxPrice;
 
-  const handleAddToCart = () => {
+  const handleAddToCart = async () => {
+    if (!isAuthenticated) {
+      toast.error('Vui lòng đăng nhập để thêm sản phẩm vào giỏ hàng');
+      navigate('/login');
+      return;
+    }
+
+    if (!customerId) {
+      toast.error('Không tìm thấy thông tin khách hàng. Vui lòng thử lại.');
+      return;
+    }
+
     if (selectedVariant) {
-      console.log('Add to cart:', selectedVariant);
-      // TODO: Implement add to cart logic
+      setIsAdding(true);
+      try {
+        await cartApi.addItem(customerId, {
+          productVariantId: selectedVariant.id,
+          quantity: 1,
+          unitPrice: selectedVariant.price
+        });
+        toast.success('Đã thêm sản phẩm vào giỏ hàng');
+        // Notify other components that cart has been updated
+        window.dispatchEvent(new CustomEvent('cart:updated'));
+      } catch (err) {
+        const message = err instanceof Error ? err.message : 'Thêm vào giỏ hàng thất bại';
+        toast.error(message);
+      } finally {
+        setIsAdding(false);
+      }
     }
   };
 
@@ -137,7 +170,7 @@ export const ProductDetail: React.FC = () => {
           <div style={{ display: 'flex', gap: '12px' }}>
             <button
               onClick={handleAddToCart}
-              disabled={!selectedVariant || (selectedVariant.stockQuantity ?? 0) <= 0}
+              disabled={!selectedVariant || (selectedVariant.stockQuantity ?? 0) <= 0 || isAdding}
               style={{
                 flex: 1,
                 padding: '12px 24px',
@@ -147,11 +180,11 @@ export const ProductDetail: React.FC = () => {
                 borderRadius: '6px',
                 fontSize: '16px',
                 fontWeight: 600,
-                cursor: (selectedVariant?.stockQuantity ?? 0) > 0 ? 'pointer' : 'not-allowed',
-                opacity: (selectedVariant?.stockQuantity ?? 0) > 0 ? 1 : 0.6,
+                cursor: (selectedVariant?.stockQuantity ?? 0) > 0 && !isAdding ? 'pointer' : 'not-allowed',
+                opacity: (selectedVariant?.stockQuantity ?? 0) > 0 && !isAdding ? 1 : 0.6,
               }}
             >
-              Thêm vào giỏ hàng
+              {isAdding ? 'Đang thêm...' : 'Thêm vào giỏ hàng'}
             </button>
           </div>
 
