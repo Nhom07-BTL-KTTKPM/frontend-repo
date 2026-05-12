@@ -67,6 +67,7 @@ export const Dashboard = () => {
     );
 };
 
+export { Chat } from './Chat';
 export { VerifyEmail } from './VerifyEmail';
 export { ForgotPassword } from './ForgotPassword';
 export { ResetPassword } from './ResetPassword';
