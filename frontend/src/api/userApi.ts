@@ -1,8 +1,33 @@
 import { axiosClient } from './axiosClient';
-import type { ApiResponse, CustomerProfileInfo } from '../types/api';
+import type { ApiResponse, CustomerProfileInfo, CustomerUpdateRequest, Address, AddressCreateRequest } from '../types/api';
 
 export const userApi = {
   getCustomerByAccountId: (accountId: string) => {
     return axiosClient.get<unknown, ApiResponse<CustomerProfileInfo>>(`/user/customers/account/${accountId}`);
+  },
+
+  updateCustomer: (customerId: string, data: CustomerUpdateRequest) => {
+    return axiosClient.put<unknown, ApiResponse<void>>(`/user/customers/${customerId}`, data);
+  },
+
+  // Address endpoints
+  getAddressesByCustomerId: (customerId: string) => {
+    return axiosClient.get<unknown, ApiResponse<Address[]>>(`/user/addresses/customer/${customerId}`);
+  },
+
+  addAddress: (customerId: string, address: AddressCreateRequest) => {
+    return axiosClient.post<unknown, ApiResponse<void>>(`/user/addresses/${customerId}`, address);
+  },
+
+  updateAddress: (addressId: string, address: AddressCreateRequest) => {
+    return axiosClient.put<unknown, ApiResponse<void>>(`/user/addresses/update/${addressId}`, address);
+  },
+
+  setDefaultAddress: (addressId: string) => {
+    return axiosClient.put<unknown, ApiResponse<void>>(`/user/addresses/default/${addressId}`);
+  },
+
+  deleteAddress: (addressId: string) => {
+    return axiosClient.delete<unknown, ApiResponse<void>>(`/user/addresses/${addressId}`);
   },
 };

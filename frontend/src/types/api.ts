@@ -32,6 +32,8 @@ export interface UserProfileInfo {
   skinType?: string;
   loyaltyPoints?: number;
   skinConcerns?: string[];
+  employeeCode?: string;
+  hireDate?: string;
   avatarUrl?: string;
   status?: string;
   provider?: string;
@@ -53,4 +55,49 @@ export interface CustomerProfileInfo {
   skinType?: string;
   loyaltyPoints?: number;
   skinConcerns?: string[];
+}
+
+export interface CustomerUpdateRequest {
+  fullName?: string;
+  phoneNumber?: string;
+  dateOfBirth?: string;
+  gender?: string;
+  skinType?: string;
+}
+
+export interface EmployeeProfileInfo {
+  id?: string;
+  accountId: string;
+  employeeCode: string;
+  fullName?: string;
+  phoneNumber?: string;
+  hireDate?: string;
+  active?: boolean;
+}
+
+export interface EmployeeUpdateRequest {
+  fullName?: string;
+  phoneNumber?: string;
+}
+
+export interface Address {
+  id?: string;
+  customerId?: string;
+  recipientName?: string;
+  phone?: string;
+  streetAddress?: string;
+  ward?: string;
+  district?: string;
+  city?: string;
+  isDefault?: boolean;
+}
+
+export interface AddressCreateRequest {
+  recipientName?: string;
+  phone?: string;
+  streetAddress?: string;
+  ward?: string;
+  district?: string;
+  city?: string;
+  isDefault?: boolean;
 }
