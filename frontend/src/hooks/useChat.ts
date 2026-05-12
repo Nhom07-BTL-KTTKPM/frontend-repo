@@ -26,8 +26,11 @@ export const useChat = () => {
     setMessages,
     appendMessages,
     prependMessages,
+    createOptimisticSession,
+    migrateSessionId,
     appendOptimisticMessage,
     replaceMessage,
+    removeMessage,
   } = useChatStore();
 
   const useSessionsQuery = (params: {
@@ -103,23 +106,33 @@ export const useChat = () => {
   const sendMessageMutation = useMutation({
     mutationFn: (data: SendChatRequest) => aiApi.sendMessage(data),
     onMutate: async (variables) => {
-      const sessionId = variables.sessionId ?? useChatStore.getState().currentSessionId;
+      let sessionId = variables.sessionId ?? useChatStore.getState().currentSessionId;
+      let tempSessionId: string | null = null;
+
       if (!sessionId) {
-        return { sessionId: null, tempMessageId: null };
+        tempSessionId = createOptimisticSession(variables.message.slice(0, 48));
+        sessionId = tempSessionId;
       }
 
       const tempMessageId = appendOptimisticMessage(sessionId, variables.message);
-      return { sessionId, tempMessageId };
+      return { sessionId, tempMessageId, tempSessionId };
     },
     onSuccess: (res, variables, context) => {
       const payload: SendChatResponse = res.data;
       const sessionId = payload.sessionId;
+      const activeSessionId = context?.tempSessionId && context.tempSessionId !== sessionId
+        ? context.tempSessionId
+        : context?.sessionId;
 
-      if (context?.sessionId && context.tempMessageId) {
+      if (context?.tempSessionId && context.tempSessionId !== sessionId) {
+        migrateSessionId(context.tempSessionId, sessionId);
+      }
+
+      if (activeSessionId && context?.tempMessageId) {
         if (payload.message.role === 'USER') {
-          replaceMessage(context.sessionId, context.tempMessageId, payload.message);
+          replaceMessage(activeSessionId, context.tempMessageId, payload.message);
         } else {
-          appendMessages(context.sessionId, [payload.message]);
+          appendMessages(activeSessionId, [payload.message]);
         }
       } else {
         appendMessages(sessionId, [payload.message]);
@@ -137,7 +150,10 @@ export const useChat = () => {
     },
     onError: (error, variables, context) => {
       if (context?.sessionId && context.tempMessageId) {
-        useChatStore.getState().removeMessage(context.sessionId, context.tempMessageId);
+        removeMessage(context.sessionId, context.tempMessageId);
+      }
+      if (context?.tempSessionId) {
+        useChatStore.getState().setCurrentSessionId(null);
       }
       setSessionsError(getErrorMessage(error));
     },

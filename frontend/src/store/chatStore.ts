@@ -26,6 +26,8 @@ interface ChatStoreState {
   appendMessages: (sessionId: string, messages: ChatMessage[], nextCursor?: string | null) => void;
   prependMessages: (sessionId: string, messages: ChatMessage[], nextCursor?: string | null) => void;
 
+  createOptimisticSession: (title?: string) => string;
+  migrateSessionId: (tempSessionId: string, nextSessionId: string) => void;
   appendOptimisticMessage: (sessionId: string, content: string) => string;
   replaceMessage: (sessionId: string, tempId: string, message: ChatMessage) => void;
   removeMessage: (sessionId: string, messageId: string) => void;
@@ -128,6 +130,55 @@ export const useChatStore = create<ChatStoreState>((set, get) => ({
       messagesNextCursorBySession: {
         ...state.messagesNextCursorBySession,
         [sessionId]: nextCursor ?? state.messagesNextCursorBySession[sessionId] ?? null,
+      },
+    };
+  }),
+
+  createOptimisticSession: (title = 'New session') => {
+    const tempSessionId = `temp-session-${Date.now()}`;
+    const newSession: ChatSessionSummary = {
+      id: tempSessionId,
+      title,
+      lastMessage: '',
+      lastMessageAt: new Date().toISOString(),
+    };
+
+    set((state) => ({
+      currentSessionId: tempSessionId,
+      sessions: normalizeSessionList([newSession, ...state.sessions]),
+    }));
+
+    return tempSessionId;
+  },
+
+  migrateSessionId: (tempSessionId, nextSessionId) => set((state) => {
+    const sessions = state.sessions.map((session) =>
+      session.id === tempSessionId ? { ...session, id: nextSessionId } : session
+    );
+
+    const { [tempSessionId]: tempMessages, ...restMessages } = state.messagesBySession;
+    const { [tempSessionId]: tempCursor, ...restCursors } = state.messagesNextCursorBySession;
+    const { [tempSessionId]: tempLoading, ...restLoading } = state.messagesLoadingBySession;
+    const { [tempSessionId]: tempError, ...restErrors } = state.messagesErrorBySession;
+
+    return {
+      currentSessionId: state.currentSessionId === tempSessionId ? nextSessionId : state.currentSessionId,
+      sessions: normalizeSessionList(sessions),
+      messagesBySession: {
+        ...restMessages,
+        [nextSessionId]: tempMessages ?? [],
+      },
+      messagesNextCursorBySession: {
+        ...restCursors,
+        [nextSessionId]: tempCursor ?? null,
+      },
+      messagesLoadingBySession: {
+        ...restLoading,
+        [nextSessionId]: tempLoading ?? false,
+      },
+      messagesErrorBySession: {
+        ...restErrors,
+        [nextSessionId]: tempError ?? null,
       },
     };
   }),
