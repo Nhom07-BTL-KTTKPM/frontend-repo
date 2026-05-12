@@ -8,17 +8,27 @@ interface ChatThreadProps {
   error: string | null;
   hasMore: boolean;
   onLoadMore: () => void;
+  hasActiveSession: boolean;
+  autoScroll?: boolean;
 }
 
-export const ChatThread = ({ messages, isLoading, error, hasMore, onLoadMore }: ChatThreadProps) => {
+export const ChatThread = ({
+  messages,
+  isLoading,
+  error,
+  hasMore,
+  onLoadMore,
+  hasActiveSession,
+  autoScroll = true,
+}: ChatThreadProps) => {
   const containerRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
-    if (!containerRef.current) {
+    if (!containerRef.current || !autoScroll) {
       return;
     }
     containerRef.current.scrollTop = containerRef.current.scrollHeight;
-  }, [messages.length]);
+  }, [messages.length, autoScroll]);
 
   return (
     <section className="flex h-full flex-col rounded-3xl border border-white/50 bg-white/80 p-6 shadow-[0_20px_60px_-40px_rgba(0,0,0,0.35)] backdrop-blur">
@@ -38,11 +48,27 @@ export const ChatThread = ({ messages, isLoading, error, hasMore, onLoadMore }: 
       </div>
 
       <div ref={containerRef} className="mt-6 flex-1 space-y-4 overflow-y-auto pr-2">
+        {isLoading && !messages.length && (
+          <div className="space-y-3">
+            {[1, 2, 3].map((item) => (
+              <div
+                key={item}
+                className="h-16 rounded-2xl bg-[#f0e8dc] animate-pulse"
+              />
+            ))}
+          </div>
+        )}
         {messages.map((message) => (
           <ChatMessageItem key={message.id} message={message} />
         ))}
 
-        {!messages.length && !isLoading && (
+        {!hasActiveSession && !isLoading && (
+          <div className="rounded-2xl border border-dashed border-[#c9a96e]/50 bg-[#faf6f0] p-6 text-center text-sm text-[#6b5438]">
+            Select a session on the left or send a new message to begin.
+          </div>
+        )}
+
+        {hasActiveSession && !messages.length && !isLoading && (
           <div className="rounded-2xl border border-dashed border-[#c9a96e]/50 bg-[#faf6f0] p-6 text-center text-sm text-[#6b5438]">
             Start the conversation with your beauty goals and we will handle the rest.
           </div>

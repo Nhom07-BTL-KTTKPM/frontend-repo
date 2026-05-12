@@ -28,6 +28,16 @@ export const ChatSidebar = ({
       </div>
 
       <div className="flex-1 space-y-3 overflow-y-auto pr-2">
+        {isLoading && !sessions.length && (
+          <div className="space-y-3">
+            {[1, 2, 3].map((item) => (
+              <div
+                key={item}
+                className="h-20 rounded-2xl border border-white/10 bg-white/5 animate-pulse"
+              />
+            ))}
+          </div>
+        )}
         {sessions.map((session) => {
           const isActive = session.id === activeSessionId;
           return (

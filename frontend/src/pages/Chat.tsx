@@ -1,4 +1,5 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { toast } from 'sonner';
 import { useAuthStore } from '../store/authStore';
 import { useChatStore } from '../store/chatStore';
 import { useChat } from '../hooks/useChat';
@@ -85,10 +86,56 @@ export const Chat = () => {
     return [];
   }, [activeMessages]);
 
+  const lastSentMessageRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    if (sessionsError) {
+      toast.error(sessionsError, {
+        action: {
+          label: 'Retry',
+          onClick: () => sessionsQuery.refetch(),
+        },
+      });
+    }
+  }, [sessionsError, sessionsQuery]);
+
+  useEffect(() => {
+    if (messagesError) {
+      toast.error(messagesError, {
+        action: {
+          label: 'Retry',
+          onClick: () => messagesQuery.refetch(),
+        },
+      });
+    }
+  }, [messagesError, messagesQuery]);
+
+  useEffect(() => {
+    if (sendMessageMutation.error) {
+      toast.error('Unable to send message.', {
+        action: {
+          label: 'Retry',
+          onClick: () => {
+            if (!customerId || !lastSentMessageRef.current) {
+              return;
+            }
+            sendMessageMutation.mutate({
+              customerId,
+              sessionId: currentSessionId ?? undefined,
+              message: lastSentMessageRef.current,
+            });
+          },
+        },
+      });
+    }
+  }, [sendMessageMutation.error, customerId, currentSessionId, sendMessageMutation]);
+
   const handleSend = (message: string) => {
     if (!customerId) {
       return;
     }
+
+    lastSentMessageRef.current = message;
 
     sendMessageMutation.mutate({
       customerId,
@@ -143,12 +190,17 @@ export const Chat = () => {
           />
 
           <div className="flex h-full flex-col gap-6">
+            <div className="rounded-2xl border border-[#c9a96e]/40 bg-gradient-to-r from-[#faf6f0] via-white to-[#faf6f0] px-4 py-3 text-xs text-[#6b5438]">
+              Lumiere AI is here to guide your routine with curated insights. Always patch test and consult a professional for medical concerns.
+            </div>
             <ChatThread
               messages={activeMessages}
               isLoading={messagesLoading}
               error={messagesError}
               hasMore={!!messagesNextCursor}
               onLoadMore={handleLoadMoreMessages}
+              hasActiveSession={!!currentSessionId}
+              autoScroll={messageMode !== 'prepend'}
             />
             <ChatComposer
               onSend={handleSend}
