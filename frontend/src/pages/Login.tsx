@@ -4,6 +4,17 @@ import { useNavigate, Link } from 'react-router-dom';
 import { toast } from 'sonner';
 import { GoogleLogin } from '@react-oauth/google';
 import type { ApiError } from '../types/api';
+import { useAuthStore } from '../store/authStore';
+
+const getPostLoginPath = (role?: string) => {
+    const normalizedRole = role?.toUpperCase();
+
+    if (normalizedRole === 'ADMIN' || normalizedRole === 'EMPLOYEE' || normalizedRole === 'EMPOYEE') {
+        return '/admin/dashboard';
+    }
+
+    return '/';
+};
 
 export const Login = () => {
     const { loginMutation, googleLoginMutation } = useAuth();
@@ -12,7 +23,7 @@ export const Login = () => {
     const [password, setPassword] = useState('');
     const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
 
-    const handleSubmit = (e: React.FormEvent) => {
+    const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
 
         // Client-side validation
@@ -35,20 +46,19 @@ export const Login = () => {
         }
 
         setFieldErrors({});
-        loginMutation.mutate({ email, password }, {
-            onSuccess: () => {
-                toast.success('Đăng nhập thành công');
-                navigate('/');
-            },
-            onError: (err: unknown) => {
-                const apiErr = err as ApiError;
-                if (apiErr.errors && Object.keys(apiErr.errors).length > 0) {
-                    setFieldErrors(apiErr.errors);
-                } else {
-                    toast.error(apiErr.message || 'Đăng nhập thất bại');
-                }
+        try {
+            await loginMutation.mutateAsync({ email, password });
+            const role = useAuthStore.getState().user?.role;
+            toast.success('Đăng nhập thành công');
+            navigate(getPostLoginPath(role));
+        } catch (err) {
+            const apiErr = err as ApiError;
+            if (apiErr.errors && Object.keys(apiErr.errors).length > 0) {
+                setFieldErrors(apiErr.errors);
+            } else {
+                toast.error(apiErr.message || 'Đăng nhập thất bại');
             }
-        });
+        }
     };
 
     return (
@@ -85,16 +95,16 @@ export const Login = () => {
                     <GoogleLogin
                         onSuccess={credentialResponse => {
                             if (credentialResponse.credential) {
-                                googleLoginMutation.mutate(credentialResponse.credential, {
-                                    onSuccess: () => {
+                                googleLoginMutation.mutateAsync(credentialResponse.credential)
+                                    .then(() => {
+                                        const role = useAuthStore.getState().user?.role;
                                         toast.success('Đăng nhập bằng Google thành công');
-                                        navigate('/');
-                                    },
-                                    onError: (err: unknown) => {
+                                        navigate(getPostLoginPath(role));
+                                    })
+                                    .catch((err: unknown) => {
                                         const apiErr = err as ApiError;
                                         toast.error(apiErr.message || 'Đăng nhập Google thất bại');
-                                    }
-                                });
+                                    });
                             }
                         }}
                         onError={() => {
