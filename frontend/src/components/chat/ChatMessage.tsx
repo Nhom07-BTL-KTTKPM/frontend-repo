@@ -5,6 +5,9 @@ interface ChatMessageProps {
 }
 
 export const ChatMessage = ({ message }: ChatMessageProps) => {
+  if (!message) {
+    return null;
+  }
   const isUser = message.role === 'USER';
 
   return (

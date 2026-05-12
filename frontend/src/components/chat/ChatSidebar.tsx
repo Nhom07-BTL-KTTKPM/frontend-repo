@@ -23,8 +23,8 @@ export const ChatSidebar = ({
     <aside className="flex h-full flex-col rounded-3xl border border-white/30 bg-gradient-to-b from-[#1a1a1a] via-[#2d2d2d] to-[#1a1a1a] p-6 text-white shadow-[0_20px_60px_-40px_rgba(0,0,0,0.6)]">
       <div className="mb-6">
         <p className="text-xs uppercase tracking-[0.35em] text-[#e8d5a8]">Lumiere</p>
-        <h2 className="mt-2 text-2xl font-semibold tracking-tight">AI Sessions</h2>
-        <p className="mt-1 text-sm text-white/60">Resume or start a new conversation.</p>
+        <h2 className="mt-2 text-2xl font-semibold tracking-tight">Phiên trò chuyện</h2>
+        <p className="mt-1 text-sm text-white/60">Tiếp tục hoặc bắt đầu cuộc trò chuyện mới.</p>
       </div>
 
       <div className="flex-1 space-y-3 overflow-y-auto pr-2">
@@ -52,13 +52,13 @@ export const ChatSidebar = ({
               }`}
             >
               <p className="text-sm font-semibold text-white">
-                {session.title || 'Untitled session'}
+                {session.title || 'Phiên chưa đặt tên'}
               </p>
               <p className="mt-1 line-clamp-2 text-xs text-white/60">
-                {session.lastMessage || 'No messages yet.'}
+                {session.lastMessage || 'Chưa có tin nhắn.'}
               </p>
               <p className="mt-2 text-[10px] uppercase tracking-[0.2em] text-white/40">
-                {session.lastMessageAt ? new Date(session.lastMessageAt).toLocaleString() : 'New'}
+                {session.lastMessageAt ? new Date(session.lastMessageAt).toLocaleString() : 'Mới'}
               </p>
             </button>
           );
@@ -66,7 +66,7 @@ export const ChatSidebar = ({
 
         {!sessions.length && !isLoading && (
           <div className="rounded-2xl border border-dashed border-white/20 p-4 text-sm text-white/60">
-            No sessions yet. Send a message to begin.
+            Chưa có phiên nào. Hãy gửi tin nhắn để bắt đầu.
           </div>
         )}
       </div>
@@ -79,7 +79,7 @@ export const ChatSidebar = ({
 
       <div className="mt-4 flex items-center justify-between gap-3">
         <span className="text-xs text-white/50">
-          {isLoading ? 'Loading sessions...' : hasMore ? 'More sessions available' : 'Up to date'}
+          {isLoading ? 'Đang tải phiên...' : hasMore ? 'Còn phiên khác' : 'Đã cập nhật'}
         </span>
         <button
           type="button"
@@ -87,7 +87,7 @@ export const ChatSidebar = ({
           disabled={!hasMore || isLoading}
           className="rounded-full border border-white/20 px-4 py-2 text-xs font-semibold uppercase tracking-[0.2em] text-white/80 transition hover:border-white/40 hover:text-white disabled:opacity-50"
         >
-          Load
+          Tải thêm
         </button>
       </div>
     </aside>

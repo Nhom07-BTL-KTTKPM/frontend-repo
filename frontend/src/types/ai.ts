@@ -1,12 +1,14 @@
 export type ChatMessageRole = 'USER' | 'ASSISTANT' | 'SYSTEM';
 
 export interface SuggestedProduct {
-  id: string;
+  id?: string;
+  productId?: string;
   name: string;
   imageUrl?: string;
   price?: number;
   productUrl?: string;
   reason?: string;
+  score?: number;
 }
 
 export interface ChatMessage {
@@ -45,6 +47,6 @@ export interface SendChatRequest {
 
 export interface SendChatResponse {
   sessionId: string;
-  message: ChatMessage;
+  reply: string;
   suggestedProducts?: SuggestedProduct[];
 }
