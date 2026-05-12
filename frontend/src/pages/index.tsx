@@ -29,18 +29,8 @@ export const ProductDetail = () => {
 
 export { Cart } from './Cart';
 
-export const Checkout = () => {
-    const navigate = useNavigate();
-    return (
-        <div style={{ padding: '4rem', textAlign: 'center' }}>
-            <h1 style={{ fontFamily: 'var(--font-display)', fontSize: '3rem', color: 'var(--color-gold)' }}>Thanh toán</h1>
-            <p>Nhập thông tin giao hàng</p>
-            <button className="btn btn--primary" style={{ marginTop: '1rem', padding: '10px 20px', background: 'var(--color-gold)', border: 'none', borderRadius: '4px', color: 'white', cursor: 'pointer' }} onClick={() => navigate('/')}>
-                Quay lại
-            </button>
-        </div>
-    );
-};
+export { Checkout } from './Checkout';
+export { OrderHistory } from './OrderHistory';
 
 export const Payment = () => {
     return (

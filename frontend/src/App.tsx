@@ -13,7 +13,7 @@ import { EmployeeRoute } from './routes/EmployeeRoute';
 import { Login } from './pages/Login';
 import { Register } from './pages/Register';
 import { Profile } from './pages/Profile';
-import { Home, ProductList, ProductDetail, Cart, Checkout, Payment, Dashboard, VerifyEmail, ForgotPassword, ResetPassword } from './pages';
+import { Home, ProductList, ProductDetail, Cart, Checkout, OrderHistory, Payment, Dashboard, VerifyEmail, ForgotPassword, ResetPassword } from './pages';
 
 function App() {
   const { initSession } = useAuth();
@@ -57,8 +57,9 @@ function App() {
           </Route>
 
           {/* Protected Routes (Chỉ người ĐÃ đăng nhập) */}
-          <Route element={<ProtectedRoute />}>
+        <Route element={<ProtectedRoute />}>
             <Route path="/profile" element={<Profile />} />
+            <Route path="/orders" element={<OrderHistory />} />
           </Route>
 
           {/* Employee/Admin Routes */}

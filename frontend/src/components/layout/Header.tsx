@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react';
 import { useAuthStore, useIsAdmin, useIsEmployee } from '../../store/authStore';
 import { useAuth } from '../../hooks/useAuth';
 import { cartApi } from '../../api/cartApi';
-import { Search, ShoppingBag, UserCircle } from 'lucide-react';
+import { Search, ShoppingBag, UserCircle, ClipboardList } from 'lucide-react';
 
 export const Header = () => {
   const navigate = useNavigate();
@@ -88,6 +88,9 @@ export const Header = () => {
 
           {isAuthenticated ? (
             <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
+              <Link to="/orders" className="header__action-btn" aria-label="Đơn hàng" style={{ border: 'none', background: 'none', fontSize: '1.1rem', cursor: 'pointer', padding: '10px' }}>
+                <ClipboardList size={20} />
+              </Link>
               <Link to="/profile" className="header__action-btn" aria-label="Tài khoản" style={{ border: 'none', background: 'none', fontSize: '1.1rem', cursor: 'pointer', padding: '10px' }}>
                 <UserCircle size={20} />
               </Link>
