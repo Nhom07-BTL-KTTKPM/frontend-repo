@@ -1,9 +1,9 @@
 import React from 'react';
-import type { Category } from '../types/catalog';
+import type { CategorySummaryResponse } from '../types/catalog';
 
 interface CategoryCardProps {
-  category: Category;
-  onClick?: (category: Category) => void;
+  category: CategorySummaryResponse;
+  onClick?: (category: CategorySummaryResponse) => void;
 }
 
 const iconMap: Record<string, string> = {

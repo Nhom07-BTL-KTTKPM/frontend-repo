@@ -26,3 +26,18 @@ export interface BrandResponse {
 
 export interface Category extends CategoryResponse {}
 export interface Brand extends BrandResponse {}
+
+// Lightweight projections returned by /summary endpoints
+export interface BrandSummaryResponse {
+  id: string;
+  name: string;
+  slug: string;
+  logoUrl?: string;
+}
+
+export interface CategorySummaryResponse {
+  id: string;
+  name: string;
+  slug: string;
+  imageUrl?: string;
+}

@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { brandApi } from '../api/brandApi';
 import { productApi } from '../api/productApi';
 import { useApi } from '../hooks/useApi';
@@ -34,10 +34,23 @@ export const BrandDetailPage: React.FC = () => {
 
   const [products, setProducts] = useState<Product[]>([]);
   const [productsLoading, setProductsLoading] = useState(false);
+  const location = useLocation();
+  const searchParams = new URLSearchParams(location.search);
+  const skipProducts = searchParams.get('noProducts') === 'true';
 
   useEffect(() => {
     if (!brand?.id) return;
     let isMounted = true;
+
+    if (skipProducts) {
+      // Skip fetching products when flagged (temporary)
+      setProducts([]);
+      setProductsLoading(false);
+      return () => {
+        isMounted = false;
+      };
+    }
+
     setProductsLoading(true);
     productApi
       .getProductsByBrand(brand.id, { size: 12 })
@@ -58,7 +71,7 @@ export const BrandDetailPage: React.FC = () => {
     return () => {
       isMounted = false;
     };
-  }, [brand?.id]);
+  }, [brand?.id, skipProducts]);
 
   if (loading) {
     return <div className="loading">Đang tải...</div>;

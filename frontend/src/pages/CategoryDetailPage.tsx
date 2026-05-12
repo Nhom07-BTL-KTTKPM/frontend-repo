@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { categoryApi } from '../api/categoryApi';
 import { productApi } from '../api/productApi';
 import { useApi } from '../hooks/useApi';
@@ -19,6 +19,10 @@ const MOCK_CATEGORY: CategoryResponse = {
 export const CategoryDetailPage: React.FC = () => {
   const { slug } = useParams<{ slug: string }>();
   const navigate = useNavigate();
+  const location = useLocation();
+
+  const searchParams = new URLSearchParams(location.search);
+  const skipProducts = searchParams.get('noProducts') === 'true';
 
   if (!slug) return <div>Không tìm thấy phân loại</div>;
 
@@ -50,6 +54,15 @@ export const CategoryDetailPage: React.FC = () => {
     const targetId = activeSubId ?? category?.id;
     if (!targetId) return;
     let isMounted = true;
+    if (skipProducts) {
+      // Skip fetching products when flagged (temporary)
+      setProducts([]);
+      setProductsLoading(false);
+      return () => {
+        isMounted = false;
+      };
+    }
+
     setProductsLoading(true);
     productApi
       .getProductsByCategoryRoot(targetId, { size: 24 })
@@ -70,7 +83,7 @@ export const CategoryDetailPage: React.FC = () => {
     return () => {
       isMounted = false;
     };
-  }, [category?.id, activeSubId]);
+  }, [category?.id, activeSubId, skipProducts]);
 
   const resultsLabel = useMemo(
     () => `${products.length} sản phẩm`,

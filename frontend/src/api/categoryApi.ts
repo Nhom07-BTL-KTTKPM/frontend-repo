@@ -1,8 +1,8 @@
 import { axiosClient } from './axiosClient';
-import type { CategoryResponse } from '../types/catalog';
+import type { CategoryResponse, CategorySummaryResponse } from '../types/catalog';
 
 export const categoryApi = {
-  // Get all active categories
+  // Get all active categories (full payload)
   getActiveCategories: async (): Promise<CategoryResponse[]> => {
     try {
       const response = await axiosClient.get<CategoryResponse[]>('/catalog/categories/active');
@@ -10,6 +10,30 @@ export const categoryApi = {
       return Array.isArray(payload) ? payload : [];
     } catch (error) {
       console.error('Error fetching active categories:', error);
+      throw error;
+    }
+  },
+
+  // Get lightweight summaries of active categories (id, name, slug, imageUrl)
+  getCategorySummaries: async (): Promise<CategorySummaryResponse[]> => {
+    try {
+      const response = await axiosClient.get<CategorySummaryResponse[]>('/catalog/categories/summary');
+      const payload = response as unknown as CategorySummaryResponse[];
+      return Array.isArray(payload) ? payload : [];
+    } catch (error) {
+      console.error('Error fetching category summaries:', error);
+      throw error;
+    }
+  },
+
+  // Get lightweight summaries of root active categories (parentId = null)
+  getRootCategorySummaries: async (): Promise<CategorySummaryResponse[]> => {
+    try {
+      const response = await axiosClient.get<CategorySummaryResponse[]>('/catalog/categories/summary/root');
+      const payload = response as unknown as CategorySummaryResponse[];
+      return Array.isArray(payload) ? payload : [];
+    } catch (error) {
+      console.error('Error fetching root category summaries:', error);
       throw error;
     }
   },

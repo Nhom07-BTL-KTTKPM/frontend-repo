@@ -3,24 +3,25 @@ import { useNavigate } from 'react-router-dom';
 import { CategoryCard } from './CategoryCard';
 import { categoryApi } from '../api/categoryApi';
 import { useApi } from '../hooks/useApi';
-import type { Category } from '../types/catalog';
+import type { CategorySummaryResponse } from '../types/catalog';
 
-const MOCK_CATEGORIES: Category[] = [
-  { id: '1', name: 'Chăm sóc da', slug: 'chăm-sóc-da', isActive: true },
-  { id: '2', name: 'Trang điểm', slug: 'trang-điểm', isActive: true },
-  { id: '3', name: 'Chăm sóc tóc', slug: 'chăm-sóc-tóc', isActive: true },
-  { id: '4', name: 'Chăm sóc cơ thể', slug: 'chăm-sóc-cơ-thể', isActive: true },
-  { id: '5', name: 'Chăm sóc nắng', slug: 'chăm-sóc-nắng', isActive: true },
-  { id: '6', name: 'Bộ quà tặng', slug: 'bộ-quà-tặng', isActive: true },
+const MOCK_CATEGORIES: CategorySummaryResponse[] = [
+  { id: '1', name: 'Chăm sóc da', slug: 'chăm-sóc-da' },
+  { id: '2', name: 'Trang điểm', slug: 'trang-điểm' },
+  { id: '3', name: 'Chăm sóc tóc', slug: 'chăm-sóc-tóc' },
+  { id: '4', name: 'Chăm sóc cơ thể', slug: 'chăm-sóc-cơ-thể' },
+  { id: '5', name: 'Chăm sóc nắng', slug: 'chăm-sóc-nắng' },
+  { id: '6', name: 'Bộ quà tặng', slug: 'bộ-quà-tặng' },
 ];
 
 export const CategoriesList: React.FC = () => {
   const navigate = useNavigate();
-  const apiCall = useCallback(() => categoryApi.getRootCategories(), []);
+  const apiCall = useCallback(() => categoryApi.getRootCategorySummaries(), []);
   const { data: categories, isUsingFallback } = useApi(apiCall, MOCK_CATEGORIES);
 
-  const handleCategoryClick = useCallback((category: Category) => {
-    navigate(`/categories/${category.slug}`);
+  const handleCategoryClick = useCallback((category: CategorySummaryResponse) => {
+    // Temporarily include a flag to instruct the detail page to skip product API calls
+    navigate(`/categories/${category.slug}?noProducts=true`);
   }, [navigate]);
 
   if (!categories || !Array.isArray(categories)) {

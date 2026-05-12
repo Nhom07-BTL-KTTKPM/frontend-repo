@@ -1,8 +1,8 @@
 import { axiosClient } from './axiosClient';
-import type { BrandResponse } from '../types/catalog';
+import type { BrandResponse, BrandSummaryResponse } from '../types/catalog';
 
 export const brandApi = {
-  // Get all active brands
+  // Get all active brands (full payload)
   getActiveBrands: async (): Promise<BrandResponse[]> => {
     try {
       const response = await axiosClient.get<BrandResponse[]>('/catalog/brands/active');
@@ -10,6 +10,18 @@ export const brandApi = {
       return Array.isArray(payload) ? payload : [];
     } catch (error) {
       console.error('Error fetching active brands:', error);
+      throw error;
+    }
+  },
+
+  // Get lightweight summaries of active brands (id, name, slug, logoUrl)
+  getBrandSummaries: async (): Promise<BrandSummaryResponse[]> => {
+    try {
+      const response = await axiosClient.get<BrandSummaryResponse[]>('/catalog/brands/summary');
+      const payload = response as unknown as BrandSummaryResponse[];
+      return Array.isArray(payload) ? payload : [];
+    } catch (error) {
+      console.error('Error fetching brand summaries:', error);
       throw error;
     }
   },

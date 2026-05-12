@@ -2,23 +2,24 @@ import React, { useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { brandApi } from '../api/brandApi';
 import { useApi } from '../hooks/useApi';
-import type { BrandResponse } from '../types/catalog';
+import type { BrandSummaryResponse } from '../types/catalog';
 
-const MOCK_BRANDS: BrandResponse[] = [
-  { id: '1', name: 'Aquamarine', slug: 'aquamarine', isActive: true },
-  { id: '2', name: 'Coral Reef', slug: 'coral-reef', isActive: true },
-  { id: '3', name: 'Seaside', slug: 'seaside', isActive: true },
-  { id: '4', name: 'Wave', slug: 'wave', isActive: true },
-  { id: '5', name: 'Marina', slug: 'marina', isActive: true },
+const MOCK_BRANDS: BrandSummaryResponse[] = [
+  { id: '1', name: 'Aquamarine', slug: 'aquamarine' },
+  { id: '2', name: 'Coral Reef', slug: 'coral-reef' },
+  { id: '3', name: 'Seaside', slug: 'seaside' },
+  { id: '4', name: 'Wave', slug: 'wave' },
+  { id: '5', name: 'Marina', slug: 'marina' },
 ];
 
 export const BrandsList: React.FC = () => {
   const navigate = useNavigate();
-  const apiCall = useCallback(() => brandApi.getActiveBrands(), []);
+  const apiCall = useCallback(() => brandApi.getBrandSummaries(), []);
   const { data: brands, isUsingFallback } = useApi(apiCall, MOCK_BRANDS);
 
   const handleBrandClick = useCallback((slug: string) => {
-    navigate(`/brands/${slug}`);
+    // Temporarily include a flag to instruct the detail page to skip product API calls
+    navigate(`/brands/${slug}?noProducts=true`);
   }, [navigate]);
 
   if (!brands || !Array.isArray(brands)) {
