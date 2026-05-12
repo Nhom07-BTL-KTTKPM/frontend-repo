@@ -1,32 +1,42 @@
+
 import { useNavigate } from 'react-router-dom';
 export { ProductList } from './ProductList';
 export { ProductDetail } from './ProductDetail';
 export { HomePage as Home } from './HomePage';
 export { CategoryDetailPage } from './CategoryDetailPage';
 export { BrandDetailPage } from './BrandDetailPage';
+export { Cart } from './Cart';
+export { Checkout } from './Checkout';
+export { OrderHistory } from './OrderHistory';
 
-
-export const Cart = () => {
-    const navigate = useNavigate();
+export const Home = () => {
     return (
         <div style={{ padding: '4rem', textAlign: 'center' }}>
-            <h1 style={{ fontFamily: 'var(--font-display)', fontSize: '3rem', color: 'var(--color-gold)' }}>Giỏ hàng</h1>
-            <p>Danh sách item trong giỏ</p>
-            <button className="btn btn--primary" style={{ marginTop: '1rem', padding: '10px 20px', background: 'var(--color-gold)', border: 'none', borderRadius: '4px', color: 'white', cursor: 'pointer' }} onClick={() => navigate('/checkout')}>Tiến hành thanh toán</button>
+            <h1 style={{ fontFamily: 'var(--font-display)', fontSize: '3rem', color: 'var(--color-gold)' }}>Home Page</h1>
+            <p>Trang chủ - Trưng bày sản phẩm</p>
         </div>
     );
 };
 
-export const Checkout = () => {
-    const navigate = useNavigate();
+export const ProductList = () => {
     return (
         <div style={{ padding: '4rem', textAlign: 'center' }}>
-            <h1 style={{ fontFamily: 'var(--font-display)', fontSize: '3rem', color: 'var(--color-gold)' }}>Thanh toán</h1>
-            <p>Nhập thông tin giao hàng</p>
-            <button className="btn btn--primary" style={{ marginTop: '1rem', padding: '10px 20px', background: 'var(--color-gold)', border: 'none', borderRadius: '4px', color: 'white', cursor: 'pointer' }} onClick={() => navigate('/payment')}>Sang cổng giả lập Payment</button>
+            <h1 style={{ fontFamily: 'var(--font-display)', fontSize: '3rem', color: 'var(--color-gold)' }}>Danh sách sản phẩm</h1>
+            <p>Trang danh sach san pham do ban ban phu trach.</p>
         </div>
     );
 };
+
+export const ProductDetail = () => {
+    return (
+        <div style={{ padding: '4rem', textAlign: 'center' }}>
+            <h1 style={{ fontFamily: 'var(--font-display)', fontSize: '3rem', color: 'var(--color-gold)' }}>Chi tiết sản phẩm</h1>
+            <p>Trang chi tiet san pham do ban ban phu trach.</p>
+        </div>
+    );
+};
+
+
 
 export const Payment = () => {
     return (

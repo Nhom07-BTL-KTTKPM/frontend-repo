@@ -3,7 +3,7 @@ import type { InternalAxiosRequestConfig } from 'axios';
 import { useAuthStore } from '../store/authStore';
 import type { ApiResponse, AuthTokenResponse, ApiError } from '../types/api';
 
-const baseURL = import.meta.env.VITE_API_BASE_URL;
+const baseURL = import.meta.env.VITE_API_BASE_URL || import.meta.env.VITE_AUTH_API_URL || 'http://localhost:8081';
 
 // Main axios instance for general API requests
 export const axiosClient = axios.create({
