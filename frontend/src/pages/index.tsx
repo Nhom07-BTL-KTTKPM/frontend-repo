@@ -8,11 +8,6 @@ import { useAuthStore } from '../store/authStore';
 import type { CatalogProduct, CatalogProductVariant } from '../types/catalog';
 import type { CartResponse } from '../types/cart';
 
-interface CustomerResponse {
-  data?: { id: string; [key: string]: unknown };
-  id?: string;
-  [key: string]: unknown;
-}
 
 const formatCurrency = (value?: number) => {
     if (value === null || value === undefined) {
@@ -55,7 +50,6 @@ const useCustomerId = () => {
             try {
                 const res = await userApi.getCustomerByAccountId(accountId);
                 if (isMounted) {
-                    // user-service trả Customer trực tiếp (không wrap ApiResponse)
                     // axiosClient interceptor đã unwrap response.data → res = Customer object
                     const customer = extractCustomer(res);
                     setCustomerId(customer.id ?? null);
