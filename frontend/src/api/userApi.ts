@@ -5,7 +5,7 @@ import type { ApiResponse, CustomerProfileInfo, CustomerUpdateRequest, Address, 
 
 export const userApi = {
   getCustomerByAccountId: (accountId: string) => {
-    return axiosClient.get<unknown, ApiResponse<CustomerProfileInfo>>(`/customers/account/${accountId}`, {
+    return axiosClient.get<unknown, ApiResponse<CustomerProfileInfo>>(`/user/customers/account/${accountId}`, {
       baseURL: resolveBaseUrl(serviceBase.user),
     });
   },
