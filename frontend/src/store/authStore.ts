@@ -2,6 +2,20 @@ import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import type { UserProfileInfo } from '../types/api';
 
+const ACCESS_TOKEN_STORAGE_KEY = 'auth-access-token';
+
+const syncAccessToken = (token: string | null) => {
+  if (typeof window === 'undefined') {
+    return;
+  }
+
+  if (token) {
+    localStorage.setItem(ACCESS_TOKEN_STORAGE_KEY, token);
+  } else {
+    localStorage.removeItem(ACCESS_TOKEN_STORAGE_KEY);
+  }
+};
+
 interface AuthState {
   accessToken: string | null;
   user: UserProfileInfo | null;
@@ -25,16 +39,22 @@ export const useAuthStore = create<AuthState>()(
       isInitialized: false,
       isAuthenticated: false,
 
-      setAccessToken: (token) => set({ accessToken: token, isAuthenticated: !!token }),
+      setAccessToken: (token) => {
+        syncAccessToken(token);
+        set({ accessToken: token, isAuthenticated: !!token });
+      },
 
       setUser: (user) => set({ user }),
 
-      setCredentials: (user, token) => set({
-        user,
-        accessToken: token,
-        isAuthenticated: true,
-        hasEverLoggedIn: true,
-      }),
+      setCredentials: (user, token) => {
+        syncAccessToken(token);
+        set({
+          user,
+          accessToken: token,
+          isAuthenticated: true,
+          hasEverLoggedIn: true,
+        });
+      },
 
       setInitialized: () => set({ isInitialized: true }),
 
@@ -43,6 +63,7 @@ export const useAuthStore = create<AuthState>()(
         import('./chatStore').then(({ useChatStore }) => {
           useChatStore.getState().resetChatState();
         });
+        syncAccessToken(null);
         set({
           accessToken: null,
           user: null,
