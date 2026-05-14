@@ -43,4 +43,5 @@ export interface CreateOrderRequest {
   phone: string;
   note?: string;
   paymentMethod: PaymentMethod;
+  selectedItemIds: string[];
 }

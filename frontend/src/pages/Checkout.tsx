@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuthStore } from '../store/authStore';
 import { cartApi } from '../api/cartApi';
 import { catalogApi } from '../api/catalogApi';
@@ -24,7 +24,10 @@ const formatCurrency = (value?: number) => {
 
 export const Checkout = () => {
     const navigate = useNavigate();
+    const location = useLocation();
     const { user, isAuthenticated } = useAuthStore();
+    
+    const selectedItemIds: string[] = location.state?.selectedItemIds || [];
     
     const [customerId, setCustomerId] = useState<string | null>(null);
     const [cart, setCart] = useState<CartResponse | null>(null);
@@ -44,6 +47,12 @@ export const Checkout = () => {
         if (!isAuthenticated) {
             toast.error('Vui lòng đăng nhập để thanh toán');
             navigate('/login?redirect=/checkout');
+            return;
+        }
+
+        if (selectedItemIds.length === 0) {
+            toast.error('Vui lòng chọn sản phẩm để thanh toán');
+            navigate('/cart');
             return;
         }
 
@@ -79,9 +88,19 @@ export const Checkout = () => {
                 if (!phone && user?.phoneNumber) setPhone(user.phoneNumber);
 
                 // 3. Fetch cart
-                const cartRes = await cartApi.getCartByCustomerId(cId);
-                const cartData = ((cartRes as unknown as { data?: CartResponse }).data ?? cartRes) as CartResponse;
-                setCart(cartData);
+                let cartData: CartResponse | null = null;
+                try {
+                    const cartRes = await cartApi.getCartByCustomerId(cId);
+                    cartData = ((cartRes as unknown as { data?: CartResponse }).data ?? cartRes) as CartResponse;
+                    if (cartData && cartData.items) {
+                        cartData.items = cartData.items.filter(item => selectedItemIds.includes(item.id));
+                    }
+                    setCart(cartData);
+                } catch (err: any) {
+                    if (err?.response?.status !== 404) {
+                        throw err;
+                    }
+                }
 
                 // 4. Fetch variants
                 if (cartData && cartData.items && cartData.items.length > 0) {
@@ -135,7 +154,8 @@ export const Checkout = () => {
                 phone,
                 shippingAddress,
                 note,
-                paymentMethod
+                paymentMethod,
+                selectedItemIds
             });
 
             toast.success('Đặt hàng thành công!');
