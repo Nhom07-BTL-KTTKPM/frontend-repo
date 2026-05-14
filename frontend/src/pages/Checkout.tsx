@@ -170,6 +170,19 @@ export const Checkout = () => {
                 selectedItemIds
             });
 
+            // Remove selected items from cart
+            try {
+                for (const itemId of selectedItemIds) {
+                    await cartApi.removeItem(customerId, itemId);
+                }
+            } catch (cartError) {
+                console.error('Failed to remove items from cart:', cartError);
+                // Continue anyway, order was created successfully
+            }
+
+            // Dispatch cart update event to refresh cart badge
+            window.dispatchEvent(new CustomEvent('cart:updated'));
+
             toast.success('Đặt hàng thành công!');
             // Chuyển hướng theo phương thức thanh toán
             if (paymentMethod === 'COD') {
