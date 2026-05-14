@@ -46,7 +46,7 @@ function App() {
         <Route element={<MainLayout />}>
 
           {/* Dashboar for admin and employee */}
-          <Route path="/dashboard" element={<Navigate to="/admin/dashboard" replace />} />
+          
           
           {/* Public Routes (Ai cũng xem được) */}
           <Route path="/" element={<Home />} />
@@ -78,8 +78,16 @@ function App() {
           {/* <Route element={<EmployeeRoute />}>
             <Route path="/dashboard" element={<Dashboard />} />
           </Route> */}
-          
         </Route>
+        {/* ================= ADMIN ================= */}
+        <Route path="/dashboard" element={<Navigate to="/admin/dashboard" replace />} />
+        <Route element={<AdminRoute />}>
+            <Route path="/admin" element={<AdminLayout />}>
+              <Route path="dashboard" element={<AdminDashboard />} />
+              <Route path="products" element={<ProductManagement />} />
+              <Route path="users" element={<UserManagement />} />
+            </Route>
+          </Route>
       </Routes>
     </BrowserRouter>
   );
