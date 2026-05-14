@@ -8,6 +8,7 @@ import { useAuthStore } from '../store/authStore';
 import { useCustomerId } from '../hooks/useCustomerId';
 import type { CatalogProduct, CatalogProductVariant } from '../types/catalog';
 import type { CartResponse } from '../types/cart';
+import { ShoppingBag } from 'lucide-react';
 
 const formatCurrency = (value?: number) => {
     if (value === null || value === undefined) {
@@ -31,6 +32,25 @@ export const Cart = () => {
     const [productMap, setProductMap] = useState<Record<string, CatalogProduct>>({});
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
+    const [selectedItemIds, setSelectedItemIds] = useState<Set<string>>(new Set());
+
+    const toggleItem = (id: string) => {
+        setSelectedItemIds(prev => {
+            const next = new Set(prev);
+            if (next.has(id)) next.delete(id);
+            else next.add(id);
+            return next;
+        });
+    };
+
+    const toggleAll = () => {
+        if (!cart?.items) return;
+        if (selectedItemIds.size === cart.items.length) {
+            setSelectedItemIds(new Set());
+        } else {
+            setSelectedItemIds(new Set(cart.items.map(i => i.id)));
+        }
+    };
 
     useEffect(() => {
         let isMounted = true;
@@ -47,10 +67,15 @@ export const Cart = () => {
                 if (isMounted) {
                     setCart(res);
                 }
-            } catch (err) {
+            } catch (err: any) {
                 if (isMounted) {
-                    const message = err instanceof Error ? err.message : 'Khong the tai gio hang';
-                    setError(message);
+                    if (err?.response?.status === 404) {
+                        setCart(null);
+                        setError(null);
+                    } else {
+                        const message = err instanceof Error ? err.message : 'Khong the tai gio hang';
+                        setError(message);
+                    }
                 }
             } finally {
                 if (isMounted) {
@@ -118,8 +143,10 @@ export const Cart = () => {
         if (!cart?.items) {
             return 0;
         }
-        return cart.items.reduce((sum, item) => sum + Number(item.unitPrice) * item.quantity, 0);
-    }, [cart]);
+        return cart.items
+            .filter(item => selectedItemIds.has(item.id))
+            .reduce((sum, item) => sum + Number(item.unitPrice) * item.quantity, 0);
+    }, [cart, selectedItemIds]);
 
     const handleUpdateQty = async (itemId: string, quantity: number) => {
         if (!customerId) {
@@ -166,23 +193,56 @@ export const Cart = () => {
             {isAuthenticated && (customerLoading || loading) && <p>Dang tai gio hang...</p>}
             {isAuthenticated && error && <p style={{ color: 'var(--color-error)' }}>{error}</p>}
 
-            {isAuthenticated && !loading && cart?.items?.length === 0 && (
-                <div style={{ padding: '2rem', borderRadius: '12px', background: '#fff' }}>
-                    <p>Gio hang dang trong. Hay them san pham tu <Link to="/products">danh sach san pham</Link>.</p>
+            {isAuthenticated && !loading && (!cart || cart?.items?.length === 0) && (
+                <div style={{ 
+                    padding: '4rem 2rem', 
+                    borderRadius: '16px', 
+                    background: '#fff', 
+                    display: 'flex', 
+                    flexDirection: 'column', 
+                    alignItems: 'center', 
+                    justifyContent: 'center',
+                    boxShadow: '0 16px 40px rgba(17,24,39,0.04)' 
+                }}>
+                    <div style={{ width: '80px', height: '80px', borderRadius: '50%', background: 'var(--color-cream)', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '1.5rem', color: 'var(--color-gold)' }}>
+                        <ShoppingBag size={40} />
+                    </div>
+                    <h2 style={{ fontFamily: 'var(--font-display)', fontSize: '1.5rem', color: 'var(--color-black)', marginBottom: '0.5rem' }}>Giỏ hàng của bạn đang trống</h2>
+                    <p style={{ color: 'var(--color-gray-500)', marginBottom: '2rem', textAlign: 'center', maxWidth: '400px' }}>
+                        Có vẻ như bạn chưa thêm bất kỳ sản phẩm nào vào giỏ hàng. Khám phá ngay các sản phẩm làm đẹp của chúng tôi!
+                    </p>
+                    <button className="btn btn--primary" style={{ padding: '12px 32px', background: 'var(--color-black)', border: 'none', borderRadius: '8px', color: 'white', cursor: 'pointer', fontWeight: 500, display: 'inline-flex' }} onClick={() => navigate('/products')}>
+                        Khám phá sản phẩm
+                    </button>
                 </div>
             )}
 
             {isAuthenticated && cart?.items?.length ? (
                 <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '2rem' }}>
                     <div style={{ background: '#fff', borderRadius: '16px', padding: '1.5rem', boxShadow: '0 16px 40px rgba(17,24,39,0.08)' }}>
+                        <div style={{ paddingBottom: '1rem', borderBottom: '1px solid rgba(0,0,0,0.1)', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                            <input 
+                                type="checkbox" 
+                                checked={cart.items.length > 0 && selectedItemIds.size === cart.items.length} 
+                                onChange={toggleAll}
+                                style={{ width: '20px', height: '20px', accentColor: 'var(--color-gold)', cursor: 'pointer' }}
+                            />
+                            <span style={{ fontWeight: 500, color: 'var(--color-black)' }}>Chọn tất cả ({cart.items.length} sản phẩm)</span>
+                        </div>
                         {cart.items.map((item) => {
                             const variant = variantMap[item.productVariantId];
                             const productName = variant ? productMap[variant.productId]?.name : undefined;
                             const imageUrl = variant?.imageUrl;
 
                             return (
-                            <div key={item.id} style={{ display: 'flex', justifyContent: 'space-between', gap: '1rem', padding: '1rem 0', borderBottom: '1px solid rgba(0,0,0,0.05)' }}>
+                            <div key={item.id} style={{ display: 'flex', justifyContent: 'space-between', gap: '1rem', padding: '1rem 0', borderBottom: '1px solid rgba(0,0,0,0.05)', alignItems: 'center' }}>
                                 <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
+                                    <input 
+                                        type="checkbox" 
+                                        checked={selectedItemIds.has(item.id)} 
+                                        onChange={() => toggleItem(item.id)}
+                                        style={{ width: '20px', height: '20px', accentColor: 'var(--color-gold)', cursor: 'pointer' }}
+                                    />
                                     <div style={{ width: '72px', height: '72px', borderRadius: '12px', background: 'var(--color-cream)', overflow: 'hidden', flexShrink: 0 }}>
                                         {imageUrl ? (
                                             <img src={imageUrl} alt={productName ?? 'Product'} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
@@ -234,10 +294,15 @@ export const Cart = () => {
                         </div>
                         <button
                             className="btn btn--primary"
-                            style={{ width: '100%', padding: '12px 16px', background: 'linear-gradient(135deg, var(--color-gold), var(--color-gold-dark))', border: 'none', borderRadius: '8px', color: 'white', cursor: 'pointer' }}
-                            onClick={() => navigate('/checkout')}
+                            style={{ width: '100%', padding: '12px 16px', background: 'linear-gradient(135deg, var(--color-gold), var(--color-gold-dark))', border: 'none', borderRadius: '8px', color: 'white', cursor: selectedItemIds.size > 0 ? 'pointer' : 'not-allowed', opacity: selectedItemIds.size > 0 ? 1 : 0.6 }}
+                            onClick={() => {
+                                if (selectedItemIds.size > 0) {
+                                    navigate('/checkout', { state: { selectedItemIds: Array.from(selectedItemIds) } });
+                                }
+                            }}
+                            disabled={selectedItemIds.size === 0}
                         >
-                            Tien hanh thanh toan
+                            Tien hanh thanh toan ({selectedItemIds.size})
                         </button>
                     </div>
                 </div>
