@@ -15,14 +15,14 @@ export const Payment = () => {
     );
 };
 
-export const Dashboard = () => {
-    return (
-        <div style={{ padding: '4rem', textAlign: 'center' }}>
-            <h1 style={{ fontFamily: 'var(--font-display)', fontSize: '3rem', color: 'var(--color-error)' }}>Dashboard (Nội bộ)</h1>
-            <p>Trang quản trị dành riêng cho nhân viên và admin</p>
-        </div>
-    );
-};
+// export const Dashboard = () => {
+//     return (
+//         <div style={{ padding: '4rem', textAlign: 'center' }}>
+//             <h1 style={{ fontFamily: 'var(--font-display)', fontSize: '3rem', color: 'var(--color-error)' }}>Dashboard (Nội bộ)</h1>
+//             <p>Trang quản trị dành riêng cho nhân viên và admin</p>
+//         </div>
+//     );
+// };
 
 export { Chat } from './Chat';
 export { VerifyEmail } from './VerifyEmail';

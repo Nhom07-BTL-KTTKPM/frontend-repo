@@ -68,7 +68,7 @@ export const Header = () => {
             </li>
             {canAccessDashboard && (
               <li className="nav__item">
-                <Link to="/dashboard" className="nav__link" style={{ color: 'var(--color-error)', fontWeight: 'bold' }}>Dashboard Nội Bộ</Link>
+                <Link to="/admin/dashboard" className="nav__link" style={{ color: 'var(--color-error)', fontWeight: 'bold' }}>Dashboard Nội Bộ</Link>
               </li>
             )}
           </ul>
