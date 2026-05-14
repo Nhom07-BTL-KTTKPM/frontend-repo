@@ -9,6 +9,7 @@ import { userApi } from '../api/userApi';
 import type { PaymentMethod } from '../types/order';
 import type { CartResponse } from '../types/cart';
 import type { CatalogProductVariant } from '../types/catalog';
+import type { Address } from '../types/address';
 import { toast } from 'sonner';
 
 const formatCurrency = (value?: number) => {
@@ -36,10 +37,11 @@ export const Checkout = () => {
     const [submitting, setSubmitting] = useState(false);
 
     // Form state
-    const [recipientName, setRecipientName] = useState('');
+    const [addresses, setAddresses] = useState<Address[]>([]);
+    const [selectedAddressId, setSelectedAddressId] = useState<string | null>(null);
+    const [isAddressModalOpen, setIsAddressModalOpen] = useState(false);
+    
     const [email, setEmail] = useState('');
-    const [phone, setPhone] = useState('');
-    const [shippingAddress, setShippingAddress] = useState('');
     const [note, setNote] = useState('');
     const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('COD');
 
@@ -69,23 +71,25 @@ export const Checkout = () => {
                 }
                 setCustomerId(cId);
 
-                // 2. Fetch default address
+                // 2. Fetch addresses
                 try {
-                    const addressRes = await addressApi.getDefaultAddress(cId);
-                    const addr = ((addressRes as unknown as { data?: { street?: string, ward?: string, district?: string, city?: string, recipientName?: string, phone?: string } }).data ?? addressRes) as { street?: string, ward?: string, district?: string, city?: string, recipientName?: string, phone?: string };
-                    if (addr && addr.street) {
-                        setShippingAddress(`${addr.street}, ${addr.ward}, ${addr.district}, ${addr.city}`);
-                        if (addr.recipientName) setRecipientName(addr.recipientName);
-                        if (addr.phone) setPhone(addr.phone);
+                    const addressesRes = await addressApi.getAddressesByCustomerId(cId);
+                    const addressList = ((addressesRes as unknown as { data?: Address[] }).data ?? addressesRes) as Address[];
+                    if (addressList && addressList.length > 0) {
+                        setAddresses(addressList);
+                        const defaultAddr = addressList.find(a => a.isDefault);
+                        if (defaultAddr && defaultAddr.id) {
+                            setSelectedAddressId(defaultAddr.id);
+                        } else if (addressList[0].id) {
+                            setSelectedAddressId(addressList[0].id);
+                        }
                     }
                 } catch {
-                    console.log('No default address found');
+                    console.log('No addresses found');
                 }
 
                 // Fill from user profile if not filled by address
-                if (!recipientName && user?.fullName) setRecipientName(user.fullName);
                 if (!email && user?.email) setEmail(user.email);
-                if (!phone && user?.phoneNumber) setPhone(user.phoneNumber);
 
                 // 3. Fetch cart
                 let cartData: CartResponse | null = null;
@@ -135,8 +139,15 @@ export const Checkout = () => {
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!customerId) return;
-        if (!recipientName || !email || !phone || !shippingAddress) {
-            toast.error('Vui lòng điền đầy đủ thông tin giao hàng');
+        
+        const selectedAddress = addresses.find(a => a.id === selectedAddressId);
+        
+        if (!selectedAddress) {
+            toast.error('Vui lòng chọn địa chỉ giao hàng');
+            return;
+        }
+        if (!email) {
+            toast.error('Vui lòng nhập email liên hệ');
             return;
         }
 
@@ -147,12 +158,13 @@ export const Checkout = () => {
 
         setSubmitting(true);
         try {
+            const shippingAddressStr = `${selectedAddress.street}, ${selectedAddress.ward}, ${selectedAddress.district}, ${selectedAddress.city}`;
             await orderApi.createOrder({
                 customerId,
-                recipientName,
+                recipientName: selectedAddress.recipientName,
                 email,
-                phone,
-                shippingAddress,
+                phone: selectedAddress.phone,
+                shippingAddress: shippingAddressStr,
                 note,
                 paymentMethod,
                 selectedItemIds
@@ -198,25 +210,37 @@ export const Checkout = () => {
                 <div style={{ background: '#fff', padding: '2rem', borderRadius: '12px', boxShadow: '0 4px 15px rgba(0,0,0,0.05)' }}>
                     <h2 style={{ fontSize: '1.5rem', marginBottom: '1.5rem', color: 'var(--color-black)' }}>Thông tin giao hàng</h2>
                     
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1rem' }}>
-                        <div>
-                            <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 500 }}>Họ và tên *</label>
-                            <input type="text" value={recipientName} onChange={e => setRecipientName(e.target.value)} required style={{ width: '100%', padding: '10px', border: '1px solid #ddd', borderRadius: '6px' }} />
+                    {/* Address Selection Box */}
+                    <div style={{ padding: '1.5rem', borderRadius: '8px', border: '1px solid #e0e0e0', marginBottom: '1.5rem', position: 'relative' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '1rem', alignItems: 'center' }}>
+                            <h3 style={{ margin: 0, fontSize: '1.1rem', color: 'var(--color-black)', fontWeight: 600 }}>Địa chỉ</h3>
+                            <button type="button" onClick={() => setIsAddressModalOpen(true)} style={{ color: '#007bff', background: 'none', border: 'none', cursor: 'pointer', fontSize: '1rem', fontWeight: 500 }}>Chọn địa chỉ</button>
                         </div>
-                        <div>
-                            <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 500 }}>Số điện thoại *</label>
-                            <input type="text" value={phone} onChange={e => setPhone(e.target.value)} required style={{ width: '100%', padding: '10px', border: '1px solid #ddd', borderRadius: '6px' }} />
-                        </div>
+                        
+                        {addresses.length > 0 && selectedAddressId ? (() => {
+                            const selectedAddress = addresses.find(a => a.id === selectedAddressId);
+                            if (!selectedAddress) return null;
+                            return (
+                                <div>
+                                    <div style={{ fontWeight: 600, fontSize: '1rem', marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                        {selectedAddress.recipientName} 
+                                        <span style={{ fontWeight: 400, color: '#666', borderLeft: '1px solid #ddd', paddingLeft: '8px' }}>{selectedAddress.phone}</span>
+                                    </div>
+                                    <div style={{ color: '#555', fontSize: '0.9rem', marginBottom: '0.25rem' }}>{selectedAddress.street}</div>
+                                    <div style={{ color: '#555', fontSize: '0.9rem', marginBottom: '0.5rem' }}>{selectedAddress.ward}, {selectedAddress.district}, {selectedAddress.city}</div>
+                                    {selectedAddress.isDefault && (
+                                        <span style={{ border: '1px solid #ee4d2d', color: '#ee4d2d', padding: '2px 8px', fontSize: '0.75rem', borderRadius: '4px' }}>Mặc định</span>
+                                    )}
+                                </div>
+                            );
+                        })() : (
+                            <div style={{ color: '#888', fontStyle: 'italic', padding: '1rem 0' }}>Chưa có địa chỉ giao hàng. Vui lòng chọn hoặc thêm địa chỉ mới.</div>
+                        )}
                     </div>
 
                     <div style={{ marginBottom: '1rem' }}>
                         <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 500 }}>Email *</label>
                         <input type="email" value={email} onChange={e => setEmail(e.target.value)} required style={{ width: '100%', padding: '10px', border: '1px solid #ddd', borderRadius: '6px' }} />
-                    </div>
-
-                    <div style={{ marginBottom: '1rem' }}>
-                        <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 500 }}>Địa chỉ giao hàng chi tiết *</label>
-                        <textarea value={shippingAddress} onChange={e => setShippingAddress(e.target.value)} required rows={3} style={{ width: '100%', padding: '10px', border: '1px solid #ddd', borderRadius: '6px', resize: 'vertical' }} />
                     </div>
 
                     <div style={{ marginBottom: '2rem' }}>
@@ -309,6 +333,66 @@ export const Checkout = () => {
                     </button>
                 </div>
             </form>
+
+            {/* Address Selection Modal */}
+            {isAddressModalOpen && (
+                <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
+                    <div style={{ background: '#fff', padding: '2rem', borderRadius: '12px', width: '90%', maxWidth: '700px', maxHeight: '80vh', overflowY: 'auto' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
+                            <h2 style={{ margin: 0, fontSize: '1.5rem', color: 'var(--color-black)' }}>Địa chỉ của tôi</h2>
+                            <button type="button" onClick={() => setIsAddressModalOpen(false)} style={{ background: 'none', border: 'none', fontSize: '2rem', cursor: 'pointer', lineHeight: 1, color: '#999' }}>&times;</button>
+                        </div>
+                        
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                            {addresses.length === 0 ? (
+                                <p style={{ color: '#666', textAlign: 'center', padding: '2rem 0' }}>Bạn chưa lưu địa chỉ nào.</p>
+                            ) : (
+                                addresses.map(addr => (
+                                    <div 
+                                        key={addr.id} 
+                                        onClick={() => {
+                                            setSelectedAddressId(addr.id!);
+                                            setIsAddressModalOpen(false);
+                                        }}
+                                        style={{ 
+                                            padding: '1.5rem', 
+                                            border: `1px solid ${selectedAddressId === addr.id ? '#007bff' : '#ddd'}`, 
+                                            borderRadius: '8px', 
+                                            cursor: 'pointer', 
+                                            background: selectedAddressId === addr.id ? '#f0f8ff' : '#fff',
+                                            transition: 'all 0.2s'
+                                        }}
+                                    >
+                                        <div style={{ fontWeight: 600, fontSize: '1rem', marginBottom: '0.5rem', display: 'flex', alignItems: 'center' }}>
+                                            <span style={{ color: 'var(--color-black)' }}>{addr.recipientName}</span>
+                                            <span style={{ fontWeight: 400, color: '#666', marginLeft: '8px', borderLeft: '1px solid #ddd', paddingLeft: '8px' }}>{addr.phone}</span>
+                                        </div>
+                                        <div style={{ color: '#555', fontSize: '0.95rem', marginBottom: '0.25rem' }}>{addr.street}</div>
+                                        <div style={{ color: '#555', fontSize: '0.95rem', marginBottom: '0.5rem' }}>{addr.ward}, {addr.district}, {addr.city}</div>
+                                        {addr.isDefault && (
+                                            <span style={{ border: '1px solid #ee4d2d', color: '#ee4d2d', padding: '2px 8px', fontSize: '0.75rem', borderRadius: '4px' }}>Mặc định</span>
+                                        )}
+                                    </div>
+                                ))
+                            )}
+                        </div>
+                        
+                        <div style={{ marginTop: '1.5rem', paddingTop: '1.5rem', borderTop: '1px solid #ddd', display: 'flex' }}>
+                            <button 
+                                type="button" 
+                                onClick={() => navigate('/profile')} 
+                                style={{ 
+                                    color: '#007bff', background: 'none', border: '1px solid #007bff', 
+                                    cursor: 'pointer', fontSize: '1rem', fontWeight: 500, padding: '10px 20px', borderRadius: '4px',
+                                    display: 'flex', alignItems: 'center', gap: '8px' 
+                                }}
+                            >
+                                <span style={{ fontSize: '1.2rem', lineHeight: 1 }}>+</span> Thêm địa chỉ mới
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };
