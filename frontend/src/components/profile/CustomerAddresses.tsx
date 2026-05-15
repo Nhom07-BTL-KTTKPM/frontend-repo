@@ -6,6 +6,44 @@ import type { Address, AddressCreateRequest } from '../../types/api';
 import { userApi } from '../../api/userApi';
 import { useAuthStore } from '../../store/authStore';
 
+type ProvinceApiWard = {
+  code: number;
+  name: string;
+};
+
+type ProvinceApiDistrict = {
+  code: number;
+  name: string;
+  wards?: ProvinceApiWard[] | null;
+};
+
+type ProvinceApiProvince = {
+  code: number;
+  name: string;
+  districts?: ProvinceApiDistrict[];
+};
+
+const PROVINCES_API_BASE = 'https://provinces.open-api.vn/api/v1';
+
+function getErrorMessage(error: unknown, fallback: string) {
+  if (error instanceof Error) {
+    return error.message;
+  }
+
+  if (typeof error === 'string') {
+    return error;
+  }
+
+  if (typeof error === 'object' && error !== null && 'message' in error) {
+    const message = (error as { message?: unknown }).message;
+    if (typeof message === 'string') {
+      return message;
+    }
+  }
+
+  return fallback;
+}
+
 export const CustomerAddresses = ({ customerId }: { customerId: string | undefined }) => {
   const queryClient = useQueryClient();
   const authUser = useAuthStore((s) => s.user);
@@ -20,6 +58,40 @@ export const CustomerAddresses = ({ customerId }: { customerId: string | undefin
     city: '',
     isDefault: false,
   });
+
+  const provincesQuery = useQuery({
+    queryKey: ['province-open-api', 'provinces'],
+    queryFn: async () => {
+      const response = await fetch(`${PROVINCES_API_BASE}/?depth=2`);
+      if (!response.ok) {
+        throw new Error('Không tải được danh sách tỉnh/thành phố');
+      }
+
+      return (await response.json()) as ProvinceApiProvince[];
+    },
+    staleTime: 1000 * 60 * 60 * 24,
+  });
+
+  const selectedProvince = provincesQuery.data?.find((province) => province.name === form.city);
+  const selectedDistrict = selectedProvince?.districts?.find((district) => district.name === form.district);
+
+  const districtQuery = useQuery({
+    queryKey: ['province-open-api', 'district', selectedDistrict?.code],
+    queryFn: async () => {
+      if (!selectedDistrict?.code) return null;
+
+      const response = await fetch(`${PROVINCES_API_BASE}/d/${selectedDistrict.code}?depth=2`);
+      if (!response.ok) {
+        throw new Error('Không tải được danh sách phường/xã');
+      }
+
+      return (await response.json()) as ProvinceApiDistrict;
+    },
+    enabled: !!selectedDistrict?.code,
+  });
+
+  const districtOptions = selectedProvince?.districts ?? [];
+  const wardOptions = districtQuery.data?.wards ?? [];
 
   const addressesQuery = useQuery({
     queryKey: ['profile', 'customer', 'addresses', customerId ?? authUser?.accountId],
@@ -38,8 +110,8 @@ export const CustomerAddresses = ({ customerId }: { customerId: string | undefin
       queryClient.invalidateQueries({ queryKey: ['profile', 'customer', 'addresses'] });
       setIsAdding(false);
     },
-    onError: (err: any) => {
-      toast.error(err?.message || 'Không thể thêm địa chỉ');
+    onError: (err: unknown) => {
+      toast.error(getErrorMessage(err, 'Không thể thêm địa chỉ'));
     },
   });
 
@@ -50,7 +122,7 @@ export const CustomerAddresses = ({ customerId }: { customerId: string | undefin
       queryClient.invalidateQueries({ queryKey: ['profile', 'customer', 'addresses'] });
       setEditing(null);
     },
-    onError: (err: any) => toast.error(err?.message || 'Không thể cập nhật địa chỉ'),
+    onError: (err: unknown) => toast.error(getErrorMessage(err, 'Không thể cập nhật địa chỉ')),
   });
 
   const deleteMutation = useMutation({
@@ -59,7 +131,7 @@ export const CustomerAddresses = ({ customerId }: { customerId: string | undefin
       toast.success('Đã xóa địa chỉ');
       queryClient.invalidateQueries({ queryKey: ['profile', 'customer', 'addresses'] });
     },
-    onError: (err: any) => toast.error(err?.message || 'Không thể xóa địa chỉ'),
+    onError: (err: unknown) => toast.error(getErrorMessage(err, 'Không thể xóa địa chỉ')),
   });
 
   const setDefaultMutation = useMutation({
@@ -68,7 +140,7 @@ export const CustomerAddresses = ({ customerId }: { customerId: string | undefin
       toast.success('Đã đặt địa chỉ mặc định');
       queryClient.invalidateQueries({ queryKey: ['profile', 'customer', 'addresses'] });
     },
-    onError: (err: any) => toast.error(err?.message || 'Không thể đặt địa chỉ mặc định'),
+    onError: (err: unknown) => toast.error(getErrorMessage(err, 'Không thể đặt địa chỉ mặc định')),
   });
 
   if (!customerId) {
@@ -79,6 +151,36 @@ export const CustomerAddresses = ({ customerId }: { customerId: string | undefin
 
   function resetForm() {
     setForm({ recipientName: '', phone: '', streetAddress: '', ward: '', district: '', city: '', isDefault: false });
+  }
+
+  function handleProvinceChange(value: string) {
+    const nextProvince = provincesQuery.data?.find((province) => province.code.toString() === value);
+
+    setForm((current) => ({
+      ...current,
+      city: nextProvince?.name ?? '',
+      district: '',
+      ward: '',
+    }));
+  }
+
+  function handleDistrictChange(value: string) {
+    const nextDistrict = selectedProvince?.districts?.find((district) => district.code.toString() === value);
+
+    setForm((current) => ({
+      ...current,
+      district: nextDistrict?.name ?? '',
+      ward: '',
+    }));
+  }
+
+  function handleWardChange(value: string) {
+    const nextWard = wardOptions.find((ward) => ward.code.toString() === value);
+
+    setForm((current) => ({
+      ...current,
+      ward: nextWard?.name ?? '',
+    }));
   }
 
   return (
@@ -95,9 +197,19 @@ export const CustomerAddresses = ({ customerId }: { customerId: string | undefin
       {(isAdding || editing) && (
         <form onSubmit={(e) => {
           e.preventDefault();
+          if (!form.city || !form.district || !form.ward) {
+            toast.error('Vui lòng chọn đầy đủ tỉnh/thành, quận/huyện và phường/xã');
+            return;
+          }
+
           const payload = form;
           if (editing) {
-            updateMutation.mutate({ id: editing.id as any as string, payload });
+            if (!editing.id) {
+              toast.error('Thiếu mã địa chỉ để cập nhật');
+              return;
+            }
+
+            updateMutation.mutate({ id: editing.id, payload });
           } else {
             addMutation.mutate(payload);
           }
@@ -106,9 +218,29 @@ export const CustomerAddresses = ({ customerId }: { customerId: string | undefin
             <Input label="Tên người nhận" value={form.recipientName || ''} onChange={(v) => setForm((s) => ({ ...s, recipientName: v }))} />
             <Input label="Số điện thoại" value={form.phone || ''} onChange={(v) => setForm((s) => ({ ...s, phone: v }))} />
             <Input label="Địa chỉ (số nhà, đường)" value={form.streetAddress || ''} onChange={(v) => setForm((s) => ({ ...s, streetAddress: v }))} />
-            <Input label="Phường/Xã" value={form.ward || ''} onChange={(v) => setForm((s) => ({ ...s, ward: v }))} />
-            <Input label="Quận/Huyện" value={form.district || ''} onChange={(v) => setForm((s) => ({ ...s, district: v }))} />
-            <Input label="Tỉnh/Thành phố" value={form.city || ''} onChange={(v) => setForm((s) => ({ ...s, city: v }))} />
+            <SelectField
+              label="Tỉnh/Thành phố"
+              value={selectedProvince?.code.toString() ?? ''}
+              onChange={handleProvinceChange}
+              options={provincesQuery.data ?? []}
+              placeholder={provincesQuery.isLoading ? 'Đang tải danh sách tỉnh/thành...' : 'Chọn tỉnh/thành phố'}
+            />
+            <SelectField
+              label="Quận/Huyện"
+              value={selectedDistrict?.code.toString() ?? ''}
+              onChange={handleDistrictChange}
+              options={districtOptions}
+              placeholder={!selectedProvince ? 'Chọn tỉnh/thành phố trước' : 'Chọn quận/huyện'}
+              disabled={!selectedProvince || provincesQuery.isLoading}
+            />
+            <SelectField
+              label="Phường/Xã"
+              value={districtQuery.data?.wards?.find((ward) => ward.name === form.ward)?.code.toString() ?? ''}
+              onChange={handleWardChange}
+              options={wardOptions}
+              placeholder={!selectedDistrict ? 'Chọn quận/huyện trước' : districtQuery.isLoading ? 'Đang tải phường/xã...' : 'Chọn phường/xã'}
+              disabled={!selectedDistrict || districtQuery.isLoading}
+            />
           </div>
 
           <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
@@ -133,12 +265,26 @@ export const CustomerAddresses = ({ customerId }: { customerId: string | undefin
             </div>
             <div style={{ display: 'flex', gap: 8 }}>
               {!a.isDefault && (
-                <button className="btn btn--outline" onClick={() => setDefaultMutation.mutate(a.id as any as string)}>Đặt mặc định</button>
+                <button className="btn btn--outline" onClick={() => {
+                  if (!a.id) {
+                    toast.error('Thiếu mã địa chỉ');
+                    return;
+                  }
+
+                  setDefaultMutation.mutate(a.id);
+                }}>Đặt mặc định</button>
               )}
               <button className="btn" onClick={() => { setEditing(a); setIsAdding(false); setForm({ recipientName: a.recipientName || '', phone: a.phone || '', streetAddress: a.streetAddress || '', ward: a.ward || '', district: a.district || '', city: a.city || '', isDefault: !!a.isDefault }); }}>
                 <Edit3 size={14} />
               </button>
-              <button className="btn" onClick={() => deleteMutation.mutate(a.id as any as string)}>
+              <button className="btn" onClick={() => {
+                if (!a.id) {
+                  toast.error('Thiếu mã địa chỉ');
+                  return;
+                }
+
+                deleteMutation.mutate(a.id);
+              }}>
                 <Trash2 size={14} />
               </button>
             </div>
@@ -154,6 +300,47 @@ function Input({ label, value, onChange }: { label: string; value: string; onCha
     <div>
       <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, marginBottom: 6 }}>{label}</label>
       <input value={value} onChange={(e) => onChange(e.target.value)} style={{ width: '100%', padding: 10, borderRadius: 6, border: '1px solid var(--color-gray-200)' }} />
+    </div>
+  );
+}
+
+function SelectField<T extends { code: number; name: string }>({
+  label,
+  value,
+  onChange,
+  options,
+  placeholder,
+  disabled,
+}: {
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
+  options: T[];
+  placeholder: string;
+  disabled?: boolean;
+}) {
+  return (
+    <div>
+      <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, marginBottom: 6 }}>{label}</label>
+      <select
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        disabled={disabled}
+        style={{
+          width: '100%',
+          padding: 10,
+          borderRadius: 6,
+          border: '1px solid var(--color-gray-200)',
+          background: disabled ? 'var(--color-gray-50)' : '#fff',
+        }}
+      >
+        <option value="">{placeholder}</option>
+        {options.map((option) => (
+          <option key={option.code} value={option.code}>
+            {option.name}
+          </option>
+        ))}
+      </select>
     </div>
   );
 }
