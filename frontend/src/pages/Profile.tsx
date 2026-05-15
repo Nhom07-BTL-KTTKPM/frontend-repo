@@ -200,9 +200,9 @@ export const Profile = () => {
   return (
     <div className="container" style={{ padding: '4rem 0', minHeight: '80vh' }}>
       {user.role === 'CUSTOMER' ? (
-        <div style={{ maxWidth: '1160px', margin: '0 auto', display: 'grid', gridTemplateColumns: '240px minmax(0, 1fr)', gap: '1.25rem', alignItems: 'start' }}>
-          <aside style={{ background: '#fff', borderRadius: '12px', padding: '1rem', boxShadow: '0 6px 18px rgba(0,0,0,0.04)', position: 'sticky', top: '88px'}}>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px'}}>
+        <div style={{ margin: '0 auto', display: 'grid', gridTemplateColumns: '240px minmax(0, 1fr)', gap: '1.25rem', alignItems: 'start' }}>
+          <aside style={{ background: '#fff', borderRadius: '12px', padding: '1rem', boxShadow: '0 6px 18px rgba(0,0,0,0.04)', position: 'sticky', top: '88px' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
               <button onClick={() => setCustomerTab('profile')} className={`btn ${customerTab === 'profile' ? 'btn--primary' : ''}`} style={{ textAlign: 'left', justifyContent: 'flex-start' }}>
                 Hồ sơ
               </button>
@@ -229,10 +229,21 @@ export const Profile = () => {
                   {!isChangingPassword && (
                     <button
                       onClick={() => setIsChangingPassword(true)}
-                      className="btn btn--outline"
-                      style={{ padding: '8px 16px', borderRadius: '6px', border: '1px solid var(--color-gray-300)', background: 'transparent', cursor: 'pointer', fontWeight: 500 }}
+                      style={{
+                        padding: '10px 24px',
+                        borderRadius: '12px',
+                        border: '2px solid #D4AF37',
+                        background: '#fff',
+                        color: '#B8860B',
+                        fontWeight: 700,
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '8px',
+                        transition: 'all 0.3s ease'
+                      }}
                     >
-                      Thay đổi
+                      THAY ĐỔI
                     </button>
                   )}
                 </div>
@@ -249,16 +260,27 @@ export const Profile = () => {
                             onClick={handleRequestChangePassword}
                             disabled={requestChangePasswordMutation.isPending}
                             className="btn btn--primary"
-                            style={{ padding: '10px 20px', background: 'var(--color-primary)', color: '#fff', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: 600 }}
+                            style={{
+                              padding: '10px 24px',
+                              borderRadius: '12px',
+                              background: 'linear-gradient(135deg, #D4AF37, #B8860B)', // Nút vàng gradient
+                              color: '#fff',
+                              border: 'none',
+                              boxShadow: '0 4px 15px rgba(184, 134, 11, 0.3)',
+                              cursor: 'pointer',
+                              fontWeight: 700,
+                              textTransform: 'uppercase',
+                              letterSpacing: '1px'
+                            }}
                           >
                             {requestChangePasswordMutation.isPending ? 'Đang gửi...' : 'Gửi mã OTP'}
                           </button>
                           <button
                             onClick={cancelChangePassword}
                             className="btn"
-                            style={{ padding: '10px 20px', background: 'var(--color-gray-200)', color: 'var(--color-gray-700)', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: 500 }}
+                            style={{ padding: '10px 20px', background: '#e5e7eb', color: '#374151', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: 600 }}
                           >
-                            Hủy
+                            Huỷ
                           </button>
                         </div>
                       </div>
@@ -313,7 +335,18 @@ export const Profile = () => {
                             type="submit"
                             disabled={confirmChangePasswordMutation.isPending || !otp || !oldPassword || !newPassword}
                             className="btn btn--primary"
-                            style={{ padding: '10px 20px', background: 'var(--color-primary)', color: '#fff', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: 600, flex: 1, minWidth: '160px' }}
+                            style={{
+                              padding: '10px 24px',
+                              borderRadius: '12px',
+                              background: 'linear-gradient(135deg, #D4AF37, #B8860B)', // Nút vàng gradient
+                              color: '#fff',
+                              border: 'none',
+                              boxShadow: '0 4px 15px rgba(184, 134, 11, 0.3)',
+                              cursor: 'pointer',
+                              fontWeight: 700,
+                              textTransform: 'uppercase',
+                              letterSpacing: '1px'
+                            }}
                           >
                             {confirmChangePasswordMutation.isPending ? 'Đang xử lý...' : 'Xác nhận đổi'}
                           </button>
@@ -323,7 +356,7 @@ export const Profile = () => {
                             className="btn"
                             style={{ padding: '10px 20px', background: 'var(--color-gray-200)', color: 'var(--color-gray-700)', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: 500 }}
                           >
-                            Hủy
+                            Huỷ
                           </button>
                         </div>
                       </form>
@@ -335,10 +368,7 @@ export const Profile = () => {
           </div>
         </div>
       ) : (
-        <div style={{ maxWidth: '900px', margin: '0 auto' }}>
-          <h2 style={{ fontFamily: 'var(--font-body)', fontSize: '2rem', fontWeight: 600, marginBottom: '2rem', textAlign: 'center', color: 'var(--color-black)' }}>
-            Hồ sơ tài khoản
-          </h2>
+        <div style={{ margin: '-50px auto' }}>
 
           {user.role === 'EMPLOYEE' ? (
             <EmployeeProfile user={user} employee={employeeQuery.data!} onSave={handleEmployeeProfileSave} />
@@ -347,115 +377,148 @@ export const Profile = () => {
           )}
 
           <div style={{ background: '#fff', borderRadius: '12px', boxShadow: '0 10px 25px rgba(0,0,0,0.05)', padding: '2rem' }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.5rem', gap: '1rem', flexWrap: 'wrap' }}>
-            <h3 style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '1.25rem', margin: 0, color: 'var(--color-gray-800)' }}>
-              <Key size={20} color="var(--color-primary)" /> Đổi mật khẩu
-            </h3>
-            {!isChangingPassword && (
-              <button
-                onClick={() => setIsChangingPassword(true)}
-                className="btn btn--outline"
-                style={{ padding: '8px 16px', borderRadius: '6px', border: '1px solid var(--color-gray-300)', background: 'transparent', cursor: 'pointer', fontWeight: 500 }}
-              >
-                Thay đổi
-              </button>
-            )}
-          </div>
-
-          {isChangingPassword && (
-            <div style={{ marginTop: '1.5rem', borderTop: '1px solid var(--color-gray-200)', paddingTop: '1.5rem' }}>
-              {!otpRequested ? (
-                <div>
-                  <p style={{ color: 'var(--color-gray-600)', marginBottom: '1rem', fontSize: '0.95rem' }}>
-                    Để bảo mật, hệ thống sẽ gửi một mã OTP đến email <strong>{user.email}</strong>. Vui lòng nhấn nút bên dưới để nhận mã.
-                  </p>
-                  <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
-                    <button
-                      onClick={handleRequestChangePassword}
-                      disabled={requestChangePasswordMutation.isPending}
-                      className="btn btn--primary"
-                      style={{ padding: '10px 20px', background: 'var(--color-primary)', color: '#fff', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: 600 }}
-                    >
-                      {requestChangePasswordMutation.isPending ? 'Đang gửi...' : 'Gửi mã OTP'}
-                    </button>
-                    <button
-                      onClick={cancelChangePassword}
-                      className="btn"
-                      style={{ padding: '10px 20px', background: 'var(--color-gray-200)', color: 'var(--color-gray-700)', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: 500 }}
-                    >
-                      Hủy
-                    </button>
-                  </div>
-                </div>
-              ) : (
-                <form onSubmit={handleConfirmChangePassword} style={{ maxWidth: '420px' }}>
-                  <InputField
-                    label="Mã OTP (từ email)"
-                    value={otp}
-                    type="text"
-                    placeholder="Nhập 6 số"
-                    error={fieldErrors.otp}
-                    onChange={(value) => {
-                      setOtp(value);
-                      setFieldErrors((prev) => ({ ...prev, otp: '' }));
-                    }}
-                  />
-                  <InputField
-                    label="Mật khẩu hiện tại"
-                    value={oldPassword}
-                    type="password"
-                    placeholder="••••••••"
-                    error={fieldErrors.oldPassword}
-                    onChange={(value) => {
-                      setOldPassword(value);
-                      setFieldErrors((prev) => ({ ...prev, oldPassword: '' }));
-                    }}
-                  />
-                  <InputField
-                    label="Mật khẩu mới"
-                    value={newPassword}
-                    type="password"
-                    placeholder="••••••••"
-                    error={fieldErrors.newPassword}
-                    onChange={(value) => {
-                      setNewPassword(value);
-                      setFieldErrors((prev) => ({ ...prev, newPassword: '' }));
-                    }}
-                  />
-                  <InputField
-                    label="Xác nhận mật khẩu mới"
-                    value={confirmPassword}
-                    type="password"
-                    placeholder="••••••••"
-                    error={fieldErrors.confirmPassword}
-                    onChange={(value) => {
-                      setConfirmPassword(value);
-                      setFieldErrors((prev) => ({ ...prev, confirmPassword: '' }));
-                    }}
-                  />
-                  <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
-                    <button
-                      type="submit"
-                      disabled={confirmChangePasswordMutation.isPending || !otp || !oldPassword || !newPassword}
-                      className="btn btn--primary"
-                      style={{ padding: '10px 20px', background: 'var(--color-primary)', color: '#fff', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: 600, flex: 1, minWidth: '160px' }}
-                    >
-                      {confirmChangePasswordMutation.isPending ? 'Đang xử lý...' : 'Xác nhận đổi'}
-                    </button>
-                    <button
-                      type="button"
-                      onClick={cancelChangePassword}
-                      className="btn"
-                      style={{ padding: '10px 20px', background: 'var(--color-gray-200)', color: 'var(--color-gray-700)', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: 500 }}
-                    >
-                      Hủy
-                    </button>
-                  </div>
-                </form>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.5rem', gap: '1rem', flexWrap: 'wrap' }}>
+              <h3 style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '1.25rem', margin: 0, color: 'var(--color-gray-800)' }}>
+                <Key size={20} color="var(--color-primary)" /> Đổi mật khẩu
+              </h3>
+              {!isChangingPassword && (
+                <button
+                  onClick={() => setIsChangingPassword(true)}
+                  style={{
+                    padding: '10px 24px',
+                    borderRadius: '12px',
+                    border: '2px solid #D4AF37',
+                    background: '#fff',
+                    color: '#B8860B',
+                    fontWeight: 700,
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                    transition: 'all 0.3s ease'
+                  }}
+                >
+                  THAY ĐỔI
+                </button>
               )}
             </div>
-          )}
-        </div>
+
+            {isChangingPassword && (
+              <div style={{ marginTop: '1.5rem', borderTop: '1px solid var(--color-gray-200)', paddingTop: '1.5rem' }}>
+                {!otpRequested ? (
+                  <div>
+                    <p style={{ color: 'var(--color-gray-600)', marginBottom: '1rem', fontSize: '0.95rem' }}>
+                      Để bảo mật, hệ thống sẽ gửi một mã OTP đến email <strong>{user.email}</strong>. Vui lòng nhấn nút bên dưới để nhận mã.
+                    </p>
+                    <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+                      <button
+                        onClick={handleRequestChangePassword}
+                        disabled={requestChangePasswordMutation.isPending}
+                        className="btn btn--primary"
+                        style={{
+                          padding: '10px 24px',
+                          borderRadius: '12px',
+                          background: 'linear-gradient(135deg, #D4AF37, #B8860B)', // Nút vàng gradient
+                          color: '#fff',
+                          border: 'none',
+                          boxShadow: '0 4px 15px rgba(184, 134, 11, 0.3)',
+                          cursor: 'pointer',
+                          fontWeight: 700,
+                          textTransform: 'uppercase',
+                          letterSpacing: '1px'
+                        }}
+                      >
+                        {requestChangePasswordMutation.isPending ? 'Đang gửi...' : 'Gửi mã OTP'}
+                      </button>
+                      <button
+                        onClick={cancelChangePassword}
+                        className="btn"
+                        style={{ padding: '10px 20px', background: '#e5e7eb', color: '#374151', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: 600 }}
+                      >
+                        Huỷ
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <form onSubmit={handleConfirmChangePassword} style={{ maxWidth: '420px' }}>
+                    <InputField
+                      label="Mã OTP (từ email)"
+                      value={otp}
+                      type="text"
+                      placeholder="Nhập 6 số"
+                      error={fieldErrors.otp}
+                      onChange={(value) => {
+                        setOtp(value);
+                        setFieldErrors((prev) => ({ ...prev, otp: '' }));
+                      }}
+                    />
+                    <InputField
+                      label="Mật khẩu hiện tại"
+                      value={oldPassword}
+                      type="password"
+                      placeholder="••••••••"
+                      error={fieldErrors.oldPassword}
+                      onChange={(value) => {
+                        setOldPassword(value);
+                        setFieldErrors((prev) => ({ ...prev, oldPassword: '' }));
+                      }}
+                    />
+                    <InputField
+                      label="Mật khẩu mới"
+                      value={newPassword}
+                      type="password"
+                      placeholder="••••••••"
+                      error={fieldErrors.newPassword}
+                      onChange={(value) => {
+                        setNewPassword(value);
+                        setFieldErrors((prev) => ({ ...prev, newPassword: '' }));
+                      }}
+                    />
+                    <InputField
+                      label="Xác nhận mật khẩu mới"
+                      value={confirmPassword}
+                      type="password"
+                      placeholder="••••••••"
+                      error={fieldErrors.confirmPassword}
+                      onChange={(value) => {
+                        setConfirmPassword(value);
+                        setFieldErrors((prev) => ({ ...prev, confirmPassword: '' }));
+                      }}
+                    />
+                    <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+                      <button
+                        type="submit"
+                        disabled={confirmChangePasswordMutation.isPending || !otp || !oldPassword || !newPassword}
+                        className="btn btn--primary"
+                        style={{
+                          padding: '10px 24px',
+                          borderRadius: '12px',
+                          background: 'linear-gradient(135deg, #D4AF37, #B8860B)', // Nút vàng gradient
+                          color: '#fff',
+                          border: 'none',
+                          boxShadow: '0 4px 15px rgba(184, 134, 11, 0.3)',
+                          cursor: 'pointer',
+                          fontWeight: 700,
+                          textTransform: 'uppercase',
+                          letterSpacing: '1px'
+                        }}
+                      >
+                        {confirmChangePasswordMutation.isPending ? 'Đang xử lý...' : 'Xác nhận đổi'}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={cancelChangePassword}
+                        className="btn"
+                        style={{ padding: '10px 20px', background: 'var(--color-gray-200)', color: 'var(--color-gray-700)', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: 500 }}
+                      >
+                        Huỷ
+                      </button>
+                    </div>
+                  </form>
+                )}
+              </div>
+            )}
+          </div>
         </div>
       )}
     </div>

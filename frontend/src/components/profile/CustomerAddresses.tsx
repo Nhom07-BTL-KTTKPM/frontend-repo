@@ -184,11 +184,11 @@ export const CustomerAddresses = ({ customerId }: { customerId: string | undefin
   }
 
   return (
-    <div style={{ background: '#fff', borderRadius: 12, boxShadow: '0 10px 25px rgba(0,0,0,0.05)', padding: 20 }}>
+    <div style={{ background: '#fff', borderRadius: 16, boxShadow: '0 12px 30px rgba(201,169,110,0.12)', padding: 20, border: '1px solid rgba(201,169,110,0.18)' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-        <h3 style={{ margin: 0, fontSize: 18 }}>Địa chỉ giao hàng</h3>
+        <h3 style={{ margin: 0, fontSize: 18, color: '#111827' }}>Địa chỉ giao hàng</h3>
         <div style={{ display: 'flex', gap: 8 }}>
-          <button onClick={() => { setIsAdding((s) => !s); setEditing(null); resetForm(); }} className="btn btn--primary" style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
+          <button onClick={() => { setIsAdding((s) => !s); setEditing(null); resetForm(); }} style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '10px 18px', borderRadius: '12px', border: '2px solid #D4AF37', background: '#fff', color: '#B8860B', fontWeight: 700, cursor: 'pointer' }}>
             <PlusCircle size={16} /> Thêm địa chỉ
           </button>
         </div>
@@ -214,7 +214,7 @@ export const CustomerAddresses = ({ customerId }: { customerId: string | undefin
             addMutation.mutate(payload);
           }
         }} style={{ marginBottom: 18, borderTop: '1px solid #f3f4f6', paddingTop: 12 }}>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 8 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 20 }}>
             <Input label="Tên người nhận" value={form.recipientName || ''} onChange={(v) => setForm((s) => ({ ...s, recipientName: v }))} />
             <Input label="Số điện thoại" value={form.phone || ''} onChange={(v) => setForm((s) => ({ ...s, phone: v }))} />
             <Input label="Địa chỉ (số nhà, đường)" value={form.streetAddress || ''} onChange={(v) => setForm((s) => ({ ...s, streetAddress: v }))} />
@@ -244,11 +244,24 @@ export const CustomerAddresses = ({ customerId }: { customerId: string | undefin
           </div>
 
           <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
-            <button type="submit" className="btn btn--primary" disabled={addMutation.isPending || updateMutation.isPending}>
+            <button type="submit" disabled={addMutation.isPending || updateMutation.isPending}
+              style={{
+                padding: '10px 24px',
+                borderRadius: '12px',
+                background: 'linear-gradient(135deg, #D4AF37, #B8860B)', // Nút vàng gradient
+                color: '#fff',
+                border: 'none',
+                boxShadow: '0 4px 15px rgba(184, 134, 11, 0.3)',
+                cursor: 'pointer',
+                fontWeight: 700,
+                textTransform: 'uppercase',
+                letterSpacing: '1px'
+              }}>
               {editing ? 'Lưu' : 'Thêm'}
             </button>
-            <button type="button" className="btn" onClick={() => { setIsAdding(false); setEditing(null); resetForm(); }}>
-              Hủy
+            <button type="button" onClick={() => { setIsAdding(false); setEditing(null); resetForm(); }}
+              style={{ padding: '10px 20px', background: '#e5e7eb', color: '#374151', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: 600 }}>
+              Huỷ
             </button>
           </div>
         </form>
@@ -257,35 +270,28 @@ export const CustomerAddresses = ({ customerId }: { customerId: string | undefin
       <div style={{ display: 'grid', gap: 10 }}>
         {addresses.length === 0 && <div style={{ color: 'var(--color-gray-600)' }}>Chưa có địa chỉ nào.</div>}
         {addresses.map((a) => (
-          <div key={a.id} style={{ border: '1px solid #eef2f7', padding: 12, borderRadius: 8, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <div key={a.id} style={{ border: '1px solid #f3f1ea', padding: 12, borderRadius: 8, display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#fff' }}>
             <div>
-              <div style={{ fontWeight: 700 }}>{a.recipientName} {a.isDefault ? <span style={{ marginLeft: 8, fontSize: 12, background: 'var(--color-gold)', color: '#fff', padding: '2px 6px', borderRadius: 6 }}>Mặc định</span> : null}</div>
+              <div style={{ fontWeight: 700 }}>{a.recipientName} {a.isDefault ? <span style={{ marginLeft: 8, fontSize: 12, background: 'green', color: '#fff', padding: '4px 8px', borderRadius: 8 }}>Mặc định</span> : null}</div>
               <div style={{ color: 'var(--color-gray-600)' }}>{a.phone}</div>
               <div style={{ marginTop: 6 }}>{a.streetAddress}, {a.ward}, {a.district}, {a.city}</div>
             </div>
             <div style={{ display: 'flex', gap: 8 }}>
               {!a.isDefault && (
-                <button className="btn btn--outline" onClick={() => {
-                  if (!a.id) {
-                    toast.error('Thiếu mã địa chỉ');
-                    return;
-                  }
-
-                  setDefaultMutation.mutate(a.id);
-                }}>Đặt mặc định</button>
+                <button onClick={() => setDefaultMutation.mutate(a.id ?? '')} style={{ padding: '8px 12px', borderRadius: '8px', border: '1px solid green', background: 'transparent', color: 'green', cursor: 'pointer' }}>Đặt mặc định</button>
               )}
-              <button className="btn" onClick={() => { setEditing(a); setIsAdding(false); setForm({ recipientName: a.recipientName || '', phone: a.phone || '', streetAddress: a.streetAddress || '', ward: a.ward || '', district: a.district || '', city: a.city || '', isDefault: !!a.isDefault }); }}>
-                <Edit3 size={14} />
+              <button onClick={() => { setEditing(a); setIsAdding(false); setForm({ recipientName: a.recipientName || '', phone: a.phone || '', streetAddress: a.streetAddress || '', ward: a.ward || '', district: a.district || '', city: a.city || '', isDefault: !!a.isDefault }); }} style={{ padding: '8px 10px', borderRadius: '8px', border: 'none', background: '#f3f4f6', cursor: 'pointer' }}>
+                <Edit3 size={14} color='#fa893e'/>
               </button>
-              <button className="btn" onClick={() => {
+              <button onClick={() => {
                 if (!a.id) {
                   toast.error('Thiếu mã địa chỉ');
                   return;
                 }
 
                 deleteMutation.mutate(a.id);
-              }}>
-                <Trash2 size={14} />
+              }} style={{ padding: '8px 10px', borderRadius: '8px', border: 'none', background: '#f3f4f6', cursor: 'pointer' }}>
+                <Trash2 size={14} color='#fa3e3e'/>
               </button>
             </div>
           </div>
@@ -299,7 +305,23 @@ function Input({ label, value, onChange }: { label: string; value: string; onCha
   return (
     <div>
       <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, marginBottom: 6 }}>{label}</label>
-      <input value={value} onChange={(e) => onChange(e.target.value)} style={{ width: '100%', padding: 10, borderRadius: 6, border: '1px solid var(--color-gray-200)' }} />
+      <input
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        style={{
+          width: '100%',
+          padding: '10px 12px',
+          borderRadius: '8px',
+          border: '1px solid #d1d5db',
+          background: '#fff',
+          color: '#111827',
+          outline: 'none',
+          transition: 'border-color 0.2s ease',
+        }}
+        onBlur={(e) => {
+          e.currentTarget.style.borderColor = '#d1d5db';
+        }}
+      />
     </div>
   );
 }
@@ -328,10 +350,19 @@ function SelectField<T extends { code: number; name: string }>({
         disabled={disabled}
         style={{
           width: '100%',
-          padding: 10,
-          borderRadius: 6,
-          border: '1px solid var(--color-gray-200)',
-          background: disabled ? 'var(--color-gray-50)' : '#fff',
+          padding: '10px 12px',
+          borderRadius: '8px',
+          border: '1px solid #d1d5db',
+          background: disabled ? '#f9fafb' : '#fff',
+          color: '#111827',
+          outline: 'none',
+          transition: 'border-color 0.2s ease',
+          cursor: disabled ? 'not-allowed' : 'pointer',
+          opacity: disabled ? 0.6 : 1,
+          minHeight: '44px',
+        }}
+        onBlur={(e) => {
+          e.currentTarget.style.borderColor = '#d1d5db';
         }}
       >
         <option value="">{placeholder}</option>
