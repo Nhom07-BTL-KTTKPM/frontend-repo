@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { Calendar, CheckCircle, Key, Mail, Phone, ShieldCheck, User, XCircle } from 'lucide-react';
+import { Calendar, Key, Mail, Phone, ShieldCheck, User, XCircle } from 'lucide-react';
 import { toast } from 'sonner';
 import { CustomerProfile } from '../components/profile/CustomerProfile.tsx';
 import { EmployeeProfile } from '../components/profile/EmployeeProfile';
@@ -546,39 +546,40 @@ const ProfileError = ({ error }: { error: unknown }) => {
 };
 
 const GenericProfile = ({ user }: { user: UserProfileInfo }) => (
-  <div style={{ background: '#fff', borderRadius: '12px', boxShadow: '0 10px 25px rgba(0,0,0,0.05)', overflow: 'hidden', marginBottom: '2rem' }}>
-    <div style={{ background: 'linear-gradient(135deg, #dbeafe, #3b82f6)', height: '120px', position: 'relative' }} />
-    <div style={{ padding: '0 2rem', marginTop: '-50px', display: 'flex', alignItems: 'flex-end', gap: '1.5rem', marginBottom: '2rem', position: 'relative', zIndex: 10 }}>
-      <div style={{ width: '100px', height: '100px', borderRadius: '50%', background: '#fff', padding: '4px', boxShadow: '0 4px 10px rgba(0,0,0,0.1)', position: 'relative', flexShrink: 0 }}>
+  <div style={{
+    background: '#fff',
+    boxShadow: '0 12px 30px rgba(201,169,110,0.12)',
+    borderRadius: '16px',
+    overflow: 'hidden',
+    marginBottom: '2rem',
+    border: '1px solid rgba(201,169,110,0.18)',
+  }}>
+
+    <div style={{ padding: '0 2.5rem', marginTop: '40px', display: 'flex', alignItems: 'flex-end', gap: '1.5rem', marginBottom: '2.5rem', position: 'relative', zIndex: 10 }}>
+      <div style={{ width: '120px', height: '120px', borderRadius: '50%', background: '#fff', padding: '5px', boxShadow: '0 8px 20px rgba(184, 134, 11, 0.2)', border: '3px solid #D4AF37', flexShrink: 0 }}>
         {user.avatarUrl ? (
           <img src={user.avatarUrl} alt="Avatar" style={{ width: '100%', height: '100%', borderRadius: '50%', objectFit: 'cover' }} />
         ) : (
-          <div style={{ width: '100%', height: '100%', borderRadius: '50%', background: 'var(--color-gray-100, #f3f4f6)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--color-gray-500, #6b7280)' }}>
-            <User size={40} />
+          <div style={{ width: '100%', height: '100%', borderRadius: '50%', background: '#f9f7f2', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#D4AF37' }}>
+            <User size={48} />
           </div>
         )}
       </div>
-      <div style={{ paddingBottom: '10px' }}>
-        <h3 style={{ fontSize: '1.8rem', fontWeight: 700, margin: 0 }}>{user.fullName || 'Người dùng'}</h3>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--color-gray-500, #6b7280)', marginTop: '4px', flexWrap: 'wrap' }}>
-          <span style={{ background: '#e0e7ff', color: '#6366f1', padding: '2px 8px', borderRadius: '12px', fontSize: '0.75rem', fontWeight: 600 }}>{user.role}</span>
-          {user.status === 'ACTIVE' && (
-            <span style={{ display: 'flex', alignItems: 'center', gap: '4px', color: '#10b981', fontSize: '0.8rem' }}>
-              <CheckCircle size={14} /> Hoạt động
-            </span>
-          )}
+
+      <div style={{ paddingBottom: '15px' }}>
+        <h3 style={{ fontSize: '2.2rem', fontWeight: 700, margin: 0, color: '#1a1a1a', letterSpacing: '-0.5px' }}>{user.fullName || 'Quản trị viên'}</h3>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '8px', flexWrap: 'wrap' }}>
+          <span style={{ background: 'linear-gradient(to right, #fef3c7, #fde68a)', color: '#92400e', padding: '6px 14px', borderRadius: '20px', fontSize: '0.8rem', fontWeight: 700, display: 'inline-block', textTransform: 'uppercase' }}>
+            {user.role}
+          </span>
         </div>
       </div>
     </div>
-    <div style={{ padding: '0 2rem 2rem' }}>
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '1.5rem' }}>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-          <SimpleRow icon={<Mail size={16} />} label="Email" value={user.email} />
-          <SimpleRow icon={<Phone size={16} />} label="Số điện thoại" value={user.phoneNumber || 'Chưa cập nhật'} />
-        </div>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-          <SimpleRow icon={<ShieldCheck size={16} />} label="Phương thức đăng nhập" value={user.provider === 'GOOGLE' ? 'Google OAuth2' : 'Tài khoản thường (Local)'} />
-          <SimpleRow icon={<Calendar size={16} />} label="Ngày tham gia" value={formatDate(user.createdAt)} />
+
+    <div style={{ padding: '0 2.5rem 2.5rem' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '2rem' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '1.8rem' }}>
+          <SimpleRow icon={<Mail size={18} color="#D4AF37" />} label="Email" value={user.email} />
         </div>
       </div>
     </div>
@@ -587,10 +588,12 @@ const GenericProfile = ({ user }: { user: UserProfileInfo }) => (
 
 const SimpleRow = ({ icon, label, value }: { icon: React.ReactNode; label: string; value?: string }) => (
   <div>
-    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--color-gray-500, #6b7280)', fontSize: '0.9rem', marginBottom: '4px' }}>
+    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#6b7280', fontSize: '0.9rem', marginBottom: '4px' }}>
       {icon} {label}
     </div>
-    <div style={{ fontWeight: 600, fontSize: '1.05rem', wordBreak: 'break-all' }}>{value || 'Chưa cập nhật'}</div>
+    <div style={{ fontWeight: 600, fontSize: '1.05rem', display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+      <span style={{ wordBreak: 'break-all' }}>{value || 'Chưa cập nhật'}</span>
+    </div>
   </div>
 );
 
