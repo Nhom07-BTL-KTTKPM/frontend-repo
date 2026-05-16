@@ -15,6 +15,13 @@ const genderOptions = [
   { label: 'Khác', value: 'OTHER' },
 ];
 
+const skinTypeOptions = [
+  { label: 'Khô', value: 'DRY' },
+  { label: 'Dầu', value: 'OILY' },
+  { label: 'Hỗn hợp', value: 'COMBINATION' },
+  { label: 'Nhạy cảm', value: 'SENSITIVE' },
+];
+
 export const CustomerProfile = ({ user, customer, onSave }: CustomerProfileProps) => {
   const [isEditing, setIsEditing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -23,7 +30,7 @@ export const CustomerProfile = ({ user, customer, onSave }: CustomerProfileProps
   const [phoneNumber, setPhoneNumber] = useState(user.phoneNumber ?? '');
   const [dateOfBirth, setDateOfBirth] = useState(formatDateInput(user.dateOfBirth));
   const [gender, setGender] = useState(user.gender ?? '');
-  const [skinType, setSkinType] = useState(user.skinType ?? '');
+  const [skinType, setSkinType] = useState(normalizeSkinTypeValue(user.skinType));
 
   // Populate form values when user opens edit mode instead of on every user change
 
@@ -33,7 +40,7 @@ export const CustomerProfile = ({ user, customer, onSave }: CustomerProfileProps
       phoneNumber.trim() !== (user.phoneNumber ?? '') ||
       dateOfBirth !== formatDateInput(user.dateOfBirth) ||
       gender !== (user.gender ?? '') ||
-      skinType.trim() !== (user.skinType ?? '')
+      skinType !== normalizeSkinTypeValue(user.skinType)
     );
   }, [dateOfBirth, gender, fullName, phoneNumber, skinType, user]);
 
@@ -44,7 +51,7 @@ export const CustomerProfile = ({ user, customer, onSave }: CustomerProfileProps
     setPhoneNumber(user.phoneNumber ?? '');
     setDateOfBirth(formatDateInput(user.dateOfBirth));
     setGender(user.gender ?? '');
-    setSkinType(user.skinType ?? '');
+    setSkinType(normalizeSkinTypeValue(user.skinType));
   };
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
@@ -53,7 +60,6 @@ export const CustomerProfile = ({ user, customer, onSave }: CustomerProfileProps
     const errors: Record<string, string> = {};
     const trimmedFullName = fullName.trim();
     const trimmedPhoneNumber = phoneNumber.trim();
-    const trimmedSkinType = skinType.trim();
 
     if (!trimmedFullName) {
       errors.fullName = 'Vui lòng nhập họ và tên';
@@ -83,7 +89,7 @@ export const CustomerProfile = ({ user, customer, onSave }: CustomerProfileProps
         phoneNumber: trimmedPhoneNumber,
         dateOfBirth: dateOfBirth || undefined,
         gender: gender || undefined,
-        skinType: trimmedSkinType || undefined,
+        skinType: skinType || undefined,
       });
 
       toast.success('Cập nhật thông tin cá nhân thành công.');
@@ -140,7 +146,7 @@ export const CustomerProfile = ({ user, customer, onSave }: CustomerProfileProps
           </div>
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-            <ProfileRow icon={<Sparkles size={16} color="#D4AF37" />} label="Loại da" value={user.skinType || 'Chưa cập nhật'} />
+            <ProfileRow icon={<Sparkles size={16} color="#D4AF37" />} label="Loại da" value={formatSkinTypeLabel(user.skinType)} />
             <ProfileRow icon={<Sparkles size={18} color="#D4AF37" />} label="Giới tính" value={formatGenderLabel(user.gender)} />
           </div>
         </div>
@@ -160,7 +166,7 @@ export const CustomerProfile = ({ user, customer, onSave }: CustomerProfileProps
                 setPhoneNumber(user.phoneNumber ?? '');
                 setDateOfBirth(formatDateInput(user.dateOfBirth));
                 setGender(user.gender ?? '');
-                setSkinType(user.skinType ?? '');
+                setSkinType(normalizeSkinTypeValue(user.skinType));
                 setFieldErrors({});
                 setIsEditing(true);
               }}
@@ -227,11 +233,11 @@ export const CustomerProfile = ({ user, customer, onSave }: CustomerProfileProps
                 options={genderOptions}
               />
 
-              <TextField
+              <SelectField
                 label="Loại da"
                 value={skinType}
                 onChange={setSkinType}
-                placeholder="Ví dụ: Da dầu, da khô..."
+                options={skinTypeOptions}
               />
             </div>
 
@@ -404,6 +410,48 @@ function formatGenderLabel(gender?: string) {
       return 'Khác';
     default:
       return gender;
+  }
+}
+
+function formatSkinTypeLabel(skinType?: string) {
+  if (!skinType) return 'Chưa có thông tin';
+
+  switch (skinType) {
+    case 'DRY':
+    case 'Khô':
+      return 'Khô';
+    case 'OILY':
+    case 'Dầu':
+      return 'Dầu';
+    case 'COMBINATION':
+    case 'Hỗn hợp':
+      return 'Hỗn hợp';
+    case 'SENSITIVE':
+    case 'Nhạy cảm':
+      return 'Nhạy cảm';
+    default:
+      return skinType;
+  }
+}
+
+function normalizeSkinTypeValue(skinType?: string) {
+  if (!skinType) return '';
+
+  switch (skinType) {
+    case 'DRY':
+    case 'Khô':
+      return 'DRY';
+    case 'OILY':
+    case 'Dầu':
+      return 'OILY';
+    case 'COMBINATION':
+    case 'Hỗn hợp':
+      return 'COMBINATION';
+    case 'SENSITIVE':
+    case 'Nhạy cảm':
+      return 'SENSITIVE';
+    default:
+      return skinType;
   }
 }
 
