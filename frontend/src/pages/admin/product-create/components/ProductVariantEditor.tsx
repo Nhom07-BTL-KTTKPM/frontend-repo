@@ -39,7 +39,6 @@ export const ProductVariantEditor = () => {
   return (
     <FieldShell
       label="Biến thể sản phẩm"
-      hint="Tối thiểu 1 biến thể để thể hiện giá, SKU và tồn kho"
       error={variantError}
       action={
         <button
@@ -95,7 +94,6 @@ export const ProductVariantEditor = () => {
 
                 <FieldShell
                   label="SKU"
-                  hint="Tự sinh mặc định, có thể chỉnh sửa"
                   error={variantItemError?.sku?.message}
                   action={
                     <button
@@ -116,15 +114,33 @@ export const ProductVariantEditor = () => {
                 </FieldShell>
 
                 <FieldShell label="Tồn kho" error={variantItemError?.stockQuantity?.message}>
-                  <input {...register(`variants.${index}.stockQuantity`)} type="number" min={0} className={inputClassName} placeholder="0" />
+                  <input
+                    {...register(`variants.${index}.stockQuantity`)}
+                    type="text"
+                    inputMode="numeric"
+                    className={inputClassName}
+                    placeholder="Nhập số lượng tồn kho"
+                  />
                 </FieldShell>
 
                 <FieldShell label="Giá bán" error={variantItemError?.price?.message}>
-                  <input {...register(`variants.${index}.price`)} type="number" min={0} step="1000" className={inputClassName} placeholder="180000" />
+                  <input
+                    {...register(`variants.${index}.price`)}
+                    type="text"
+                    inputMode="decimal"
+                    className={inputClassName}
+                    placeholder="Nhập giá bán"
+                  />
                 </FieldShell>
 
-                <FieldShell label="Giá gốc" hint="Không bắt buộc" error={variantItemError?.originalPrice?.message}>
-                  <input {...register(`variants.${index}.originalPrice`)} type="number" min={0} step="1000" className={inputClassName} placeholder="320000" />
+                <FieldShell label="Giá gốc" error={variantItemError?.originalPrice?.message}>
+                  <input
+                    {...register(`variants.${index}.originalPrice`)}
+                    type="text"
+                    inputMode="decimal"
+                    className={inputClassName}
+                    placeholder="Nhập giá gốc nếu có"
+                  />
                 </FieldShell>
 
                 <FieldShell label="Ảnh minh họa biến thể" error={variantItemError?.imageUrl?.message}>

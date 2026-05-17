@@ -1,7 +1,7 @@
 import { axiosClient } from '../axiosClient';
 import { resolveBaseUrl, serviceBase } from '../serviceBase';
 import type { PageResponse } from '../../types/api';
-import type { CatalogProduct } from '../../types/catalog';
+import type { CatalogProduct, CatalogProductCreateRequest, CatalogProductDetail } from '../../types/catalog';
 
 export interface UpdateProductPayload {
   name?: string;
@@ -14,6 +14,12 @@ export interface UpdateProductPayload {
 const catalogProductsPath = '/catalog/products';
 
 export const productManagementApi = {
+  createProduct: (payload: CatalogProductCreateRequest) => {
+    return axiosClient.post<unknown, CatalogProductDetail>(catalogProductsPath, payload, {
+      baseURL: resolveBaseUrl(serviceBase.catalog),
+    });
+  },
+
   getProducts: (params?: Record<string, unknown>) => {
     return axiosClient.get<unknown, PageResponse<CatalogProduct>>(catalogProductsPath, {
       baseURL: resolveBaseUrl(serviceBase.catalog),

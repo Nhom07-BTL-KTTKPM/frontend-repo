@@ -36,7 +36,6 @@ export const ProductImageEditor = () => {
   return (
     <FieldShell
       label="Ảnh sản phẩm"
-      hint="Kéo thả hoặc tải ảnh lên để xem trước"
       error={imageError}
       action={
         <button
@@ -73,7 +72,13 @@ export const ProductImageEditor = () => {
             <article key={field.id} className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
               <div className="grid grid-cols-[104px_minmax(0,1fr)] gap-3 p-3 sm:grid-cols-[128px_minmax(0,1fr)]">
                 <div className="aspect-square overflow-hidden rounded-xl bg-slate-100">
-                  <img src={field.url} alt={field.altText || 'Ảnh sản phẩm'} className="h-full w-full object-cover" />
+                  {field.url ? (
+                    <img src={field.url} alt={field.altText || 'Ảnh sản phẩm'} className="h-full w-full object-cover" />
+                  ) : (
+                    <div className="grid h-full w-full place-items-center text-xs font-semibold text-slate-400">
+                      Chưa có ảnh
+                    </div>
+                  )}
                 </div>
 
                 <div className="grid gap-3">
@@ -95,16 +100,16 @@ export const ProductImageEditor = () => {
 
                   <div className="grid gap-3 md:grid-cols-2">
                     <FieldShell label="URL ảnh" error={(formState.errors.images?.[index] as { url?: { message?: string } } | undefined)?.url?.message}>
-                      <input {...register(`images.${index}.url`)} className={inputClassName} placeholder="https://..." />
+                      <input {...register(`images.${index}.url`)} className={inputClassName} placeholder="Dán URL ảnh sau khi upload" />
                     </FieldShell>
 
                     <FieldShell label="Thứ tự hiển thị" error={(formState.errors.images?.[index] as { displayOrder?: { message?: string } } | undefined)?.displayOrder?.message}>
-                      <input {...register(`images.${index}.displayOrder`)} type="number" min={0} className={inputClassName} placeholder="0" />
+                      <input {...register(`images.${index}.displayOrder`)} type="number" min={0} className={inputClassName} placeholder="Nhập thứ tự hiển thị" />
                     </FieldShell>
                   </div>
 
-                  <FieldShell label="Văn bản thay thế" hint="Mô tả ảnh hỗ trợ truy cập" error={(formState.errors.images?.[index] as { altText?: { message?: string } } | undefined)?.altText?.message}>
-                    <input {...register(`images.${index}.altText`)} className={inputClassName} placeholder="Mô tả ảnh sản phẩm" />
+                  <FieldShell label="Văn bản thay thế" error={(formState.errors.images?.[index] as { altText?: { message?: string } } | undefined)?.altText?.message}>
+                    <input {...register(`images.${index}.altText`)} className={inputClassName} placeholder="Nhập mô tả ngắn cho ảnh" />
                   </FieldShell>
 
                   <div className="flex flex-wrap items-center gap-2">

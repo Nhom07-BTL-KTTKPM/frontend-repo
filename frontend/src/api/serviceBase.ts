@@ -3,6 +3,7 @@ const userBaseUrl = import.meta.env.VITE_USER_API_URL || 'http://localhost:8082/
 const catalogBaseUrl = import.meta.env.VITE_CATALOG_API_URL || 'http://localhost:8083/api/v1';
 const cartBaseUrl = import.meta.env.VITE_CART_API_URL || 'http://localhost:8084/api/v1';
 const orderBaseUrl = import.meta.env.VITE_ORDER_API_URL || 'http://localhost:8085/api/v1';
+const uploadBaseUrl = import.meta.env.VITE_UPLOAD_API_URL || 'http://localhost:8008/api/v1';
 
 const gatewayBaseUrl = import.meta.env.VITE_API_BASE_URL;
 const useGateway = !!gatewayBaseUrl;
@@ -13,6 +14,7 @@ export const serviceBase = {
   catalog: catalogBaseUrl,
   cart: cartBaseUrl,
   order: orderBaseUrl,
+  upload: uploadBaseUrl,
   useGateway,
 };
 

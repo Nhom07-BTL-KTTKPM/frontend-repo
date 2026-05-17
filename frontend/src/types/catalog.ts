@@ -80,3 +80,64 @@ export interface CatalogProductVariant {
   imageUrl?: string;
   isActive?: boolean;
 }
+
+export interface CatalogProductCreateImage {
+  url: string;
+  publicId?: string;
+  altText?: string;
+  displayOrder?: number;
+  isPrimary?: boolean;
+}
+
+export interface CatalogProductCreateVariant {
+  sku: string;
+  variantName: string;
+  price: number;
+  originalPrice?: number;
+  stockQuantity: number;
+  imageUrl?: string;
+  isActive?: boolean;
+}
+
+export interface CatalogProductCreateRequest {
+  name: string;
+  slug?: string;
+  description?: string;
+  ingredients?: string;
+  usageInstructions?: string;
+  suitableSkinTypes?: string[];
+  skinConcerns?: string[];
+  variants: CatalogProductCreateVariant[];
+  images: CatalogProductCreateImage[];
+  categoryId: string;
+  brandId: string;
+  isActive?: boolean;
+  isFeatured?: boolean;
+}
+
+export interface CatalogProductDetail {
+  id: string;
+  name: string;
+  slug: string;
+  description?: string;
+  ingredients?: string;
+  usageInstructions?: string;
+  suitableSkinTypes?: string[];
+  skinConcerns?: string[];
+  averageRating?: number;
+  totalReviews?: number;
+  totalSold?: number;
+  minPrice?: number;
+  maxPrice?: number;
+  isActive?: boolean;
+  isFeatured?: boolean;
+  categoryId?: string;
+  categoryName?: string;
+  brandId?: string;
+  brandName?: string;
+  brandLogoUrl?: string;
+  images?: CatalogProductImage[];
+  variants?: CatalogProductVariant[];
+  createdAt?: string;
+  updatedAt?: string;
+}

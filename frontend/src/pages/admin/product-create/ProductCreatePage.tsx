@@ -3,7 +3,8 @@ import { ArrowLeft, BadgeCheck, CheckCircle2, Flame, Leaf, Sparkles, WandSparkle
 import { Controller, FormProvider, useForm, useWatch, type SubmitHandler } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Link } from 'react-router-dom';
-import { brandOptions, categoryOptions, skinConcernSuggestions, skinTypeSuggestions } from './productCreate.constants';
+import { toast } from 'sonner';
+import { skinConcernSuggestions, skinTypeSuggestions } from './productCreate.constants';
 import { productCreateSchema, type ProductCreateFormValues } from './productCreate.schema';
 import { SectionCard } from './components/SectionCard';
 import { FieldShell } from './components/FieldShell';
@@ -11,41 +12,40 @@ import { TagInput } from './components/TagInput';
 import { ProductVariantEditor } from './components/ProductVariantEditor';
 import { ProductImageEditor } from './components/ProductImageEditor';
 import { AutoGrowTextarea } from './components/AutoGrowTextarea';
+import { productManagementApi } from '../../../api/admin/productManagementApi';
+import { resolveMediaSourceUrl } from '../../../api/uploadApi';
+import type { CatalogProductCreateRequest } from '../../../types/catalog';
+import { brandApi } from '../../../api/brandApi';
+import { categoryApi } from '../../../api/categoryApi';
+import type { BrandSummaryResponse, CategorySummaryResponse } from '../../../types/catalog';
 
 const inputClassName =
   'w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 outline-none transition focus:border-amber-400 focus:ring-4 focus:ring-amber-100';
 
 const initialValues: ProductCreateFormValues = {
-  name: 'Full Spectrum CBD Tincture - Pet Tincture',
-  slug: 'full-spectrum-cbd-tincture-pet-tincture',
-  categoryId: categoryOptions[0].id,
-  brandId: brandOptions[0].id,
-  description: 'Mô tả chi tiết sản phẩm, câu chuyện thương hiệu và định vị công dụng cho catalog.',
-  ingredients: 'Hemp extract, botanical oil blend, carrier oil',
-  usageInstructions: 'Làm sạch da trước khi sử dụng, dùng theo từng bước routine buổi sáng hoặc tối.',
-  suitableSkinTypes: ['Da nhạy cảm', 'Da khô'],
-  skinConcerns: ['Dưỡng ẩm', 'Làm dịu'],
+  name: '',
+  slug: '',
+  categoryId: '',
+  brandId: '',
+  description: '',
+  ingredients: '',
+  usageInstructions: '',
+  suitableSkinTypes: [],
+  skinConcerns: [],
   isActive: true,
   isFeatured: false,
   variants: [
     {
-      sku: 'CBD-PET-30ML',
-      variantName: '30ml',
-      price: '180000',
-      originalPrice: '320000',
-      stockQuantity: '12',
+      sku: '',
+      variantName: '',
+      price: '',
+      originalPrice: '',
+      stockQuantity: '',
       imageUrl: '',
       isActive: true,
     },
   ],
-  images: [
-    {
-      url: 'https://images.unsplash.com/photo-1522335789203-aabd1fc54bc9?auto=format&fit=crop&w=900&q=80',
-      altText: 'Ảnh minh họa sản phẩm',
-      displayOrder: '0',
-      isPrimary: true,
-    },
-  ],
+  images: [],
 };
 
 const formatCurrency = (value: string) => {
@@ -70,16 +70,69 @@ const slugify = (value: string) =>
     .replace(/[^a-z0-9]+/g, '-')
     .replace(/^-+|-+$/g, '');
 
+const toNumber = (value: string, fallback = 0) => {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : fallback;
+};
+
+const toOptionalNumber = (value: string) => {
+  if (!value || !value.trim()) {
+    return undefined;
+  }
+
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : undefined;
+};
+
 export const ProductCreatePage = () => {
   const [submittedAt, setSubmittedAt] = useState<string | null>(null);
   const [submittedName, setSubmittedName] = useState<string>('');
   const [isSlugManuallyEdited, setIsSlugManuallyEdited] = useState(false);
+  const [categoryOptions, setCategoryOptions] = useState<CategorySummaryResponse[]>([]);
+  const [brandOptions, setBrandOptions] = useState<BrandSummaryResponse[]>([]);
+  const [isCatalogOptionsLoading, setIsCatalogOptionsLoading] = useState(false);
 
   const form = useForm<ProductCreateFormValues>({
     resolver: zodResolver(productCreateSchema),
     defaultValues: initialValues,
     mode: 'onChange',
   });
+
+  useEffect(() => {
+    let active = true;
+
+    const loadCatalogOptions = async () => {
+      setIsCatalogOptionsLoading(true);
+
+      try {
+        const [categorySummaries, brandSummaries] = await Promise.all([
+          categoryApi.getCategorySummaries(),
+          brandApi.getBrandSummaries(),
+        ]);
+
+        if (!active) {
+          return;
+        }
+
+        setCategoryOptions(categorySummaries);
+        setBrandOptions(brandSummaries);
+      } catch (error) {
+        if (active) {
+          toast.error('Không thể tải danh mục hoặc thương hiệu thật từ hệ thống.');
+        }
+      } finally {
+        if (active) {
+          setIsCatalogOptionsLoading(false);
+        }
+      }
+    };
+
+    void loadCatalogOptions();
+
+    return () => {
+      active = false;
+    };
+  }, []);
 
   const watchedValues = useWatch({ control: form.control });
 
@@ -94,12 +147,12 @@ export const ProductCreatePage = () => {
 
   const selectedCategory = useMemo(
     () => categoryOptions.find((item) => item.id === watchedValues.categoryId),
-    [watchedValues.categoryId],
+    [categoryOptions, watchedValues.categoryId],
   );
 
   const selectedBrand = useMemo(
     () => brandOptions.find((item) => item.id === watchedValues.brandId),
-    [watchedValues.brandId],
+    [brandOptions, watchedValues.brandId],
   );
 
   const variantPrices = (watchedValues.variants || [])
@@ -110,9 +163,68 @@ export const ProductCreatePage = () => {
   const maxPrice = variantPrices.length > 0 ? Math.max(...variantPrices) : null;
   const primaryImage = watchedValues.images?.find((item) => item.isPrimary) || watchedValues.images?.[0];
 
-  const onSubmit: SubmitHandler<ProductCreateFormValues> = (values) => {
-    setSubmittedAt(new Date().toLocaleString('vi-VN'));
-    setSubmittedName(values.name);
+  const onSubmit: SubmitHandler<ProductCreateFormValues> = async (values) => {
+    try {
+      const [uploadedImages, uploadedVariants] = await Promise.all([
+        Promise.all(
+          values.images.map(async (image, index) => {
+            const imageSource = image.url.trim();
+            const resolvedImage = await resolveMediaSourceUrl(imageSource, 'PRODUCT', `${values.name}-image-${index + 1}`);
+
+            return {
+              url: resolvedImage.url,
+              publicId: resolvedImage.key,
+              altText: image.altText?.trim() || undefined,
+              displayOrder: toNumber(image.displayOrder, index),
+              isPrimary: image.isPrimary,
+            };
+          }),
+        ),
+        Promise.all(
+          values.variants.map(async (variant, index) => {
+            const imageSource = variant.imageUrl?.trim() || '';
+            const resolvedVariantImage = imageSource
+              ? await resolveMediaSourceUrl(imageSource, 'PRODUCT', `${values.name}-variant-${index + 1}`)
+              : null;
+
+            return {
+              sku: variant.sku.trim(),
+              variantName: variant.variantName.trim(),
+              price: toNumber(variant.price),
+              originalPrice: toOptionalNumber(variant.originalPrice),
+              stockQuantity: toNumber(variant.stockQuantity),
+              imageUrl: resolvedVariantImage?.url,
+              isActive: variant.isActive,
+            };
+          }),
+        ),
+      ]);
+
+      const payload: CatalogProductCreateRequest = {
+        name: values.name.trim(),
+        slug: values.slug.trim() || undefined,
+        description: values.description.trim() || undefined,
+        ingredients: values.ingredients.trim() || undefined,
+        usageInstructions: values.usageInstructions.trim() || undefined,
+        suitableSkinTypes: values.suitableSkinTypes.map((item) => item.trim()).filter(Boolean),
+        skinConcerns: values.skinConcerns.map((item) => item.trim()).filter(Boolean),
+        variants: uploadedVariants,
+        images: uploadedImages,
+        categoryId: values.categoryId,
+        brandId: values.brandId,
+        isActive: values.isActive,
+        isFeatured: values.isFeatured,
+      };
+
+      await productManagementApi.createProduct(payload);
+
+      setSubmittedAt(new Date().toLocaleString('vi-VN'));
+      setSubmittedName(values.name);
+      toast.success('Đã thêm sản phẩm mới thành công.');
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Không thể thêm sản phẩm. Vui lòng thử lại.';
+      toast.error(message);
+    }
   };
 
   const imageCount = watchedValues.images?.length || 0;
@@ -179,13 +291,12 @@ export const ProductCreatePage = () => {
           <div className="grid gap-6">
             <SectionCard title="Thông tin cốt lõi">
               <div className="grid gap-5 md:grid-cols-2">
-                <FieldShell label="Tên sản phẩm" error={form.formState.errors.name?.message} hint="Bắt buộc, tối đa 500 ký tự">
-                  <input {...form.register('name')} className={inputClassName} placeholder="Full Spectrum CBD Tincture - Pet Tincture" />
+                <FieldShell label="Tên sản phẩm" error={form.formState.errors.name?.message}>
+                  <input {...form.register('name')} className={inputClassName} placeholder="Nhập tên sản phẩm mới" />
                 </FieldShell>
 
                 <FieldShell
                   label="Slug"
-                  hint="Tự động sinh theo tên sản phẩm, bạn vẫn có thể sửa tay"
                   error={form.formState.errors.slug?.message}
                   action={
                     isSlugManuallyEdited ? (
@@ -209,12 +320,13 @@ export const ProductCreatePage = () => {
                       },
                     })}
                     className={inputClassName}
-                    placeholder="full-spectrum-cbd-tincture-pet-tincture"
+                    placeholder="ten-san-pham-cua-ban"
                   />
                 </FieldShell>
 
                 <FieldShell label="Danh mục" error={form.formState.errors.categoryId?.message}>
-                  <select {...form.register('categoryId')} className={inputClassName}>
+                  <select {...form.register('categoryId')} className={inputClassName} disabled={isCatalogOptionsLoading}>
+                    <option value="">{isCatalogOptionsLoading ? 'Đang tải danh mục...' : 'Chọn danh mục từ hệ thống'}</option>
                     {categoryOptions.map((option) => (
                       <option key={option.id} value={option.id}>
                         {option.name}
@@ -224,7 +336,8 @@ export const ProductCreatePage = () => {
                 </FieldShell>
 
                 <FieldShell label="Thương hiệu" error={form.formState.errors.brandId?.message}>
-                  <select {...form.register('brandId')} className={inputClassName}>
+                  <select {...form.register('brandId')} className={inputClassName} disabled={isCatalogOptionsLoading}>
+                    <option value="">{isCatalogOptionsLoading ? 'Đang tải thương hiệu...' : 'Chọn thương hiệu từ hệ thống'}</option>
                     {brandOptions.map((option) => (
                       <option key={option.id} value={option.id}>
                         {option.name}
@@ -255,7 +368,7 @@ export const ProductCreatePage = () => {
 
             <SectionCard title="Mô tả và nội dung">
               <div className="grid gap-5">
-                <FieldShell label="Mô tả" hint="Mô tả chi tiết sản phẩm" error={form.formState.errors.description?.message}>
+                <FieldShell label="Mô tả" error={form.formState.errors.description?.message}>
                   <Controller
                     control={form.control}
                     name="description"
@@ -265,13 +378,13 @@ export const ProductCreatePage = () => {
                         minHeight={140}
                         maxHeight={300}
                         className={inputClassName}
-                        placeholder="Mô tả chi tiết..."
+                        placeholder="Nhập mô tả sản phẩm"
                       />
                     )}
                   />
                 </FieldShell>
 
-                <FieldShell label="Thành phần" hint="Thành phần hoặc hoạt chất" error={form.formState.errors.ingredients?.message}>
+                <FieldShell label="Thành phần" error={form.formState.errors.ingredients?.message}>
                   <Controller
                     control={form.control}
                     name="ingredients"
@@ -281,13 +394,13 @@ export const ProductCreatePage = () => {
                         minHeight={120}
                         maxHeight={280}
                         className={inputClassName}
-                        placeholder="Danh sách thành phần..."
+                        placeholder="Nhập thành phần hoặc hoạt chất"
                       />
                     )}
                   />
                 </FieldShell>
 
-                <FieldShell label="Hướng dẫn sử dụng" hint="Hướng dẫn sử dụng" error={form.formState.errors.usageInstructions?.message}>
+                <FieldShell label="Hướng dẫn sử dụng" error={form.formState.errors.usageInstructions?.message}>
                   <Controller
                     control={form.control}
                     name="usageInstructions"
@@ -297,7 +410,7 @@ export const ProductCreatePage = () => {
                         minHeight={120}
                         maxHeight={280}
                         className={inputClassName}
-                        placeholder="Cách sử dụng..."
+                        placeholder="Nhập hướng dẫn sử dụng"
                       />
                     )}
                   />
@@ -354,7 +467,7 @@ export const ProductCreatePage = () => {
                   Lưu ý validate FE
                 </div>
                 <p className="m-0 text-amber-900/90">
-                  Biểu mẫu sẽ chặn tên trống, slug sai định dạng, danh mục hoặc thương hiệu chưa chọn, biến thể thiếu giá hoặc SKU, và ảnh chưa có ảnh đại diện.
+                  Biểu mẫu sẽ chặn tên trống, slug sai định dạng, danh mục hoặc thương hiệu chưa chọn, biến thể thiếu giá hoặc SKU, và ảnh chưa có URL hợp lệ.
                 </p>
               </div>
             </SectionCard>
@@ -425,10 +538,10 @@ export const ProductCreatePage = () => {
 
               <button
                 type="submit"
-                disabled={!form.formState.isValid}
+                disabled={!form.formState.isValid || form.formState.isSubmitting}
                 className="rounded-2xl bg-gradient-to-r from-indigo-600 to-blue-600 px-6 py-3 text-sm font-bold text-white shadow-lg shadow-indigo-200 transition hover:shadow-xl disabled:cursor-not-allowed disabled:opacity-60"
               >
-                Thêm sản phẩm
+                {form.formState.isSubmitting ? 'Đang lưu...' : 'Thêm sản phẩm'}
               </button>
             </div>
           </div>
