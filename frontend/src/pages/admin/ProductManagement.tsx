@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
-import { ChevronDown, Search, SlidersHorizontal, Edit2, Eye, Trash2, Copy, ToggleRight } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { ChevronDown, Search, SlidersHorizontal, Edit2, Eye, Trash2, Copy, ToggleRight, Plus } from 'lucide-react';
 import { productManagementApi } from '../../api/admin/productManagementApi';
 
 type ProductVariantRow = {
@@ -167,9 +168,13 @@ export const ProductManagement = () => {
           </p>
         </div>
 
-        <button className="px-6 py-3 bg-gradient-to-r from-indigo-600 to-blue-600 text-white font-bold rounded-lg shadow-lg hover:shadow-xl transition">
-          Add product
-        </button>
+        <Link
+          to="/admin/products/new"
+          className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-indigo-600 to-blue-600 text-white font-bold rounded-lg shadow-lg hover:shadow-xl transition"
+        >
+          <Plus size={16} />
+          Thêm sản phẩm
+        </Link>
       </div>
 
       <div className="grid grid-cols-4 gap-4">
