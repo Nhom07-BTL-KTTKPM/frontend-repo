@@ -29,6 +29,39 @@ export interface AuthTokenResponse {
   refreshTokenExpiresIn: number;
 }
 
+export type AccountStatus = 'ACTIVE' | 'DISABLED' | 'PENDING_VERIFY';
+
+export interface CustomerAccountInfo {
+  accountId: string;
+  email: string;
+  status: AccountStatus;
+  fullName?: string;
+  phoneNumber?: string;
+}
+
+export interface EmployeeAccountInfo {
+  accountId: string;
+  email: string;
+  status: AccountStatus;
+  fullName?: string;
+  phoneNumber?: string;
+  employeeCode?: string;
+  hireDate?: string;
+}
+
+export interface EmployeeCreateRequest {
+  email: string;
+  password: string;
+  fullName: string;
+  phoneNumber: string;
+}
+
+export interface EmployeeAccountUpdateRequest {
+  email: string;
+  fullName: string;
+  phoneNumber: string;
+}
+
 export interface UserProfileInfo {
   accountId: string;
   email: string;
