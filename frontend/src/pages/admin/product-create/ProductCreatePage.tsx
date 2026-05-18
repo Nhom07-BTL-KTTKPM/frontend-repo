@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { ArrowLeft, BadgeCheck, CheckCircle2, Flame, Leaf, Sparkles, WandSparkles } from 'lucide-react';
 import { Controller, FormProvider, useForm, useWatch, type SubmitHandler } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { skinConcernSuggestions, skinTypeSuggestions } from './productCreate.constants';
 import { productCreateSchema, type ProductCreateFormValues } from './productCreate.schema';
@@ -85,6 +85,7 @@ const toOptionalNumber = (value: string) => {
 };
 
 export const ProductCreatePage = () => {
+  const navigate = useNavigate();
   const [submittedAt, setSubmittedAt] = useState<string | null>(null);
   const [submittedName, setSubmittedName] = useState<string>('');
   const [isSlugManuallyEdited, setIsSlugManuallyEdited] = useState(false);
@@ -221,6 +222,7 @@ export const ProductCreatePage = () => {
       setSubmittedAt(new Date().toLocaleString('vi-VN'));
       setSubmittedName(values.name);
       toast.success('Đã thêm sản phẩm mới thành công.');
+      navigate('/admin/products');
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Không thể thêm sản phẩm. Vui lòng thử lại.';
       toast.error(message);
@@ -438,7 +440,10 @@ export const ProductCreatePage = () => {
               </div>
             </SectionCard>
 
-            <ProductVariantEditor />
+            <ProductVariantEditor
+              brandSource={selectedBrand?.slug || selectedBrand?.name || ''}
+              lineSource={selectedCategory?.slug || selectedCategory?.name || ''}
+            />
           </div>
 
           <aside className="grid gap-6 lg:sticky lg:top-6 lg:self-start">

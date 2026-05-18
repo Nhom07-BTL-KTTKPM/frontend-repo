@@ -1,11 +1,11 @@
-import { useRef } from 'react';
+import { useEffect, useRef } from 'react';
 import { ImagePlus, Plus, Trash2 } from 'lucide-react';
 import { useFieldArray, useFormContext, useWatch } from 'react-hook-form';
 import { FieldShell } from './FieldShell';
 import type { ProductCreateFormValues } from '../productCreate.schema';
 
 const inputClassName =
-  'w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 outline-none transition focus:border-amber-400 focus:ring-4 focus:ring-amber-100';
+  'w-full rounded-xl border border-slate-200 bg-slate-100 px-3 py-2 text-sm text-slate-900 outline-none transition focus:border-amber-400 focus:ring-4 focus:ring-amber-100';
 
 const slugify = (value: string) =>
   value
@@ -15,21 +15,64 @@ const slugify = (value: string) =>
     .replace(/[^a-z0-9]+/g, '-')
     .replace(/^-+|-+$/g, '');
 
-const generateSku = (productName: string, variantName: string, index: number) => {
-  const base = slugify(`${productName}-${variantName || `variant-${index + 1}`}`)
-    .replace(/-/g, '-')
-    .toUpperCase();
-
-  return base.slice(0, 32) || `VARIANT-${index + 1}`;
+const compactToken = (value: string, fallback: string, length: number) => {
+  const token = slugify(value).replace(/-/g, '').toUpperCase();
+  return (token || fallback).slice(0, length);
 };
 
-export const ProductVariantEditor = () => {
+const hashSeed = (value: string) => {
+  let hash = 0;
+
+  for (let index = 0; index < value.length; index += 1) {
+    hash = (hash * 31 + value.charCodeAt(index)) >>> 0;
+  }
+
+  return hash.toString(36).toUpperCase();
+};
+
+const extractSizeCode = (value: string) => {
+  const normalized = value.toUpperCase();
+  const match = normalized.match(/(\d{1,4})(ML|G|T|P)\b/);
+
+  return match ? `${match[1]}${match[2]}` : '00';
+};
+
+const generateSku = (brandSource: string, lineSource: string, productName: string, variantName: string, rowSeed: string) => {
+  const brandCode = compactToken(brandSource, 'BR', 2);
+  const lineCode = compactToken(lineSource, 'LN', 2);
+  const typeCode = compactToken(productName, 'PR', 2);
+  const variantCode = `${compactToken(variantName, 'VR', 3)}${hashSeed(rowSeed).slice(-3)}`.slice(0, 6);
+  const sizeCode = extractSizeCode(variantName);
+
+  return [brandCode, lineCode, typeCode, variantCode, sizeCode].join('-').toUpperCase().slice(0, 25);
+};
+
+type ProductVariantEditorProps = {
+  brandSource: string;
+  lineSource: string;
+};
+
+export const ProductVariantEditor = ({ brandSource, lineSource }: ProductVariantEditorProps) => {
   const fileRefs = useRef<Record<number, HTMLInputElement | null>>({});
   const { control, register, formState, setValue } = useFormContext<ProductCreateFormValues>();
   const productName = useWatch({ control, name: 'name' }) || '';
   const variantValues = useWatch({ control, name: 'variants' }) || [];
   const { fields, append, remove } = useFieldArray({ control, name: 'variants' });
   const variantError = (formState.errors.variants as { message?: string } | undefined)?.message;
+
+  useEffect(() => {
+    fields.forEach((field, index) => {
+      const variantName = variantValues[index]?.variantName || '';
+      const nextSku = generateSku(brandSource, lineSource, productName, variantName, field.id);
+
+      if (variantValues[index]?.sku !== nextSku) {
+        setValue(`variants.${index}.sku`, nextSku, {
+          shouldDirty: false,
+          shouldValidate: true,
+        });
+      }
+    });
+  }, [brandSource, fields, lineSource, productName, setValue, variantValues]);
 
   const setVariantImage = (index: number, file: File) => {
     const previewUrl = URL.createObjectURL(file);
@@ -46,7 +89,7 @@ export const ProductVariantEditor = () => {
           onClick={() => {
             const nextIndex = fields.length;
             append({
-              sku: generateSku(productName, '', nextIndex),
+              sku: generateSku(brandSource, lineSource, productName, '', `${productName}-${nextIndex + 1}`),
               variantName: '',
               price: '',
               originalPrice: '',
@@ -94,23 +137,10 @@ export const ProductVariantEditor = () => {
 
                 <FieldShell
                   label="SKU"
+                  hint="Tự sinh theo quy tắc hệ thống, chỉ hiển thị"
                   error={variantItemError?.sku?.message}
-                  action={
-                    <button
-                      type="button"
-                      onClick={() =>
-                        setValue(`variants.${index}.sku`, generateSku(productName, variantValues[index]?.variantName || '', index), {
-                          shouldDirty: true,
-                          shouldValidate: true,
-                        })
-                      }
-                      className="rounded-full bg-slate-900 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-slate-800"
-                    >
-                      Tự sinh
-                    </button>
-                  }
                 >
-                  <input {...register(`variants.${index}.sku`)} className={inputClassName} placeholder="SKU biến thể" />
+                  <input {...register(`variants.${index}.sku`)} readOnly className={inputClassName} placeholder="SKU tự sinh" />
                 </FieldShell>
 
                 <FieldShell label="Tồn kho" error={variantItemError?.stockQuantity?.message}>
