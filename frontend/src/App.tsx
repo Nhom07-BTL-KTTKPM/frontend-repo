@@ -19,6 +19,7 @@ import { Home, ProductList, ProductDetail, Cart, Checkout, OrderHistory, Payment
 import { Dashboard as AdminDashboard } from './pages/admin/Dashboard';
 import { ProductManagement } from './pages/admin/ProductManagement';
 import { UserManagement } from './pages/admin/UserManagement';
+import { ProductCreatePage } from './pages/admin/product-create/ProductCreatePage';
 
 
 function App() {
@@ -85,6 +86,7 @@ function App() {
             <Route path="/admin" element={<AdminLayout />}>
               <Route path="dashboard" element={<AdminDashboard />} />
               <Route path="products" element={<ProductManagement />} />
+              <Route path="products/new" element={<ProductCreatePage />} />
               <Route path="users" element={<UserManagement />} />
               <Route path="profile" element={<Profile />} />
             </Route>
