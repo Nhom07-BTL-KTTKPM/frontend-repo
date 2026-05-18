@@ -15,11 +15,10 @@ export interface MediaUploadResult {
   uploadedAt: number;
 }
 
-const uploadPathPrefix = serviceBase.useGateway ? '/api/v1/upload' : '/upload';
-const gatewayBaseUrl = import.meta.env.VITE_API_BASE_URL;
+const uploadPathPrefix = '/upload';
 
 const uploadClient = axios.create({
-  baseURL: serviceBase.useGateway ? gatewayBaseUrl : serviceBase.upload,
+  baseURL: serviceBase.upload,
   headers: {
     Accept: 'application/json',
   },
