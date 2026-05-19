@@ -1,5 +1,5 @@
 import { NavLink } from 'react-router-dom';
-import { LayoutDashboard, PackageSearch, Users } from 'lucide-react';
+import { LayoutDashboard, PackageSearch, Users, Settings } from 'lucide-react';
 
 const linkStyle = ({ isActive }: { isActive: boolean }) => ({
   display: 'flex',
@@ -43,6 +43,10 @@ export const AdminSidebar = () => {
         <NavLink to="/admin/users" style={linkStyle}>
           <Users size={18} />
           Quản lý người dùng
+        </NavLink>
+        <NavLink to="/admin/profile" style={linkStyle}>
+          <Settings size={18} />
+          Quản lý thông tin cá nhân
         </NavLink>
       </nav>
     </aside>

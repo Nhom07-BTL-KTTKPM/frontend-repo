@@ -178,6 +178,16 @@ export const Checkout = () => {
                 throw new Error('Không lấy được orderId sau khi tạo đơn');
             }
 
+            try {
+                for (const itemId of selectedItemIds) {
+                    await cartApi.removeItem(customerId, itemId);
+                }
+            } catch (cartError) {
+                console.error('Failed to remove items from cart:', cartError);
+            }
+
+            window.dispatchEvent(new CustomEvent('cart:updated'));
+
             toast.success('Đặt hàng thành công!');
             // Chuyển hướng theo phương thức thanh toán
             if (paymentMethod === 'COD') {
