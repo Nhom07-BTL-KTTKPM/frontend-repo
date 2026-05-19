@@ -4,6 +4,7 @@ import { useAuthStore } from '../store/authStore';
 import { cartApi } from '../api/cartApi';
 import { catalogApi } from '../api/catalogApi';
 import { orderApi } from '../api/orderApi';
+import { paymentApi } from '../api/paymentApi';
 import { addressApi } from '../api/addressApi';
 import { userApi } from '../api/userApi';
 import type { PaymentMethod } from '../types/order';
@@ -159,7 +160,7 @@ export const Checkout = () => {
         setSubmitting(true);
         try {
             const shippingAddressStr = `${selectedAddress.street}, ${selectedAddress.ward}, ${selectedAddress.district}, ${selectedAddress.city}`;
-            await orderApi.createOrder({
+            const orderRes = await orderApi.createOrder({
                 customerId,
                 recipientName: selectedAddress.recipientName,
                 email,
@@ -170,10 +171,24 @@ export const Checkout = () => {
                 selectedItemIds
             });
 
+            const orderPayload = orderRes as unknown as { data?: { id?: string }, id?: string };
+            const orderId = orderPayload.data?.id ?? orderPayload.id;
+
+            if (!orderId) {
+                throw new Error('Không lấy được orderId sau khi tạo đơn');
+            }
+
             toast.success('Đặt hàng thành công!');
             // Chuyển hướng theo phương thức thanh toán
             if (paymentMethod === 'COD') {
                 navigate('/orders'); // Redirect to order history
+            } else if (paymentMethod === 'VNPAY') {
+                const paymentRes = await paymentApi.createPayment({ orderId });
+                const paymentPayload = paymentRes as unknown as { paymentUrl?: string };
+                if (!paymentPayload.paymentUrl) {
+                    throw new Error('Không lấy được link thanh toán VNPAY');
+                }
+                window.location.href = paymentPayload.paymentUrl;
             } else {
                 navigate('/payment'); // Giả lập payment gateway
             }
