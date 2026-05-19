@@ -78,60 +78,98 @@ export const EmployeeProfile = ({ user, employee, onSave }: EmployeeProfileProps
   };
 
   return (
-    <div style={{ background: '#fff', borderRadius: '12px', boxShadow: '0 10px 25px rgba(0,0,0,0.05)', overflow: 'hidden', marginBottom: '2rem' }}>
-      <div style={{ background: 'linear-gradient(135deg, var(--color-gold), var(--color-gold-dark))', height: '120px', position: 'relative' }} />
+    <div style={{
+      background: '#fff',
+      boxShadow: '0 12px 30px rgba(201,169,110,0.12)',
+      borderRadius: '16px',
+      overflow: 'hidden',
+      marginBottom: '2rem',
+      border: '1px solid rgba(201,169,110,0.18)',
+    }}>
 
-      <div style={{ padding: '0 2rem', marginTop: '-50px', display: 'flex', alignItems: 'flex-end', gap: '1.5rem', marginBottom: '2rem', position: 'relative', zIndex: 10 }}>
-        <div style={{ width: '100px', height: '100px', borderRadius: '50%', background: '#fff', padding: '4px', boxShadow: '0 4px 10px rgba(0,0,0,0.1)', position: 'relative', flexShrink: 0 }}>
+      <div style={{ padding: '0 2.5rem', marginTop: '40px', display: 'flex', alignItems: 'flex-end', gap: '2rem', marginBottom: '2.5rem', position: 'relative', zIndex: 10 }}>
+        {/* Avatar với viền Gold dày */}
+        <div style={{
+          width: '120px',
+          height: '120px',
+          borderRadius: '50%',
+          background: '#fff',
+          padding: '5px',
+          boxShadow: '0 8px 20px rgba(184, 134, 11, 0.2)',
+          border: '3px solid #D4AF37', // Màu vàng Gold mã chuẩn
+          flexShrink: 0
+        }}>
           {user.avatarUrl ? (
             <img src={user.avatarUrl} alt="Avatar" style={{ width: '100%', height: '100%', borderRadius: '50%', objectFit: 'cover' }} />
           ) : (
-            <div style={{ width: '100%', height: '100%', borderRadius: '50%', background: '#f3f4f6', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#6b7280' }}>
-              <User size={40} />
+            <div style={{ width: '100%', height: '100%', borderRadius: '50%', background: '#f9f7f2', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#D4AF37' }}>
+              <User size={48} />
             </div>
           )}
         </div>
-        <div style={{ paddingBottom: '10px' }}>
-          <h3 style={{ fontSize: '1.8rem', fontWeight: 700, margin: 0 }}>{user.fullName || 'Nhân viên'}</h3>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#6b7280', marginTop: '4px', flexWrap: 'wrap' }}>
-            <span style={{ background: '#fef3c7', color: '#f59e0b', padding: '2px 8px', borderRadius: '12px', fontSize: '0.75rem', fontWeight: 600 }}>
-              EMPLOYEE
-            </span>
+
+        <div style={{ paddingBottom: '15px' }}>
+          <h3 style={{ fontSize: '2.2rem', fontWeight: 700, margin: 0, color: '#1a1a1a', letterSpacing: '-0.5px' }}>
+            {user.fullName || 'Nhân viên'}
+          </h3>
+          <span style={{
+            background: 'linear-gradient(to right, #fef3c7, #fde68a)',
+            color: '#92400e',
+            padding: '4px 12px',
+            borderRadius: '20px',
+            fontSize: '0.8rem',
+            fontWeight: 700,
+            display: 'inline-block',
+            marginTop: '8px',
+            textTransform: 'uppercase'
+          }}>
+            {user.role}
+          </span>
+        </div>
+      </div>
+
+      {/* Phần thông tin hiển thị */}
+      <div style={{ padding: '0 2.5rem 2.5rem' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '2rem' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '1.8rem' }}>
+            <ProfileRow icon={<Mail size={18} color="#D4AF37" />} label="Email" value={user.email} verified={user.emailVerified} />
+            <ProfileRow icon={<Phone size={18} color="#D4AF37" />} label="Số điện thoại" value={user.phoneNumber} />
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '1.8rem' }}>
+            <ProfileRow icon={<Calendar size={18} color="#D4AF37" />} label="Mã nhân viên" value={user.employeeCode} />
+            <ProfileRow icon={<Calendar size={18} color="#D4AF37" />} label="Ngày vào làm" value={formatDate(user.hireDate)} />
           </div>
         </div>
       </div>
 
-      <div style={{ padding: '0 2rem 2rem' }}>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '1.5rem' }}>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-            <ProfileRow icon={<Mail size={16} />} label="Email" value={user.email} verified={user.emailVerified} />
-            <ProfileRow icon={<Phone size={16} />} label="Số điện thoại" value={user.phoneNumber || 'Chưa cập nhật'} />
-          </div>
-
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-            <ProfileRow icon={<Calendar size={16} />} label="Mã nhân viên" value={user.employeeCode || 'Chưa cập nhật'} />
-            <ProfileRow icon={<Calendar size={16} />} label="Ngày vào làm" value={formatDate(user.hireDate)} />
-          </div>
-        </div>
-      </div>
-
-      <div style={{ borderTop: '1px solid #f3f4f6', padding: '1.5rem 2rem 2rem' }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '1rem', flexWrap: 'wrap', marginBottom: '1rem' }}>
+      {/* Action Footer */}
+      <div style={{ borderTop: '1px solid #f0f0f0', padding: '2rem 2.5rem', background: '#fafafa' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '1rem' }}>
           <div>
-            <h4 style={{ margin: 0, fontSize: '1.1rem', color: '#111827' }}>Thông tin cơ bản có thể chỉnh sửa</h4>
-            <p style={{ margin: '0.35rem 0 0', color: '#6b7280', fontSize: '0.92rem' }}>Cập nhật tên và số điện thoại của bạn.</p>
+            <h4 style={{ margin: 0, fontSize: '1.2rem', color: '#B8860B', fontWeight: 600 }}>Thông tin cơ bản</h4>
+            <p style={{ margin: '4px 0 0', color: '#666', fontSize: '0.9rem' }}>Bạn có thể cập nhật thông tin định danh tại đây.</p>
           </div>
 
-          {!isEditing ? (
+          {!isEditing && (
             <button
-              type="button"
               onClick={() => setIsEditing(true)}
-              className="btn btn--outline"
-              style={{ padding: '8px 16px', borderRadius: '8px', border: '1px solid #d1d5db', background: 'transparent', cursor: 'pointer', fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: '8px' }}
+              style={{
+                padding: '10px 24px',
+                borderRadius: '12px',
+                border: '2px solid #D4AF37',
+                background: '#fff',
+                color: '#B8860B',
+                fontWeight: 700,
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                transition: 'all 0.3s ease'
+              }}
             >
-              <Edit3 size={16} /> Chỉnh sửa
+              <Edit3 size={18} /> CHỈNH SỬA
             </button>
-          ) : null}
+          )}
         </div>
 
         {isEditing ? (
@@ -166,7 +204,18 @@ export const EmployeeProfile = ({ user, employee, onSave }: EmployeeProfileProps
                 type="submit"
                 disabled={isSaving || !hasChanges}
                 className="btn btn--primary"
-                style={{ padding: '10px 20px', background: 'var(--color-primary)', color: '#fff', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: 600 }}
+                style={{
+                  padding: '10px 24px',
+                  borderRadius: '12px',
+                  background: 'linear-gradient(135deg, #D4AF37, #B8860B)', // Nút vàng gradient
+                  color: '#fff',
+                  border: 'none',
+                  boxShadow: '0 4px 15px rgba(184, 134, 11, 0.3)',
+                  cursor: 'pointer',
+                  fontWeight: 700,
+                  textTransform: 'uppercase',
+                  letterSpacing: '1px'
+                }}
               >
                 {isSaving ? 'Đang lưu...' : 'Lưu thay đổi'}
               </button>
@@ -176,7 +225,7 @@ export const EmployeeProfile = ({ user, employee, onSave }: EmployeeProfileProps
                 className="btn"
                 style={{ padding: '10px 20px', background: '#e5e7eb', color: '#374151', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: 600 }}
               >
-                Hủy
+                Huỷ
               </button>
             </div>
           </form>

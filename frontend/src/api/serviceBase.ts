@@ -4,6 +4,7 @@ const catalogBaseUrl = import.meta.env.VITE_CATALOG_API_URL || 'http://localhost
 const cartBaseUrl = import.meta.env.VITE_CART_API_URL || 'http://localhost:8084/api/v1';
 const orderBaseUrl = import.meta.env.VITE_ORDER_API_URL || 'http://localhost:8085/api/v1';
 const paymentBaseUrl = import.meta.env.VITE_PAYMENT_API_URL || 'http://localhost:8087/api/v1';
+const uploadBaseUrl = import.meta.env.VITE_UPLOAD_API_URL || import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080/api/v1';
 
 const gatewayBaseUrl = import.meta.env.VITE_API_BASE_URL;
 const useGateway = !!gatewayBaseUrl;
@@ -15,6 +16,7 @@ export const serviceBase = {
   cart: cartBaseUrl,
   order: orderBaseUrl,
   payment: paymentBaseUrl,
+  upload: uploadBaseUrl,
   useGateway,
 };
 

@@ -233,15 +233,16 @@ export const Cart = () => {
                             const variant = variantMap[item.productVariantId];
                             const productName = variant ? productMap[variant.productId]?.name : undefined;
                             const imageUrl = variant?.imageUrl;
+                            const variantName = variant?.variantName || 'N/A';
 
                             return (
-                            <div key={item.id} style={{ display: 'flex', justifyContent: 'space-between', gap: '1rem', padding: '1rem 0', borderBottom: '1px solid rgba(0,0,0,0.05)', alignItems: 'center' }}>
-                                <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
+                            <div key={item.id} style={{ display: 'flex', gap: '1rem', padding: '1rem 0', borderBottom: '1px solid rgba(0,0,0,0.05)', alignItems: 'flex-start' }}>
+                                <div style={{ display: 'flex', gap: '1rem', alignItems: 'flex-start', flex: 1, minWidth: 0 }}>
                                     <input 
                                         type="checkbox" 
                                         checked={selectedItemIds.has(item.id)} 
                                         onChange={() => toggleItem(item.id)}
-                                        style={{ width: '20px', height: '20px', accentColor: 'var(--color-gold)', cursor: 'pointer' }}
+                                        style={{ width: '20px', height: '20px', accentColor: 'var(--color-gold)', cursor: 'pointer', marginTop: '0.5rem', flexShrink: 0 }}
                                     />
                                     <div style={{ width: '72px', height: '72px', borderRadius: '12px', background: 'var(--color-cream)', overflow: 'hidden', flexShrink: 0 }}>
                                         {imageUrl ? (
@@ -252,33 +253,33 @@ export const Cart = () => {
                                             </div>
                                         )}
                                     </div>
-                                    <div>
-                                        <p style={{ margin: 0, fontWeight: 600 }}>{productName ?? 'San pham'}</p>
-                                        <p style={{ margin: '0.35rem 0', color: 'var(--color-gray-500)' }}>{formatCurrency(Number(item.unitPrice))}</p>
-                                        <p style={{ margin: 0, color: 'var(--color-gray-400)', fontSize: '0.75rem' }}>Variant: {item.productVariantId}</p>
+                                    <div style={{ flex: 1, minWidth: 0 }}>
+                                        <p style={{ margin: 0, fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{productName ?? 'San pham'}</p>
+                                        <p style={{ margin: '0.35rem 0', color: 'var(--color-gray-500)', fontSize: '0.875rem' }}>{variantName}</p>
+                                        <p style={{ margin: '0.25rem 0', color: 'var(--color-gray-500)' }}>{formatCurrency(Number(item.unitPrice))}</p>
                                     </div>
                                 </div>
-                                <div>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', flexShrink: 0 }}>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                                        <button
+                                            onClick={() => handleUpdateQty(item.id, item.quantity - 1)}
+                                            style={{ width: '28px', height: '28px', borderRadius: '50%', border: '1px solid var(--color-gray-300)', cursor: 'pointer', background: 'none' }}
+                                        >
+                                            -
+                                        </button>
+                                        <span style={{ minWidth: '24px', textAlign: 'center' }}>{item.quantity}</span>
+                                        <button
+                                            onClick={() => handleUpdateQty(item.id, item.quantity + 1)}
+                                            style={{ width: '28px', height: '28px', borderRadius: '50%', border: '1px solid var(--color-gray-300)', cursor: 'pointer', background: 'none' }}
+                                        >
+                                            +
+                                        </button>
+                                    </div>
                                     <button
                                         onClick={() => handleRemove(item.id)}
-                                        style={{ border: 'none', background: 'none', color: 'var(--color-error)', cursor: 'pointer', padding: 0 }}
+                                        style={{ border: 'none', background: 'none', color: 'var(--color-error)', cursor: 'pointer', padding: '0 0.5rem', minWidth: '40px', textAlign: 'center' }}
                                     >
                                         Xoa
-                                    </button>
-                                </div>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                                    <button
-                                        onClick={() => handleUpdateQty(item.id, item.quantity - 1)}
-                                        style={{ width: '28px', height: '28px', borderRadius: '50%', border: '1px solid var(--color-gray-300)', cursor: 'pointer' }}
-                                    >
-                                        -
-                                    </button>
-                                    <span style={{ minWidth: '24px', textAlign: 'center' }}>{item.quantity}</span>
-                                    <button
-                                        onClick={() => handleUpdateQty(item.id, item.quantity + 1)}
-                                        style={{ width: '28px', height: '28px', borderRadius: '50%', border: '1px solid var(--color-gray-300)', cursor: 'pointer' }}
-                                    >
-                                        +
                                     </button>
                                 </div>
                             </div>
