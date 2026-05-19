@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import { useAuthStore } from '../store/authStore';
 import { orderApi } from '../api/orderApi';
 import { userApi } from '../api/userApi';
@@ -147,14 +148,22 @@ export const OrderHistory = () => {
                                 ))}
                             </div>
 
-                            <div style={{ marginTop: '1.5rem', paddingTop: '1rem', borderTop: '1px dashed #e5e7eb', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <div style={{ marginTop: '1.5rem', paddingTop: '1rem', borderTop: '1px dashed #e5e7eb', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '1rem', flexWrap: 'wrap' }}>
                                 <div style={{ fontSize: '0.85rem', color: 'var(--color-gray-500)' }}>
                                     <p style={{ margin: '0 0 4px 0' }}>Thanh toán: <strong>{order.paymentMethod}</strong> ({getPaymentStatusLabel(order.paymentStatus)})</p>
                                     <p style={{ margin: 0 }}>Giao đến: {order.recipientName} - {order.shippingAddress}</p>
                                 </div>
-                                <div style={{ textAlign: 'right' }}>
-                                    <span style={{ fontSize: '0.9rem', color: 'var(--color-gray-500)', marginRight: '10px' }}>Tổng tiền:</span>
-                                    <span style={{ fontSize: '1.25rem', fontWeight: 700, color: 'var(--color-gold)' }}>{formatCurrency(order.total)}</span>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                                    <div style={{ textAlign: 'right' }}>
+                                        <span style={{ fontSize: '0.9rem', color: 'var(--color-gray-500)', marginRight: '10px' }}>Tổng tiền:</span>
+                                        <span style={{ fontSize: '1.25rem', fontWeight: 700, color: 'var(--color-gold)' }}>{formatCurrency(order.total)}</span>
+                                    </div>
+                                    <Link
+                                        to={`/orders/${order.id}`}
+                                        style={{ padding: '8px 14px', borderRadius: '6px', background: 'var(--color-gold)', color: '#fff', textDecoration: 'none', fontSize: '0.85rem', fontWeight: 600 }}
+                                    >
+                                        Xem chi tiết
+                                    </Link>
                                 </div>
                             </div>
                         </div>
