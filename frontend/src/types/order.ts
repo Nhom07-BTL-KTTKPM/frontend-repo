@@ -1,4 +1,4 @@
-export type OrderStatus = 'PENDING' | 'CONFIRMED' | 'PROCESSING' | 'SHIPPING' | 'DELIVERED' | 'CANCELLED' | 'REFUNDED';
+export type OrderStatus = 'PENDING' | 'CONFIRMED' | 'PROCESSING' | 'SHIPPING' | 'DELIVERED' | 'CANCELLED' | 'REFUNDED' | 'DELIVERY_FAILED';
 
 export type PaymentMethod = 'COD' | 'VNPAY' | 'BANK_TRANSFER';
 
@@ -30,6 +30,7 @@ export interface OrderResponse {
   email: string;
   phone: string;
   note?: string;
+  cancelReason?: string;
   orderDate: string;
   updatedAt: string;
   items: OrderItemResponse[];
@@ -44,4 +45,9 @@ export interface CreateOrderRequest {
   note?: string;
   paymentMethod: PaymentMethod;
   selectedItemIds: string[];
+}
+
+export interface UpdateOrderStatusRequest {
+  status: OrderStatus;
+  cancelReason?: string;
 }
