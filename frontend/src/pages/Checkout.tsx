@@ -24,6 +24,17 @@ const formatCurrency = (value?: number) => {
     }).format(value);
 };
 
+const formatAddressLine = (address: Address) => {
+    const parts = [
+        address.streetAddress ?? address.street,
+        address.ward,
+        address.district,
+        address.city,
+    ].filter((part): part is string => Boolean(part && part.trim()));
+
+    return parts.join(', ');
+};
+
 export const Checkout = () => {
     const navigate = useNavigate();
     const location = useLocation();
@@ -159,7 +170,7 @@ export const Checkout = () => {
 
         setSubmitting(true);
         try {
-            const shippingAddressStr = `${selectedAddress.street}, ${selectedAddress.ward}, ${selectedAddress.district}, ${selectedAddress.city}`;
+            const shippingAddressStr = formatAddressLine(selectedAddress);
             const orderRes = await orderApi.createOrder({
                 customerId,
                 recipientName: selectedAddress.recipientName,
@@ -251,8 +262,7 @@ export const Checkout = () => {
                                         {selectedAddress.recipientName} 
                                         <span style={{ fontWeight: 400, color: '#666', borderLeft: '1px solid #ddd', paddingLeft: '8px' }}>{selectedAddress.phone}</span>
                                     </div>
-                                    <div style={{ color: '#555', fontSize: '0.9rem', marginBottom: '0.25rem' }}>{selectedAddress.street}</div>
-                                    <div style={{ color: '#555', fontSize: '0.9rem', marginBottom: '0.5rem' }}>{selectedAddress.ward}, {selectedAddress.district}, {selectedAddress.city}</div>
+                                    <div style={{ color: '#555', fontSize: '0.9rem', marginBottom: '0.5rem' }}>{formatAddressLine(selectedAddress)}</div>
                                     {selectedAddress.isDefault && (
                                         <span style={{ border: '1px solid #ee4d2d', color: '#ee4d2d', padding: '2px 8px', fontSize: '0.75rem', borderRadius: '4px' }}>Mặc định</span>
                                     )}
@@ -392,8 +402,7 @@ export const Checkout = () => {
                                             <span style={{ color: 'var(--color-black)' }}>{addr.recipientName}</span>
                                             <span style={{ fontWeight: 400, color: '#666', marginLeft: '8px', borderLeft: '1px solid #ddd', paddingLeft: '8px' }}>{addr.phone}</span>
                                         </div>
-                                        <div style={{ color: '#555', fontSize: '0.95rem', marginBottom: '0.25rem' }}>{addr.street}</div>
-                                        <div style={{ color: '#555', fontSize: '0.95rem', marginBottom: '0.5rem' }}>{addr.ward}, {addr.district}, {addr.city}</div>
+                                        <div style={{ color: '#555', fontSize: '0.95rem', marginBottom: '0.5rem' }}>{formatAddressLine(addr)}</div>
                                         {addr.isDefault && (
                                             <span style={{ border: '1px solid #ee4d2d', color: '#ee4d2d', padding: '2px 8px', fontSize: '0.75rem', borderRadius: '4px' }}>Mặc định</span>
                                         )}
