@@ -1,8 +1,9 @@
 import { Link, useNavigate } from 'react-router-dom';
 import { useEffect, useState } from 'react';
-import { useAuthStore, useIsAdmin, useIsEmployee } from '../../store/authStore';
+import { useAuthStore, useIsAdmin, useIsEmployee, useIsCustomer } from '../../store/authStore';
 import { useAuth } from '../../hooks/useAuth';
 import { cartApi } from '../../api/cartApi';
+import { useGuestCartStore } from '../../store/guestCartStore';
 import { Search, ShoppingBag, UserCircle, ClipboardList } from 'lucide-react';
 
 export const Header = () => {
@@ -10,12 +11,15 @@ export const Header = () => {
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
   const accountId = useAuthStore((state) => state.user?.accountId);
   const { logoutMutation } = useAuth();
+  const isCustomer = useIsCustomer();
+  const guestCartCount = useGuestCartStore((s) => s.items.reduce((sum, i) => sum + i.quantity, 0));
   const [cartCount, setCartCount] = useState(0);
+
   useEffect(() => {
     let isMounted = true;
 
     const loadCartCount = async () => {
-      if (!isAuthenticated || !accountId) {
+      if (!isAuthenticated || !accountId || !isCustomer) {
         setCartCount(0);
         return;
       }
@@ -40,7 +44,10 @@ export const Header = () => {
       isMounted = false;
       window.removeEventListener('cart:updated', handler);
     };
-  }, [isAuthenticated, accountId]);
+  }, [isAuthenticated, accountId, isCustomer]);
+
+  const displayCartCount = isCustomer ? cartCount : (!isAuthenticated ? guestCartCount : 0);
+  const showCartIcon = isCustomer || !isAuthenticated;
 
 
   const isAdmin = useIsAdmin();
@@ -79,12 +86,14 @@ export const Header = () => {
           <button className="header__action-btn" aria-label="Tìm kiếm" style={{ border: 'none', background: 'none', fontSize: '1.1rem', cursor: 'pointer', padding: '10px' }}>
             <Search size={20} />
           </button>
-          <Link to="/cart" className="header__action-btn" aria-label="Giỏ hàng" style={{ border: 'none', background: 'none', fontSize: '1.1rem', cursor: 'pointer', padding: '10px', position: 'relative' }}>
-            <ShoppingBag size={20} />
-            {cartCount > 0 && (
-              <span className="badge" style={{ position: 'absolute', top: 0, right: 0, background: 'var(--color-gold)', color: '#fff', fontSize: '10px', padding: '2px 6px', borderRadius: '50%' }}>{cartCount}</span>
-            )}
-          </Link>
+          {showCartIcon && (
+            <Link to="/cart" className="header__action-btn" aria-label="Giỏ hàng" style={{ border: 'none', background: 'none', fontSize: '1.1rem', cursor: 'pointer', padding: '10px', position: 'relative' }}>
+              <ShoppingBag size={20} />
+              {displayCartCount > 0 && (
+                <span className="badge" style={{ position: 'absolute', top: 0, right: 0, background: 'var(--color-gold)', color: '#fff', fontSize: '10px', padding: '2px 6px', borderRadius: '50%' }}>{displayCartCount}</span>
+              )}
+            </Link>
+          )}
 
           {isAuthenticated ? (
             <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
@@ -99,9 +108,12 @@ export const Header = () => {
               </button>
             </div>
           ) : (
-            <button onClick={() => navigate('/login')} className="btn btn--primary btn--sm" style={{ padding: '8px 20px', background: 'linear-gradient(135deg, var(--color-gold), var(--color-gold-dark))', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer' }}>
-              Đăng nhập
-            </button>
+            <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
+              <Link to="/order-lookup" className="nav__link" style={{ fontSize: '0.85rem', whiteSpace: 'nowrap' }}>Tra cứu đơn</Link>
+              <button onClick={() => navigate('/login')} className="btn btn--primary btn--sm" style={{ padding: '8px 20px', background: 'linear-gradient(135deg, var(--color-gold), var(--color-gold-dark))', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer' }}>
+                Đăng nhập
+              </button>
+            </div>
           )}
         </div>
       </div>

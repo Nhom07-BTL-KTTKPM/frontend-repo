@@ -6,6 +6,7 @@ import { productApi } from '../api/productApi';
 import { cartApi } from '../api/cartApi';
 import { useAuthStore } from '../store/authStore';
 import { useCustomerId } from '../hooks/useCustomerId';
+import { useGuestCartStore } from '../store/guestCartStore';
 import type { Product, ProductVariant } from '../types/product';
 
 export const ProductDetail: React.FC = () => {
@@ -16,6 +17,7 @@ export const ProductDetail: React.FC = () => {
 
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
   const { customerId } = useCustomerId();
+  const addGuestItem = useGuestCartStore((s) => s.addItem);
 
   const { data, isLoading, error } = useQuery({
     queryKey: ['product', slug],
@@ -41,18 +43,10 @@ export const ProductDetail: React.FC = () => {
   const originalPrice = selectedVariant?.originalPrice ?? product.maxPrice;
 
   const handleAddToCart = async () => {
-    if (!isAuthenticated) {
-      toast.error('Vui lòng đăng nhập để thêm sản phẩm vào giỏ hàng');
-      navigate('/login');
-      return;
-    }
+    if (!selectedVariant) return;
 
-    if (!customerId) {
-      toast.error('Không tìm thấy thông tin khách hàng. Vui lòng thử lại.');
-      return;
-    }
-
-    if (selectedVariant) {
+    if (isAuthenticated && customerId) {
+      // Logged-in customer → call cart API
       setIsAdding(true);
       try {
         await cartApi.addItem(customerId, {
@@ -61,7 +55,6 @@ export const ProductDetail: React.FC = () => {
           unitPrice: selectedVariant.price
         });
         toast.success('Đã thêm sản phẩm vào giỏ hàng');
-        // Notify other components that cart has been updated
         window.dispatchEvent(new CustomEvent('cart:updated'));
       } catch (err) {
         const message = err instanceof Error ? err.message : 'Thêm vào giỏ hàng thất bại';
@@ -69,6 +62,17 @@ export const ProductDetail: React.FC = () => {
       } finally {
         setIsAdding(false);
       }
+    } else {
+      // Guest → add to localStorage cart
+      addGuestItem({
+        productVariantId: selectedVariant.id,
+        quantity: 1,
+        unitPrice: selectedVariant.price,
+        variantName: selectedVariant.variantName || '',
+        productName: product.name,
+        imageUrl: displayImage,
+      });
+      toast.success('Đã thêm sản phẩm vào giỏ hàng');
     }
   };
 
