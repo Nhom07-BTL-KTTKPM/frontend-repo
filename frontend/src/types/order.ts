@@ -45,3 +45,17 @@ export interface CreateOrderRequest {
   paymentMethod: PaymentMethod;
   selectedItemIds: string[];
 }
+
+export interface GuestOrderItem {
+  productVariantId: string;
+  quantity: number;
+}
+
+export interface CreateGuestOrderRequest {
+  recipientName: string;
+  shippingAddress: string;
+  email: string;
+  phone: string;
+  note?: string;
+  items: GuestOrderItem[];
+}
