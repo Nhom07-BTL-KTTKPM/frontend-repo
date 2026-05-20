@@ -49,7 +49,7 @@ export const Checkout = () => {
     const [customerId, setCustomerId] = useState<string | null>(null);
     const [cart, setCart] = useState<CartResponse | null>(null);
     const [variants, setVariants] = useState<Record<string, CatalogProductVariant>>({});
-    const [loading, setLoading] = useState(true);
+    const [loading, setLoading] = useState(!isGuest);
     const [submitting, setSubmitting] = useState(false);
 
     // Form state
@@ -70,9 +70,7 @@ export const Checkout = () => {
             if (guestItems.length === 0) {
                 toast.error('Vui lòng chọn sản phẩm để thanh toán');
                 navigate('/cart');
-                return;
             }
-            setLoading(false);
             return;
         }
 
@@ -130,8 +128,9 @@ export const Checkout = () => {
                         cartData.items = cartData.items.filter(item => selectedItemIds.includes(item.id));
                     }
                     setCart(cartData);
-                } catch (err: any) {
-                    if (err?.response?.status !== 404) {
+                } catch (err: unknown) {
+                    const axiosErr = err as { response?: { status?: number } };
+                    if (axiosErr?.response?.status !== 404) {
                         throw err;
                     }
                 }
@@ -397,7 +396,7 @@ export const Checkout = () => {
                     <h2 style={{ fontSize: '1.5rem', marginBottom: '1.5rem', color: 'var(--color-black)' }}>Đơn hàng của bạn</h2>
                     
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', marginBottom: '2rem', maxHeight: '40vh', overflowY: 'auto' }}>
-                        {displayItems.map((item: any) => {
+                        {displayItems.map((item: { id: string; productVariantId: string; quantity: number; unitPrice: number; _guestVariant?: string; _guestName?: string; _guestImage?: string }) => {
                             const variant = variants[item.productVariantId];
                             const itemName = item._guestVariant || variant?.variantName || 'Sản phẩm';
                             const itemImage = item._guestImage || variant?.imageUrl;

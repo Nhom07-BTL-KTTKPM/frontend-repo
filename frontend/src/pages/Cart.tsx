@@ -87,9 +87,10 @@ export const Cart = () => {
                 if (isMounted) {
                     setCart(res);
                 }
-            } catch (err: any) {
+            } catch (err: unknown) {
                 if (isMounted) {
-                    if (err?.response?.status === 404) {
+                    const axiosErr = err as { response?: { status?: number } };
+                    if (axiosErr?.response?.status === 404) {
                         setCart(null);
                         setError(null);
                     } else {

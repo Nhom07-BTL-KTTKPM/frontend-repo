@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Link, useParams, useNavigate } from 'react-router-dom';
+import { Link, useParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { productApi } from '../api/productApi';
@@ -11,7 +11,6 @@ import type { Product, ProductVariant } from '../types/product';
 
 export const ProductDetail: React.FC = () => {
   const { slug } = useParams<{ slug: string }>();
-  const navigate = useNavigate();
   const [selectedVariant, setSelectedVariant] = useState<ProductVariant | null>(null);
   const [isAdding, setIsAdding] = useState(false);
 
@@ -27,32 +26,28 @@ export const ProductDetail: React.FC = () => {
 
   const product = data as Product | null;
 
-  // Set default variant on load
-  React.useEffect(() => {
-    if (product?.variants && product.variants.length > 0 && !selectedVariant) {
-      setSelectedVariant(product.variants[0]);
-    }
-  }, [product, selectedVariant]);
+  // Set default variant on load - use the first variant as default
+  const activeVariant = selectedVariant ?? (product?.variants?.[0] || null);
 
   if (isLoading) return <div style={{ padding: '4rem' }}>Đang tải...</div>;
   if (error) return <div style={{ padding: '4rem', color: 'red' }}>Không thể tải chi tiết sản phẩm</div>;
   if (!product) return <div style={{ padding: '4rem' }}>Sản phẩm không tồn tại</div>;
 
   const displayImage = product.images && product.images.length > 0 ? product.images[0].url : '';
-  const displayPrice = selectedVariant?.price ?? product.minPrice ?? 0;
-  const originalPrice = selectedVariant?.originalPrice ?? product.maxPrice;
+  const displayPrice = activeVariant?.price ?? product.minPrice ?? 0;
+  const originalPrice = activeVariant?.originalPrice ?? product.maxPrice;
 
   const handleAddToCart = async () => {
-    if (!selectedVariant) return;
+    if (!activeVariant) return;
 
     if (isAuthenticated && customerId) {
       // Logged-in customer → call cart API
       setIsAdding(true);
       try {
         await cartApi.addItem(customerId, {
-          productVariantId: selectedVariant.id,
+          productVariantId: activeVariant.id,
           quantity: 1,
-          unitPrice: selectedVariant.price
+          unitPrice: activeVariant.price
         });
         toast.success('Đã thêm sản phẩm vào giỏ hàng');
         window.dispatchEvent(new CustomEvent('cart:updated'));
@@ -65,10 +60,10 @@ export const ProductDetail: React.FC = () => {
     } else {
       // Guest → add to localStorage cart
       addGuestItem({
-        productVariantId: selectedVariant.id,
+        productVariantId: activeVariant.id,
         quantity: 1,
-        unitPrice: selectedVariant.price,
-        variantName: selectedVariant.variantName || '',
+        unitPrice: activeVariant.price,
+        variantName: activeVariant.variantName || '',
         productName: product.name,
         imageUrl: displayImage,
       });
@@ -154,8 +149,8 @@ export const ProductDetail: React.FC = () => {
                     onClick={() => setSelectedVariant(variant)}
                     style={{
                       padding: '10px 16px',
-                      border: selectedVariant?.id === variant.id ? '2px solid #D4AF37' : '1px solid #ddd',
-                      background: selectedVariant?.id === variant.id ? '#fff9f0' : 'white',
+                      border: activeVariant?.id === variant.id ? '2px solid #D4AF37' : '1px solid #ddd',
+                      background: activeVariant?.id === variant.id ? '#fff9f0' : 'white',
                       borderRadius: '6px',
                       cursor: 'pointer',
                       fontSize: '14px',
@@ -174,7 +169,7 @@ export const ProductDetail: React.FC = () => {
           <div style={{ display: 'flex', gap: '12px' }}>
             <button
               onClick={handleAddToCart}
-              disabled={!selectedVariant || (selectedVariant.stockQuantity ?? 0) <= 0 || isAdding}
+              disabled={!activeVariant || (activeVariant.stockQuantity ?? 0) <= 0 || isAdding}
               style={{
                 flex: 1,
                 padding: '12px 24px',
@@ -184,8 +179,8 @@ export const ProductDetail: React.FC = () => {
                 borderRadius: '6px',
                 fontSize: '16px',
                 fontWeight: 600,
-                cursor: (selectedVariant?.stockQuantity ?? 0) > 0 && !isAdding ? 'pointer' : 'not-allowed',
-                opacity: (selectedVariant?.stockQuantity ?? 0) > 0 && !isAdding ? 1 : 0.6,
+                cursor: (activeVariant?.stockQuantity ?? 0) > 0 && !isAdding ? 'pointer' : 'not-allowed',
+                opacity: (activeVariant?.stockQuantity ?? 0) > 0 && !isAdding ? 1 : 0.6,
               }}
             >
               {isAdding ? 'Đang thêm...' : 'Thêm vào giỏ hàng'}
@@ -193,10 +188,10 @@ export const ProductDetail: React.FC = () => {
           </div>
 
           {/* Stock Info */}
-          {selectedVariant && (
+          {activeVariant && (
             <div style={{ marginTop: '1rem', fontSize: '13px', color: '#666' }}>
-              {selectedVariant.stockQuantity && selectedVariant.stockQuantity > 0 ? (
-                <span>Còn {selectedVariant.stockQuantity} sản phẩm</span>
+              {activeVariant.stockQuantity && activeVariant.stockQuantity > 0 ? (
+                <span>Còn {activeVariant.stockQuantity} sản phẩm</span>
               ) : (
                 <span style={{ color: '#e74c3c' }}>Hết hàng</span>
               )}
