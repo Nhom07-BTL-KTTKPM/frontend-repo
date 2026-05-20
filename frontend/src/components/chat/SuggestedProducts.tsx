@@ -1,10 +1,204 @@
+import { useEffect, useMemo, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { toast } from 'sonner';
+import { cartApi } from '../../api/cartApi';
+import { catalogApi } from '../../api/catalogApi';
+import { useCustomerId } from '../../hooks/useCustomerId';
+import { useAuthStore } from '../../store/authStore';
 import type { SuggestedProduct } from '../../types/ai';
+import type { Product, ProductVariant } from '../../types/product';
 
 interface SuggestedProductsProps {
   products: SuggestedProduct[];
 }
 
+const formatCurrency = (value?: number) => {
+  if (value === null || value === undefined) {
+    return '--';
+  }
+  return new Intl.NumberFormat('vi-VN', {
+    style: 'currency',
+    currency: 'VND',
+    maximumFractionDigits: 0,
+  }).format(value);
+};
+
+const resolvePrimaryImage = (product?: Product) => {
+  if (!product?.images || product.images.length === 0) {
+    return undefined;
+  }
+  const primary = product.images.find((image) => image.isPrimary);
+  return (primary ?? product.images[0]).url;
+};
+
+const resolveDefaultVariant = (product?: Product): ProductVariant | null => {
+  if (!product?.variants || product.variants.length === 0) {
+    return null;
+  }
+  const inStock = product.variants.find((variant) => {
+    if (variant.stockQuantity === undefined || variant.stockQuantity === null) {
+      return true;
+    }
+    return variant.stockQuantity > 0;
+  });
+  return inStock ?? product.variants[0];
+};
+
 export const SuggestedProducts = ({ products }: SuggestedProductsProps) => {
+  const navigate = useNavigate();
+  const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
+  const { customerId } = useCustomerId();
+  const [productDetails, setProductDetails] = useState<Record<string, Product>>({});
+  const [loadingIds, setLoadingIds] = useState<string[]>([]);
+  const [failedIds, setFailedIds] = useState<string[]>([]);
+  const [processingId, setProcessingId] = useState<string | null>(null);
+
+  const productIds = useMemo(() => {
+    return Array.from(
+      new Set(
+        products
+          .map((product) => product.productId || product.id)
+          .filter((value): value is string => Boolean(value))
+      )
+    );
+  }, [products]);
+
+  useEffect(() => {
+    if (productIds.length === 0) {
+      return;
+    }
+
+    const missingIds = productIds.filter(
+      (id) => !productDetails[id] && !loadingIds.includes(id) && !failedIds.includes(id)
+    );
+    if (!missingIds.length) {
+      return;
+    }
+
+    let isMounted = true;
+    setLoadingIds((prev) => [...prev, ...missingIds]);
+
+    Promise.all(
+      missingIds.map(async (id) => {
+        try {
+          const product = await catalogApi.getProductById(id);
+          return { id, product };
+        } catch {
+          return { id, product: null };
+        }
+      })
+    )
+      .then((results) => {
+        if (!isMounted) {
+          return;
+        }
+        setProductDetails((prev) => {
+          const next = { ...prev };
+          results.forEach((result) => {
+            if (result?.id && result.product) {
+              next[result.id] = result.product as Product;
+            }
+          });
+          return next;
+        });
+        const failed = results
+          .filter((result) => result?.id && !result.product)
+          .map((result) => result?.id as string);
+        if (failed.length) {
+          setFailedIds((prev) => Array.from(new Set([...prev, ...failed])));
+        }
+      })
+      .finally(() => {
+        if (!isMounted) {
+          return;
+        }
+        setLoadingIds((prev) => prev.filter((id) => !missingIds.includes(id)));
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [productIds, productDetails, loadingIds]);
+
+  const handleAddToCart = async (productId: string, variant: ProductVariant | null) => {
+    if (!isAuthenticated) {
+      toast.error('Vui lòng đăng nhập để thêm vào giỏ hàng');
+      navigate('/login');
+      return;
+    }
+    if (!customerId) {
+      toast.error('Không tìm thấy thông tin khách hàng');
+      return;
+    }
+    if (!variant) {
+      toast.error('Sản phẩm chưa có phân loại khả dụng');
+      return;
+    }
+
+    setProcessingId(productId);
+    try {
+      await cartApi.addItem(customerId, {
+        productVariantId: variant.id,
+        quantity: 1,
+        unitPrice: variant.price,
+      });
+      window.dispatchEvent(new CustomEvent('cart:updated'));
+      toast.success('Đã thêm vào giỏ hàng');
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Thêm vào giỏ hàng thất bại';
+      toast.error(message);
+    } finally {
+      setProcessingId(null);
+    }
+  };
+
+  const handleBuyNow = async (productId: string, variant: ProductVariant | null) => {
+    if (!isAuthenticated) {
+      toast.error('Vui lòng đăng nhập để mua ngay');
+      navigate('/login');
+      return;
+    }
+    if (!customerId) {
+      toast.error('Không tìm thấy thông tin khách hàng');
+      return;
+    }
+    if (!variant) {
+      toast.error('Sản phẩm chưa có phân loại khả dụng');
+      return;
+    }
+
+    setProcessingId(productId);
+    try {
+      await cartApi.addItem(customerId, {
+        productVariantId: variant.id,
+        quantity: 1,
+        unitPrice: variant.price,
+      });
+      window.dispatchEvent(new CustomEvent('cart:updated'));
+
+      const cart = await cartApi.getCartByCustomerId(customerId);
+      const item = cart.items.find((entry) => entry.productVariantId === variant.id);
+      if (item) {
+        navigate('/checkout', { state: { selectedItemIds: [item.id] } });
+        return;
+      }
+      navigate('/cart');
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Không thể mua ngay';
+      toast.error(message);
+    } finally {
+      setProcessingId(null);
+    }
+  };
+
+  const handleViewDetail = (slug?: string) => {
+    if (!slug) {
+      toast.error('Không tìm thấy slug sản phẩm');
+      return;
+    }
+    navigate(`/product/${slug}`);
+  };
+
   if (!products.length) {
     return (
       <div className="rounded-3xl border border-dashed border-[#c9a96e]/40 bg-white/80 p-6 text-sm text-[#888]">
@@ -14,63 +208,99 @@ export const SuggestedProducts = ({ products }: SuggestedProductsProps) => {
   }
 
   return (
-    <div className="flex flex-col h-full rounded-3xl border border-white/40 bg-white/90 p-5 shadow-[0_16px_40px_-28px_rgba(0,0,0,0.25)]">
+    <div className="flex h-full flex-col rounded-3xl border border-[#f1e7d8] bg-white/95 p-5 shadow-[0_20px_50px_-35px_rgba(0,0,0,0.3)]">
       <div className="mb-3">
-        <p className="text-[11px] uppercase tracking-[0.25em] text-[#a68b5b]">Tuyển chọn</p>
-        <h3 className="text-lg font-semibold text-[#1a1a1a]">Sản phẩm gợi ý</h3>
+        <p className="text-[10px] uppercase tracking-[0.35em] text-[#b08b56]">Tuyển chọn</p>
+        <h3 className="text-xl font-semibold text-[#1a1a1a]">Sản phẩm gợi ý</h3>
       </div>
-      <div className="flex-1 min-h-0 space-y-3 overflow-y-auto pr-2">
-        {products.map((product, index) => (
-          <div
-            key={product.id || product.productId || `prod-${index}`}
-            className="flex flex-col gap-3 rounded-2xl border border-[#f0e8dc] bg-[#faf6f0] p-3"
-          >
-            <div className="flex items-start gap-3">
-              <div className="h-14 w-14 overflow-hidden rounded-xl bg-white/80">
-                {product.imageUrl ? (
-                  <img src={product.imageUrl} alt={product.name} className="h-full w-full object-cover" />
-                ) : (
-                  <div className="flex h-full w-full items-center justify-center text-xs text-[#a68b5b]">
-                    Chưa có ảnh
-                  </div>
-                )}
+      <div className="min-h-0 flex-1 space-y-3 overflow-y-auto pr-2">
+        {products.map((product, index) => {
+          const productId = product.productId || product.id;
+          const detail = productId ? productDetails[productId] : undefined;
+          const variant = resolveDefaultVariant(detail);
+          const imageUrl = resolvePrimaryImage(detail) ?? product.imageUrl;
+          const price = variant?.price ?? detail?.minPrice ?? product.price;
+          const slug = detail?.slug;
+          const isFailed = productId ? failedIds.includes(productId) : false;
+          const isProcessing = processingId === productId;
+
+          return (
+            <div
+              key={productId || `prod-${index}`}
+              className="flex flex-col gap-3 rounded-2xl border border-[#efe4d2] bg-[#fff9f1] p-4 shadow-[0_12px_30px_-24px_rgba(0,0,0,0.35)]"
+            >
+              <div className="flex items-start gap-3">
+                <div className="h-16 w-16 overflow-hidden rounded-2xl bg-white/80">
+                  {imageUrl ? (
+                    <img src={imageUrl} alt={product.name} className="h-full w-full object-cover" />
+                  ) : (
+                    <div className="flex h-full w-full items-center justify-center text-xs text-[#a68b5b]">
+                      Chưa có ảnh
+                    </div>
+                  )}
+                </div>
+                <div className="flex-1">
+                  <p className="text-[13px] font-semibold text-[#2d2d2d]">{detail?.name ?? product.name}</p>
+                  {product.reason && (
+                    <p className="mt-1 text-[11px] text-[#8a7a63]">{product.reason}</p>
+                  )}
+                  {price !== undefined && (
+                    <p className="mt-1 text-[12px] font-semibold text-[#6b5438]">
+                      {formatCurrency(price)}
+                    </p>
+                  )}
+                  {loadingIds.includes(productId || '') && (
+                    <p className="mt-1 text-[11px] text-[#b08b56]">Đang tải chi tiết...</p>
+                  )}
+                  {!loadingIds.includes(productId || '') && isFailed && (
+                    <p className="mt-1 text-[11px] text-[#b08b56]">Không tải được chi tiết.</p>
+                  )}
+                </div>
               </div>
-              <div className="flex-1">
-                <p className="text-sm font-semibold text-[#2d2d2d]">{product.name}</p>
-                {product.reason && (
-                  <p className="mt-1 text-xs text-[#888]">{product.reason}</p>
-                )}
-                {product.price !== undefined && (
-                  <p className="mt-1 text-xs font-semibold text-[#6b5438]">
-                    ${product.price.toFixed(2)}
-                  </p>
-                )}
-              </div>
-              {product.productUrl && (
-                <a
-                  href={product.productUrl}
-                  className="rounded-full border border-[#c9a96e]/60 px-3 py-2 text-[10px] font-semibold uppercase tracking-[0.2em] text-[#6b5438] transition hover:border-[#c9a96e]"
+
+              <div className="grid grid-cols-3 gap-2">
+                <button
+                  type="button"
+                  onClick={() => handleAddToCart(productId || '', variant)}
+                  disabled={!productId || !variant || isProcessing}
+                  className="rounded-lg border border-[#e2d3bf] bg-white px-2 py-1.5 text-[10px] font-medium text-[#6b5438] shadow-[0_6px_16px_-12px_rgba(0,0,0,0.35)] transition hover:border-[#c9a96e] disabled:cursor-not-allowed disabled:opacity-60"
                 >
-                  Xem
-                </a>
+                  {isProcessing ? 'Đang xử lý' : 'Thêm giỏ'}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleBuyNow(productId || '', variant)}
+                  disabled={!productId || !variant || isProcessing}
+                  className="rounded-lg bg-[#1a1a1a] px-2 py-1.5 text-[10px] font-semibold text-[#f0e0c2] shadow-[0_12px_24px_-18px_rgba(0,0,0,0.45)] transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  Mua ngay
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleViewDetail(slug)}
+                  disabled={!slug}
+                  className="rounded-lg border border-transparent bg-[#f7efe4] px-2 py-1.5 text-[10px] font-medium text-[#6b5438] transition hover:border-[#e2d3bf] disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  Xem chi tiết
+                </button>
+              </div>
+
+              {product.score !== undefined && (
+                <div className="flex items-center gap-2">
+                  <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-[#e8d5a8]/30">
+                    <div
+                      className="h-full rounded-full bg-gradient-to-r from-[#c9a96e] to-[#a68b5b]"
+                      style={{ width: `${Math.max(0, Math.min(100, product.score * 100))}%` }}
+                    />
+                  </div>
+                  <span className="text-[10px] font-medium text-[#8a7a63]">
+                    {Math.round(product.score * 100)}% {product.score >= 0.7 ? 'phù hợp' : 'cân nhắc'}
+                  </span>
+                </div>
               )}
             </div>
-
-            {product.score !== undefined && (
-              <div className="flex items-center gap-2">
-                <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-[#e8d5a8]/30">
-                  <div
-                    className="h-full rounded-full bg-gradient-to-r from-[#c9a96e] to-[#a68b5b]"
-                    style={{ width: `${Math.max(0, Math.min(100, product.score * 100))}%` }}
-                  />
-                </div>
-                <span className="text-[10px] font-semibold uppercase tracking-[0.05em] text-[#888]">
-                  {Math.round(product.score * 100)}% {product.score >= 0.7 ? 'phù hợp' : 'cân nhắc'}
-                </span>
-              </div>
-            )}
-          </div>
-        ))}
+          );
+        })}
       </div>
     </div>
   );
