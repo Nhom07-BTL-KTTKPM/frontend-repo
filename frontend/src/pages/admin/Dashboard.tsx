@@ -135,12 +135,10 @@ const MetricCard = ({
         <h3 className="text-2xl font-extrabold tracking-tight text-slate-900 md:text-3xl">{value}</h3>
         {detail ? <p className="text-xs leading-5 text-slate-500 font-medium">{detail}</p> : null}
       </div>
-      {/* Vòng bo icon được mạ viền vàng kim */}
       <div className={`grid h-12 w-12 shrink-0 place-items-center rounded-xl transition-transform duration-300 group-hover:scale-110 ${tone}`}>
         {icon}
       </div>
     </div>
-    {/* Thanh trang trí viền vàng chạy dưới đáy khi hover */}
     <div className="absolute bottom-0 left-0 h-[2px] w-0 bg-gradient-to-r from-transparent via-amber-400 to-transparent transition-all duration-500 group-hover:w-full" />
   </article>
 );
@@ -511,14 +509,14 @@ export const Dashboard = () => {
         <MetricCard
           label="Doanh thu thực nhận"
           value={formatCurrency(summary.totalRevenue)}
-          detail={`${summary.completedOrders} đơn đã hoàn tất / thanh toán`}
+          detail={`${summary.completedOrders} đơn đã giao thành công`}
           icon={<BadgeDollarSign size={20} />}
           tone="bg-emerald-50 text-emerald-600"
         />
         <MetricCard
           label="Tổng đơn phát sinh"
           value={String(summary.totalOrders)}
-          detail={`${summary.refundedOrders} đơn trả hàng / hoàn tiền`}
+          detail="Tính trên tất cả đơn hàng có trong bộ lọc"
           icon={<ShoppingBag size={20} />}
           tone="bg-sky-50 text-sky-600"
         />
