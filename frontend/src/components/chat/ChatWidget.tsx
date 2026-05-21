@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { MessageCircle, X } from 'lucide-react';
 import { useAuthStore } from '../../store/authStore';
@@ -8,6 +8,12 @@ export const ChatWidget = () => {
   const navigate = useNavigate();
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
   const [isOpen, setIsOpen] = useState(false);
+
+  useEffect(() => {
+    const handleClose = () => setIsOpen(false);
+    window.addEventListener('chat:close', handleClose);
+    return () => window.removeEventListener('chat:close', handleClose);
+  }, []);
 
   const handleToggle = () => {
     if (!isAuthenticated) {
