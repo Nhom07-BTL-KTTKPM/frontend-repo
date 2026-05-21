@@ -57,6 +57,11 @@ export const ChatMessage = ({ message }: ChatMessageProps) => {
       >
         {assistantReply ? (
           <div className="space-y-3">
+            {assistantReply.body && (
+              <p className="whitespace-pre-wrap leading-relaxed text-[#2d2d2d]">
+                {assistantReply.body}
+              </p>
+            )}
             <div className="rounded-2xl border border-[#f0e8dc] bg-[#faf6f0] px-4 py-3">
               <p className="text-[11px] uppercase tracking-[0.3em] text-[#a68b5b]">Gợi ý từ Lumiere</p>
               {assistantReply.listItems.length > 0 && (
@@ -69,11 +74,6 @@ export const ChatMessage = ({ message }: ChatMessageProps) => {
                 </ol>
               )}
             </div>
-            {assistantReply.body && (
-              <p className="whitespace-pre-wrap leading-relaxed text-[#2d2d2d]">
-                {assistantReply.body}
-              </p>
-            )}
           </div>
         ) : (
           <p className="whitespace-pre-wrap leading-relaxed">{message.content}</p>

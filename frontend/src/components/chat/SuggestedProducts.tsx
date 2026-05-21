@@ -53,6 +53,50 @@ export const SuggestedProducts = ({ products }: SuggestedProductsProps) => {
   const [failedIds, setFailedIds] = useState<string[]>([]);
   const [processingId, setProcessingId] = useState<string | null>(null);
 
+  const withTimeout = async <T,>(promise: Promise<T>, timeoutMs: number) => {
+    let timeoutHandle: ReturnType<typeof setTimeout> | null = null;
+    const timeoutPromise = new Promise<null>((resolve) => {
+      timeoutHandle = setTimeout(() => resolve(null), timeoutMs);
+    });
+    const result = await Promise.race([promise, timeoutPromise]);
+    if (timeoutHandle) {
+      clearTimeout(timeoutHandle);
+    }
+    return result as T | null;
+  };
+
+  const loadProductDetail = async (productId: string) => {
+    if (!productId) {
+      return null;
+    }
+    if (productDetails[productId]) {
+      return productDetails[productId];
+    }
+    if (loadingIds.includes(productId)) {
+      return null;
+    }
+
+    setLoadingIds((prev) => [...prev, productId]);
+
+    try {
+      const product = await withTimeout(catalogApi.getProductById(productId), 6500);
+      if (!product) {
+        setFailedIds((prev) => Array.from(new Set([...prev, productId])));
+        return null;
+      }
+      setProductDetails((prev) => ({
+        ...prev,
+        [productId]: product as Product,
+      }));
+      return product as Product;
+    } catch {
+      setFailedIds((prev) => Array.from(new Set([...prev, productId])));
+      return null;
+    } finally {
+      setLoadingIds((prev) => prev.filter((id) => id !== productId));
+    }
+  };
+
   const productIds = useMemo(() => {
     return Array.from(
       new Set(
@@ -75,49 +119,9 @@ export const SuggestedProducts = ({ products }: SuggestedProductsProps) => {
       return;
     }
 
-    let isMounted = true;
-    setLoadingIds((prev) => [...prev, ...missingIds]);
-
-    Promise.all(
-      missingIds.map(async (id) => {
-        try {
-          const product = await catalogApi.getProductById(id);
-          return { id, product };
-        } catch {
-          return { id, product: null };
-        }
-      })
-    )
-      .then((results) => {
-        if (!isMounted) {
-          return;
-        }
-        setProductDetails((prev) => {
-          const next = { ...prev };
-          results.forEach((result) => {
-            if (result?.id && result.product) {
-              next[result.id] = result.product as Product;
-            }
-          });
-          return next;
-        });
-        const failed = results
-          .filter((result) => result?.id && !result.product)
-          .map((result) => result?.id as string);
-        if (failed.length) {
-          setFailedIds((prev) => Array.from(new Set([...prev, ...failed])));
-        }
-      })
-      .finally(() => {
-        if (!isMounted) {
-          return;
-        }
-        setLoadingIds((prev) => prev.filter((id) => !missingIds.includes(id)));
-      });
-
-    return () => {
-      isMounted = false;
-    };
+    missingIds.forEach((id) => {
+      void loadProductDetail(id);
+    });
   }, [productIds, productDetails, loadingIds]);
 
   const handleAddToCart = async (productId: string, variant: ProductVariant | null) => {
@@ -130,17 +134,19 @@ export const SuggestedProducts = ({ products }: SuggestedProductsProps) => {
       toast.error('Không tìm thấy thông tin khách hàng');
       return;
     }
-    if (!variant) {
-      toast.error('Sản phẩm chưa có phân loại khả dụng');
+    const detail = variant ? null : await loadProductDetail(productId);
+    const resolvedVariant = variant ?? resolveDefaultVariant(detail ?? undefined);
+    if (!resolvedVariant) {
+      toast.error('Chưa tải được phân loại sản phẩm');
       return;
     }
 
     setProcessingId(productId);
     try {
       await cartApi.addItem(customerId, {
-        productVariantId: variant.id,
+        productVariantId: resolvedVariant.id,
         quantity: 1,
-        unitPrice: variant.price,
+        unitPrice: resolvedVariant.price,
       });
       window.dispatchEvent(new CustomEvent('cart:updated'));
       toast.success('Đã thêm vào giỏ hàng');
@@ -162,26 +168,30 @@ export const SuggestedProducts = ({ products }: SuggestedProductsProps) => {
       toast.error('Không tìm thấy thông tin khách hàng');
       return;
     }
-    if (!variant) {
-      toast.error('Sản phẩm chưa có phân loại khả dụng');
+    const detail = variant ? null : await loadProductDetail(productId);
+    const resolvedVariant = variant ?? resolveDefaultVariant(detail ?? undefined);
+    if (!resolvedVariant) {
+      toast.error('Chưa tải được phân loại sản phẩm');
       return;
     }
 
     setProcessingId(productId);
     try {
       await cartApi.addItem(customerId, {
-        productVariantId: variant.id,
+        productVariantId: resolvedVariant.id,
         quantity: 1,
-        unitPrice: variant.price,
+        unitPrice: resolvedVariant.price,
       });
       window.dispatchEvent(new CustomEvent('cart:updated'));
 
       const cart = await cartApi.getCartByCustomerId(customerId);
-      const item = cart.items.find((entry) => entry.productVariantId === variant.id);
+      const item = cart.items.find((entry) => entry.productVariantId === resolvedVariant.id);
       if (item) {
+        window.dispatchEvent(new CustomEvent('chat:close'));
         navigate('/checkout', { state: { selectedItemIds: [item.id] } });
         return;
       }
+      window.dispatchEvent(new CustomEvent('chat:close'));
       navigate('/cart');
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Không thể mua ngay';
@@ -191,11 +201,18 @@ export const SuggestedProducts = ({ products }: SuggestedProductsProps) => {
     }
   };
 
-  const handleViewDetail = (slug?: string) => {
+  const handleViewDetail = async (productId: string, slug?: string) => {
     if (!slug) {
-      toast.error('Không tìm thấy slug sản phẩm');
+      const detail = await loadProductDetail(productId);
+      if (!detail?.slug) {
+        toast.error('Chưa tải được chi tiết sản phẩm');
+        return;
+      }
+      window.dispatchEvent(new CustomEvent('chat:close'));
+      navigate(`/product/${detail.slug}`);
       return;
     }
+    window.dispatchEvent(new CustomEvent('chat:close'));
     navigate(`/product/${slug}`);
   };
 
@@ -262,7 +279,7 @@ export const SuggestedProducts = ({ products }: SuggestedProductsProps) => {
                 <button
                   type="button"
                   onClick={() => handleAddToCart(productId || '', variant)}
-                  disabled={!productId || !variant || isProcessing}
+                  disabled={!productId || isProcessing}
                   className="rounded-lg border border-[#e2d3bf] bg-white px-2 py-1.5 text-[10px] font-medium text-[#6b5438] shadow-[0_6px_16px_-12px_rgba(0,0,0,0.35)] transition hover:border-[#c9a96e] disabled:cursor-not-allowed disabled:opacity-60"
                 >
                   {isProcessing ? 'Đang xử lý' : 'Thêm giỏ'}
@@ -270,15 +287,15 @@ export const SuggestedProducts = ({ products }: SuggestedProductsProps) => {
                 <button
                   type="button"
                   onClick={() => handleBuyNow(productId || '', variant)}
-                  disabled={!productId || !variant || isProcessing}
+                  disabled={!productId || isProcessing}
                   className="rounded-lg bg-[#1a1a1a] px-2 py-1.5 text-[10px] font-semibold text-[#f0e0c2] shadow-[0_12px_24px_-18px_rgba(0,0,0,0.45)] transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
                 >
                   Mua ngay
                 </button>
                 <button
                   type="button"
-                  onClick={() => handleViewDetail(slug)}
-                  disabled={!slug}
+                  onClick={() => handleViewDetail(productId || '', slug)}
+                  disabled={!productId || isProcessing}
                   className="rounded-lg border border-transparent bg-[#f7efe4] px-2 py-1.5 text-[10px] font-medium text-[#6b5438] transition hover:border-[#e2d3bf] disabled:cursor-not-allowed disabled:opacity-60"
                 >
                   Xem chi tiết
