@@ -4,8 +4,10 @@ import { useAuthStore } from '../store/authStore';
 import { cartApi } from '../api/cartApi';
 import { catalogApi } from '../api/catalogApi';
 import { orderApi } from '../api/orderApi';
+import { paymentApi } from '../api/paymentApi';
 import { addressApi } from '../api/addressApi';
 import { userApi } from '../api/userApi';
+import { useGuestCartStore, type GuestCartItem } from '../store/guestCartStore';
 import type { PaymentMethod } from '../types/order';
 import type { CartResponse } from '../types/cart';
 import type { CatalogProductVariant } from '../types/catalog';
@@ -23,17 +25,31 @@ const formatCurrency = (value?: number) => {
     }).format(value);
 };
 
+const formatAddressLine = (address: Address) => {
+    const parts = [
+        address.streetAddress ?? address.street,
+        address.ward,
+        address.district,
+        address.city,
+    ].filter((part): part is string => Boolean(part && part.trim()));
+
+    return parts.join(', ');
+};
+
 export const Checkout = () => {
     const navigate = useNavigate();
     const location = useLocation();
     const { user, isAuthenticated } = useAuthStore();
+    const clearGuestCart = useGuestCartStore((s) => s.clearCart);
     
+    const isGuest: boolean = !isAuthenticated && !!location.state?.isGuest;
+    const guestItems: GuestCartItem[] = location.state?.guestItems || [];
     const selectedItemIds: string[] = location.state?.selectedItemIds || [];
     
     const [customerId, setCustomerId] = useState<string | null>(null);
     const [cart, setCart] = useState<CartResponse | null>(null);
     const [variants, setVariants] = useState<Record<string, CatalogProductVariant>>({});
-    const [loading, setLoading] = useState(true);
+    const [loading, setLoading] = useState(!isGuest);
     const [submitting, setSubmitting] = useState(false);
 
     // Form state
@@ -42,10 +58,22 @@ export const Checkout = () => {
     const [isAddressModalOpen, setIsAddressModalOpen] = useState(false);
     
     const [email, setEmail] = useState('');
+    const [recipientName, setRecipientName] = useState('');
+    const [phone, setPhone] = useState('');
+    const [shippingAddress, setShippingAddress] = useState('');
     const [note, setNote] = useState('');
     const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('COD');
 
     useEffect(() => {
+        // Guest checkout path
+        if (isGuest) {
+            if (guestItems.length === 0) {
+                toast.error('Vui lòng chọn sản phẩm để thanh toán');
+                navigate('/cart');
+            }
+            return;
+        }
+
         if (!isAuthenticated) {
             toast.error('Vui lòng đăng nhập để thanh toán');
             navigate('/login?redirect=/checkout');
@@ -100,8 +128,9 @@ export const Checkout = () => {
                         cartData.items = cartData.items.filter(item => selectedItemIds.includes(item.id));
                     }
                     setCart(cartData);
-                } catch (err: any) {
-                    if (err?.response?.status !== 404) {
+                } catch (err: unknown) {
+                    const axiosErr = err as { response?: { status?: number } };
+                    if (axiosErr?.response?.status !== 404) {
                         throw err;
                     }
                 }
@@ -132,12 +161,51 @@ export const Checkout = () => {
     }, [isAuthenticated, user, navigate]);
 
     const calculateTotal = () => {
+        if (isGuest) {
+            return guestItems.reduce((total, item) => total + (item.unitPrice * item.quantity), 0);
+        }
         if (!cart?.items) return 0;
         return cart.items.reduce((total, item) => total + (item.unitPrice * item.quantity), 0);
     };
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
+
+        if (isGuest) {
+            // Guest checkout
+            if (!recipientName) { toast.error('Vui lòng nhập tên người nhận'); return; }
+            if (!phone) { toast.error('Vui lòng nhập số điện thoại'); return; }
+            if (!email) { toast.error('Vui lòng nhập email'); return; }
+            if (!shippingAddress) { toast.error('Vui lòng nhập địa chỉ giao hàng'); return; }
+
+            setSubmitting(true);
+            try {
+                const orderRes = await orderApi.createGuestOrder({
+                    recipientName,
+                    email,
+                    phone,
+                    shippingAddress,
+                    note,
+                    items: guestItems.map(i => ({ productVariantId: i.productVariantId, quantity: i.quantity })),
+                });
+
+                const orderPayload = orderRes as unknown as { data?: { orderCode?: string }, orderCode?: string };
+                const orderCode = orderPayload.data?.orderCode ?? orderPayload.orderCode;
+
+                clearGuestCart();
+                window.dispatchEvent(new CustomEvent('cart:updated'));
+                toast.success('Đặt hàng thành công!');
+                navigate('/order-lookup', { state: { orderCode, email } });
+            } catch (error) {
+                const err = error as { response?: { data?: { message?: string } } };
+                toast.error(err.response?.data?.message || 'Lỗi khi đặt hàng');
+            } finally {
+                setSubmitting(false);
+            }
+            return;
+        }
+
+        // Authenticated customer checkout
         if (!customerId) return;
         
         const selectedAddress = addresses.find(a => a.id === selectedAddressId);
@@ -158,8 +226,8 @@ export const Checkout = () => {
 
         setSubmitting(true);
         try {
-            const shippingAddressStr = `${selectedAddress.street}, ${selectedAddress.ward}, ${selectedAddress.district}, ${selectedAddress.city}`;
-            await orderApi.createOrder({
+            const shippingAddressStr = formatAddressLine(selectedAddress);
+            const orderRes = await orderApi.createOrder({
                 customerId,
                 recipientName: selectedAddress.recipientName,
                 email,
@@ -170,25 +238,35 @@ export const Checkout = () => {
                 selectedItemIds
             });
 
-            // Remove selected items from cart
+            const orderPayload = orderRes as unknown as { data?: { id?: string }, id?: string };
+            const orderId = orderPayload.data?.id ?? orderPayload.id;
+
+            if (!orderId) {
+                throw new Error('Không lấy được orderId sau khi tạo đơn');
+            }
+
             try {
                 for (const itemId of selectedItemIds) {
                     await cartApi.removeItem(customerId, itemId);
                 }
             } catch (cartError) {
                 console.error('Failed to remove items from cart:', cartError);
-                // Continue anyway, order was created successfully
             }
 
-            // Dispatch cart update event to refresh cart badge
             window.dispatchEvent(new CustomEvent('cart:updated'));
 
             toast.success('Đặt hàng thành công!');
-            // Chuyển hướng theo phương thức thanh toán
             if (paymentMethod === 'COD') {
-                navigate('/orders'); // Redirect to order history
+                navigate('/orders');
+            } else if (paymentMethod === 'VNPAY') {
+                const paymentRes = await paymentApi.createPayment({ orderId });
+                const paymentPayload = paymentRes as unknown as { paymentUrl?: string };
+                if (!paymentPayload.paymentUrl) {
+                    throw new Error('Không lấy được link thanh toán VNPAY');
+                }
+                window.location.href = paymentPayload.paymentUrl;
             } else {
-                navigate('/payment'); // Giả lập payment gateway
+                navigate('/payment');
             }
         } catch (error) {
             const err = error as { response?: { data?: { message?: string } } };
@@ -202,7 +280,7 @@ export const Checkout = () => {
         return <div style={{ padding: '4rem', textAlign: 'center' }}>Đang tải thông tin thanh toán...</div>;
     }
 
-    if (!cart?.items || cart.items.length === 0) {
+    if (!isGuest && (!cart?.items || cart.items.length === 0)) {
         return (
             <div style={{ padding: '4rem', textAlign: 'center' }}>
                 <h1 style={{ fontFamily: 'var(--font-display)', fontSize: '2.5rem', color: 'var(--color-gold)' }}>Giỏ hàng trống</h1>
@@ -214,6 +292,10 @@ export const Checkout = () => {
         );
     }
 
+    const displayItems = isGuest
+        ? guestItems.map(gi => ({ id: gi.productVariantId, productVariantId: gi.productVariantId, quantity: gi.quantity, unitPrice: gi.unitPrice, _guestName: gi.productName, _guestVariant: gi.variantName, _guestImage: gi.imageUrl }))
+        : (cart?.items || []);
+
     return (
         <div style={{ padding: '4rem 2rem', maxWidth: '1200px', margin: '0 auto' }}>
             <h1 style={{ fontFamily: 'var(--font-display)', fontSize: '3rem', color: 'var(--color-gold)', textAlign: 'center', marginBottom: '2rem' }}>Thanh toán</h1>
@@ -223,6 +305,36 @@ export const Checkout = () => {
                 <div style={{ background: '#fff', padding: '2rem', borderRadius: '12px', boxShadow: '0 4px 15px rgba(0,0,0,0.05)' }}>
                     <h2 style={{ fontSize: '1.5rem', marginBottom: '1.5rem', color: 'var(--color-black)' }}>Thông tin giao hàng</h2>
                     
+                    {isGuest ? (
+                        /* Guest: Manual form input */
+                        <>
+                            <div style={{ marginBottom: '1rem' }}>
+                                <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 500 }}>Tên người nhận *</label>
+                                <input type="text" value={recipientName} onChange={e => setRecipientName(e.target.value)} required style={{ width: '100%', padding: '10px', border: '1px solid #ddd', borderRadius: '6px' }} />
+                            </div>
+                            <div style={{ marginBottom: '1rem' }}>
+                                <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 500 }}>Số điện thoại *</label>
+                                <input type="tel" value={phone} onChange={e => setPhone(e.target.value)} required style={{ width: '100%', padding: '10px', border: '1px solid #ddd', borderRadius: '6px' }} />
+                            </div>
+                            <div style={{ marginBottom: '1rem' }}>
+                                <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 500 }}>Email *</label>
+                                <input type="email" value={email} onChange={e => setEmail(e.target.value)} required style={{ width: '100%', padding: '10px', border: '1px solid #ddd', borderRadius: '6px' }} />
+                            </div>
+                            <div style={{ marginBottom: '1rem' }}>
+                                <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 500 }}>Địa chỉ giao hàng *</label>
+                                <input type="text" value={shippingAddress} onChange={e => setShippingAddress(e.target.value)} required placeholder="Số nhà, đường, phường, quận, thành phố" style={{ width: '100%', padding: '10px', border: '1px solid #ddd', borderRadius: '6px' }} />
+                            </div>
+                            <div style={{ marginBottom: '2rem' }}>
+                                <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 500 }}>Ghi chú (Tùy chọn)</label>
+                                <textarea value={note} onChange={e => setNote(e.target.value)} rows={2} style={{ width: '100%', padding: '10px', border: '1px solid #ddd', borderRadius: '6px', resize: 'vertical' }} />
+                            </div>
+                            <div style={{ padding: '1rem', background: 'rgba(201,169,110,0.1)', borderRadius: '8px', marginBottom: '1rem' }}>
+                                <p style={{ margin: 0, fontSize: '0.9rem', color: 'var(--color-gray-600)' }}>🛒 Khách vãng lai chỉ hỗ trợ thanh toán khi nhận hàng (COD)</p>
+                            </div>
+                        </>
+                    ) : (
+                        /* Customer: Address picker */
+                        <>
                     {/* Address Selection Box */}
                     <div style={{ padding: '1.5rem', borderRadius: '8px', border: '1px solid #e0e0e0', marginBottom: '1.5rem', position: 'relative' }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '1rem', alignItems: 'center' }}>
@@ -239,8 +351,7 @@ export const Checkout = () => {
                                         {selectedAddress.recipientName} 
                                         <span style={{ fontWeight: 400, color: '#666', borderLeft: '1px solid #ddd', paddingLeft: '8px' }}>{selectedAddress.phone}</span>
                                     </div>
-                                    <div style={{ color: '#555', fontSize: '0.9rem', marginBottom: '0.25rem' }}>{selectedAddress.street}</div>
-                                    <div style={{ color: '#555', fontSize: '0.9rem', marginBottom: '0.5rem' }}>{selectedAddress.ward}, {selectedAddress.district}, {selectedAddress.city}</div>
+                                    <div style={{ color: '#555', fontSize: '0.9rem', marginBottom: '0.5rem' }}>{formatAddressLine(selectedAddress)}</div>
                                     {selectedAddress.isDefault && (
                                         <span style={{ border: '1px solid #ee4d2d', color: '#ee4d2d', padding: '2px 8px', fontSize: '0.75rem', borderRadius: '4px' }}>Mặc định</span>
                                     )}
@@ -276,6 +387,8 @@ export const Checkout = () => {
                             <span>Chuyển khoản ngân hàng</span>
                         </label>
                     </div>
+                        </>
+                    )}
                 </div>
 
                 {/* Right Column: Order Summary */}
@@ -283,17 +396,19 @@ export const Checkout = () => {
                     <h2 style={{ fontSize: '1.5rem', marginBottom: '1.5rem', color: 'var(--color-black)' }}>Đơn hàng của bạn</h2>
                     
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', marginBottom: '2rem', maxHeight: '40vh', overflowY: 'auto' }}>
-                        {cart.items.map((item) => {
+                        {displayItems.map((item: { id: string; productVariantId: string; quantity: number; unitPrice: number; _guestVariant?: string; _guestName?: string; _guestImage?: string }) => {
                             const variant = variants[item.productVariantId];
+                            const itemName = item._guestVariant || variant?.variantName || 'Sản phẩm';
+                            const itemImage = item._guestImage || variant?.imageUrl;
                             return (
                                 <div key={item.id} style={{ display: 'flex', gap: '15px', alignItems: 'center' }}>
-                                    {variant?.imageUrl ? (
-                                        <img src={variant.imageUrl} alt={variant.variantName} style={{ width: '60px', height: '60px', objectFit: 'cover', borderRadius: '8px' }} />
+                                    {itemImage ? (
+                                        <img src={itemImage} alt={itemName} style={{ width: '60px', height: '60px', objectFit: 'cover', borderRadius: '8px' }} />
                                     ) : (
                                         <div style={{ width: '60px', height: '60px', background: '#ddd', borderRadius: '8px' }}></div>
                                     )}
                                     <div style={{ flex: 1 }}>
-                                        <h4 style={{ fontSize: '0.9rem', margin: 0, color: 'var(--color-black)' }}>{variant?.variantName || 'Sản phẩm'}</h4>
+                                        <h4 style={{ fontSize: '0.9rem', margin: 0, color: 'var(--color-black)' }}>{itemName}</h4>
                                         <p style={{ fontSize: '0.8rem', color: 'var(--color-gray-500)', margin: '4px 0' }}>SL: {item.quantity}</p>
                                     </div>
                                     <div style={{ fontWeight: 600 }}>
@@ -380,8 +495,7 @@ export const Checkout = () => {
                                             <span style={{ color: 'var(--color-black)' }}>{addr.recipientName}</span>
                                             <span style={{ fontWeight: 400, color: '#666', marginLeft: '8px', borderLeft: '1px solid #ddd', paddingLeft: '8px' }}>{addr.phone}</span>
                                         </div>
-                                        <div style={{ color: '#555', fontSize: '0.95rem', marginBottom: '0.25rem' }}>{addr.street}</div>
-                                        <div style={{ color: '#555', fontSize: '0.95rem', marginBottom: '0.5rem' }}>{addr.ward}, {addr.district}, {addr.city}</div>
+                                        <div style={{ color: '#555', fontSize: '0.95rem', marginBottom: '0.5rem' }}>{formatAddressLine(addr)}</div>
                                         {addr.isDefault && (
                                             <span style={{ border: '1px solid #ee4d2d', color: '#ee4d2d', padding: '2px 8px', fontSize: '0.75rem', borderRadius: '4px' }}>Mặc định</span>
                                         )}

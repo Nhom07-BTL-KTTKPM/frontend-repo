@@ -5,7 +5,11 @@ export { CategoryDetailPage } from './CategoryDetailPage';
 export { BrandDetailPage } from './BrandDetailPage';
 export { Cart } from './Cart';
 export { Checkout } from './Checkout';
+export { OrderLookup } from './OrderLookup';
 export { OrderHistory } from './OrderHistory';
+export { OrderDetail } from './OrderDetail';
+export { OrderSuccess } from './OrderSuccess';
+export { OrderFailed } from './OrderFailed';
 export const Payment = () => {
     return (
         <div style={{ padding: '4rem', textAlign: 'center' }}>

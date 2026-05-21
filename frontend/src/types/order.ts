@@ -51,3 +51,17 @@ export interface UpdateOrderStatusRequest {
   status: OrderStatus;
   cancelReason?: string;
 }
+
+export interface GuestOrderItem {
+  productVariantId: string;
+  quantity: number;
+}
+
+export interface CreateGuestOrderRequest {
+  recipientName: string;
+  shippingAddress: string;
+  email: string;
+  phone: string;
+  note?: string;
+  items: GuestOrderItem[];
+}

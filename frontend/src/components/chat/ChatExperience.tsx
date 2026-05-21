@@ -42,6 +42,7 @@ export const ChatExperience = ({
     return [];
   }, [activeMessages]);
 
+
   const lastSentMessageRef = useRef<string | null>(null);
 
   useEffect(() => {

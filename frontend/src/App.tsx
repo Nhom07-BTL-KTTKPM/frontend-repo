@@ -15,7 +15,7 @@ import { AdminRoute } from './routes/AdminRoute';
 import { Login } from './pages/Login';
 import { Register } from './pages/Register';
 import { Profile } from './pages/Profile';
-import { Home, ProductList, ProductDetail, Cart, Checkout, OrderHistory, Payment, VerifyEmail, ForgotPassword, ResetPassword, CategoryDetailPage, BrandDetailPage, Chat} from './pages';
+import { Home, ProductList, ProductDetail, Cart, Checkout, OrderHistory, OrderDetail, OrderSuccess, OrderFailed, Payment, VerifyEmail, ForgotPassword, ResetPassword, CategoryDetailPage, BrandDetailPage, Chat, OrderLookup} from './pages';
 import { Dashboard as AdminDashboard } from './pages/admin/Dashboard';
 import { ProductManagement } from './pages/admin/ProductManagement';
 import { UserManagement} from './pages/admin/UserManagement';
@@ -58,7 +58,10 @@ function App() {
           <Route path="/product/:slug" element={<ProductDetail />} />
           <Route path="/cart" element={<Cart />} />
           <Route path="/checkout" element={<Checkout />} />
+          <Route path="/order-lookup" element={<OrderLookup />} />
           <Route path="/payment" element={<Payment />} />
+          <Route path="/order-success/:orderId" element={<OrderSuccess />} />
+          <Route path="/order-failed/:orderId" element={<OrderFailed />} />
           <Route path="/verify-email" element={<VerifyEmail />} />
 
           {/* Guest Routes (Chỉ người CHƯA đăng nhập) */}
@@ -74,6 +77,7 @@ function App() {
             <Route path="/profile" element={<Profile />} />
             <Route path="/ai-chat" element={<Chat />} />
             <Route path="/orders" element={<OrderHistory />} />
+            <Route path="/orders/:orderId" element={<OrderDetail />} />
           </Route>
 
           {/* Employee/Admin Routes */}

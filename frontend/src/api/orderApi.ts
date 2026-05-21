@@ -1,10 +1,17 @@
 import { axiosClient } from './axiosClient';
 import { resolveBaseUrl, serviceBase } from './serviceBase';
-import type { CreateOrderRequest, OrderResponse, UpdateOrderStatusRequest } from '../types/order';
+
+import type { CreateOrderRequest, CreateGuestOrderRequest, UpdateOrderStatusRequest, OrderResponse } from '../types/order';
 
 export const orderApi = {
   createOrder: (payload: CreateOrderRequest) => {
     return axiosClient.post<unknown, OrderResponse>('/orders', payload, {
+      baseURL: resolveBaseUrl(serviceBase.order),
+    });
+  },
+
+  createGuestOrder: (payload: CreateGuestOrderRequest) => {
+    return axiosClient.post<unknown, OrderResponse>('/orders/guest', payload, {
       baseURL: resolveBaseUrl(serviceBase.order),
     });
   },
@@ -30,6 +37,13 @@ export const orderApi = {
   updateOrderStatus: (orderId: string, payload: UpdateOrderStatusRequest) => {
     return axiosClient.put<unknown, OrderResponse>(`/orders/${orderId}/status`, payload, {
       baseURL: resolveBaseUrl(serviceBase.order),
+       });
+  },
+  
+  lookupOrder: (orderCode: string, email: string) => {
+    return axiosClient.get<unknown, OrderResponse>('/orders/lookup', {
+      baseURL: resolveBaseUrl(serviceBase.order),
+      params: { orderCode, email },
     });
   },
 };
