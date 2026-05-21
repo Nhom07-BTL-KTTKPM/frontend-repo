@@ -128,18 +128,20 @@ const MetricCard = ({
   icon: ReactNode;
   tone: string;
 }) => (
-  <article className="group relative overflow-hidden rounded-2xl border border-slate-200/80 bg-white p-6 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-md hover:border-slate-300">
+  <article className="group relative overflow-hidden rounded-2xl border border-amber-200/50 bg-white p-6 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-md hover:border-amber-300/70">
     <div className="flex items-start justify-between gap-4">
       <div className="space-y-1.5">
         <p className="text-xs font-bold uppercase tracking-wider text-slate-400">{label}</p>
         <h3 className="text-2xl font-extrabold tracking-tight text-slate-900 md:text-3xl">{value}</h3>
         {detail ? <p className="text-xs leading-5 text-slate-500 font-medium">{detail}</p> : null}
       </div>
+      {/* Vòng bo icon được mạ viền vàng kim */}
       <div className={`grid h-12 w-12 shrink-0 place-items-center rounded-xl transition-transform duration-300 group-hover:scale-110 ${tone}`}>
         {icon}
       </div>
     </div>
-    <div className="absolute bottom-0 left-0 h-1 w-0 bg-gradient-to-r from-transparent via-slate-200 to-transparent transition-all duration-500 group-hover:w-full" />
+    {/* Thanh trang trí viền vàng chạy dưới đáy khi hover */}
+    <div className="absolute bottom-0 left-0 h-[2px] w-0 bg-gradient-to-r from-transparent via-amber-400 to-transparent transition-all duration-500 group-hover:w-full" />
   </article>
 );
 
