@@ -35,14 +35,14 @@ export const AdminLayout = () => {
           }}
         >
           <div>
-            <p style={{ margin: 0, color: 'var(--color-gray-500)', fontSize: '0.85rem' }}>Khu vực nội bộ</p>
-            <h1 style={{ margin: '0.15rem 0 0', fontSize: '1.5rem', color: 'var(--color-black)' }}>Lumière Dashboard</h1>
+            <p style={{ margin: 0, color: 'var(--color-gold-dark)', fontSize: '0.78rem', letterSpacing: '0.24em', textTransform: 'uppercase' }}>Internal console</p>
+            <h1 style={{ margin: '0.15rem 0 0', fontSize: '1.5rem', color: 'var(--color-black)' }}>Lumière</h1>
           </div>
 
           <div style={{ display: 'flex', alignItems: 'center', gap: '1.5rem' }}>
             <div style={{ textAlign: 'right' }}>
-              <p style={{ margin: 0, fontWeight: 700, color: 'var(--color-black)' }}>{user?.fullName || user?.email || 'Quản trị viên'}</p>
-              <p style={{ margin: 0, color: 'var(--color-gray-500)', fontSize: '0.85rem' }}>{user?.role || 'ADMIN'}</p>
+              <p style={{ margin: 0, fontWeight: 700, color: 'var(--color-black)' }}>{user?.email || 'admin@gmail.com'}</p>
+              <p style={{ margin: 0, color: 'var(--color-gray-500)', fontSize: '0.85rem' }}>Khu vực nội bộ</p>
             </div>
             <button
               onClick={handleLogout}

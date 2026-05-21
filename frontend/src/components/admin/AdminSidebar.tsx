@@ -1,5 +1,5 @@
 import { NavLink } from 'react-router-dom';
-import { LayoutDashboard, PackageSearch, Users, Settings, Box } from 'lucide-react';
+import { LayoutDashboard, PackageSearch, Users, Settings, Box, Ticket } from 'lucide-react';
 
 const linkStyle = ({ isActive }: { isActive: boolean }) => ({
   display: 'flex',
@@ -8,7 +8,7 @@ const linkStyle = ({ isActive }: { isActive: boolean }) => ({
   padding: '0.9rem 1rem',
   borderRadius: '14px',
   color: isActive ? 'var(--color-black)' : '#f5f0e7',
-  background: isActive ? 'linear-gradient(135deg, var(--color-gold-light), var(--color-gold))' : 'transparent',
+  background: isActive ? 'linear-gradient(135deg, #D4B785, #C5A872)' : 'transparent',
   textDecoration: 'none',
   fontWeight: 600,
   boxShadow: isActive ? '0 14px 30px rgba(201,169,110,0.28)' : 'none',
@@ -25,10 +25,10 @@ export const AdminSidebar = () => {
       }}
     >
       <div style={{ marginBottom: '2rem' }}>
-        <p style={{ margin: 0, fontSize: '0.75rem', letterSpacing: '0.22em', textTransform: 'uppercase', color: 'var(--color-gold-light)' }}>
+        <p style={{ margin: 0, fontSize: '0.72rem', letterSpacing: '0.26em', textTransform: 'uppercase', color: 'var(--color-gold-light)' }}>
           Internal console
         </p>
-        <h2 style={{ margin: '0.35rem 0 0', fontSize: '1.6rem', color: 'var(--color-cream)' }}>Lumière</h2>
+        <h2 style={{ margin: '0.35rem 0 0', fontSize: '1.7rem', color: 'var(--color-cream)' }}>Lumière</h2>
       </div>
 
       <nav style={{ display: 'grid', gap: '0.75rem' }}>
@@ -43,6 +43,10 @@ export const AdminSidebar = () => {
         <NavLink to="/admin/orders" style={linkStyle}>
           <Box size={18} />
           Quản lý đơn hàng
+        </NavLink>
+        <NavLink to="/admin/vouchers" style={linkStyle}>
+          <Ticket size={18} />
+          Quản lý voucher
         </NavLink>
         <NavLink to="/admin/users" style={linkStyle}>
           <Users size={18} />
