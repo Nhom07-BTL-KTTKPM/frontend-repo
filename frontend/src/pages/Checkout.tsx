@@ -8,11 +8,14 @@ import { paymentApi } from '../api/paymentApi';
 import { addressApi } from '../api/addressApi';
 import { userApi } from '../api/userApi';
 import { useGuestCartStore, type GuestCartItem } from '../store/guestCartStore';
-import type { PaymentMethod } from '../types/order';
+import type { PaymentMethod, VoucherResponse, VoucherValidationResponse } from '../types/order';
 import type { CartResponse } from '../types/cart';
 import type { CatalogProductVariant } from '../types/catalog';
 import type { Address } from '../types/address';
 import { toast } from 'sonner';
+import { CheckCircle2, TicketPercent, X } from 'lucide-react';
+
+const SHIPPING_FEE = 30000;
 
 const formatCurrency = (value?: number) => {
     if (value === null || value === undefined) {
@@ -36,6 +39,90 @@ const formatAddressLine = (address: Address) => {
     return parts.join(', ');
 };
 
+const getVoucherLabel = (voucher: VoucherResponse) => {
+    if (voucher.type === 'PERCENT') {
+        return `Giảm ${Math.round(voucher.discountValue)}%`;
+    }
+    if (voucher.type === 'FREE_SHIPPING') {
+        return 'Freeship';
+    }
+    return `Giảm ${formatCurrency(voucher.discountValue)}`;
+};
+
+const getVoucherSummary = (voucher: VoucherResponse) => {
+    const minOrder = voucher.minOrderAmount ? `Đơn từ ${formatCurrency(voucher.minOrderAmount)}` : 'Không giới hạn đơn tối thiểu';
+    const maxDiscount = voucher.maxDiscountAmount && voucher.type === 'PERCENT'
+        ? `, tối đa ${formatCurrency(voucher.maxDiscountAmount)}`
+        : '';
+    return `${minOrder}${maxDiscount}`;
+};
+
+const isVoucherActive = (voucher: VoucherResponse) => {
+    const now = Date.now();
+    const startTime = voucher.startDate ? new Date(voucher.startDate).getTime() : Number.NEGATIVE_INFINITY;
+    const endTime = voucher.endDate ? new Date(voucher.endDate).getTime() : Number.POSITIVE_INFINITY;
+    return voucher.status === 'ACTIVE' && voucher.quantity > 0 && now >= startTime && now <= endTime;
+};
+
+const VoucherCard = ({
+    voucher,
+    selected,
+    disabled,
+    onSelect,
+}: {
+    voucher: VoucherResponse;
+    selected: boolean;
+    disabled: boolean;
+    onSelect: () => void;
+}) => (
+    <button
+        type="button"
+        onClick={onSelect}
+        disabled={disabled}
+        style={{
+            width: '100%',
+            border: `1px solid ${selected ? '#ee4d2d' : '#e5e7eb'}`,
+            background: selected ? '#fff7ed' : '#fff',
+            borderRadius: '8px',
+            padding: 0,
+            display: 'grid',
+            gridTemplateColumns: '112px 1fr',
+            overflow: 'hidden',
+            cursor: disabled ? 'not-allowed' : 'pointer',
+            opacity: disabled ? 0.55 : 1,
+            textAlign: 'left',
+        }}
+    >
+        <div
+            style={{
+                background: 'linear-gradient(135deg, #ee4d2d, #ff7a45)',
+                color: '#fff',
+                minHeight: '112px',
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '8px',
+                padding: '12px',
+            }}
+        >
+            <TicketPercent size={28} />
+            <strong style={{ fontSize: '1rem', lineHeight: 1.2, textAlign: 'center' }}>{getVoucherLabel(voucher)}</strong>
+        </div>
+        <div style={{ padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', gap: '12px', alignItems: 'flex-start' }}>
+                <div>
+                    <div style={{ fontWeight: 700, color: '#111827', fontSize: '0.98rem' }}>{voucher.name}</div>
+                    <div style={{ color: '#6b7280', fontSize: '0.86rem', marginTop: '3px' }}>{voucher.code}</div>
+                </div>
+                {selected && <CheckCircle2 size={20} color="#ee4d2d" />}
+            </div>
+            <div style={{ color: '#4b5563', fontSize: '0.9rem' }}>{getVoucherSummary(voucher)}</div>
+            <div style={{ color: '#9ca3af', fontSize: '0.82rem' }}>Còn {voucher.quantity} lượt</div>
+        </div>
+    </button>
+);
+
 export const Checkout = () => {
     const navigate = useNavigate();
     const location = useLocation();
@@ -51,6 +138,12 @@ export const Checkout = () => {
     const [variants, setVariants] = useState<Record<string, CatalogProductVariant>>({});
     const [loading, setLoading] = useState(!isGuest);
     const [submitting, setSubmitting] = useState(false);
+    const [vouchers, setVouchers] = useState<VoucherResponse[]>([]);
+    const [vouchersLoading, setVouchersLoading] = useState(false);
+    const [isVoucherModalOpen, setIsVoucherModalOpen] = useState(false);
+    const [selectedVoucher, setSelectedVoucher] = useState<VoucherResponse | null>(null);
+    const [voucherDiscount, setVoucherDiscount] = useState(0);
+    const [voucherMessage, setVoucherMessage] = useState('');
 
     // Form state
     const [addresses, setAddresses] = useState<Address[]>([]);
@@ -149,6 +242,17 @@ export const Checkout = () => {
                     }
                     setVariants(variantData);
                 }
+
+                try {
+                    setVouchersLoading(true);
+                    const voucherRes = await orderApi.getVouchers();
+                    const voucherList = ((voucherRes as unknown as { data?: VoucherResponse[] }).data ?? voucherRes) as VoucherResponse[];
+                    setVouchers(voucherList.filter(isVoucherActive));
+                } catch {
+                    setVouchers([]);
+                } finally {
+                    setVouchersLoading(false);
+                }
             } catch {
                 toast.error('Lỗi tải thông tin thanh toán');
             } finally {
@@ -160,12 +264,48 @@ export const Checkout = () => {
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [isAuthenticated, user, navigate]);
 
-    const calculateTotal = () => {
+    const calculateSubtotal = () => {
         if (isGuest) {
             return guestItems.reduce((total, item) => total + (item.unitPrice * item.quantity), 0);
         }
         if (!cart?.items) return 0;
         return cart.items.reduce((total, item) => total + (item.unitPrice * item.quantity), 0);
+    };
+
+    const resetVoucher = () => {
+        setSelectedVoucher(null);
+        setVoucherDiscount(0);
+        setVoucherMessage('');
+    };
+
+    const handleVoucherSelect = async (voucher: VoucherResponse) => {
+        if (!customerId) {
+            toast.error('Vui lòng đăng nhập để áp dụng voucher');
+            return;
+        }
+
+        try {
+            const validationRes = await orderApi.validateVoucher(voucher.id, {
+                customerId,
+                orderAmount: calculateSubtotal(),
+                shippingFee: SHIPPING_FEE,
+            });
+            const validation = ((validationRes as unknown as { data?: VoucherValidationResponse }).data ?? validationRes) as VoucherValidationResponse;
+
+            if (!validation.valid) {
+                toast.error(validation.message || 'Voucher không thể áp dụng');
+                return;
+            }
+
+            setSelectedVoucher(voucher);
+            setVoucherDiscount(validation.discountAmount || 0);
+            setVoucherMessage(validation.message || 'Voucher đã được áp dụng');
+            setIsVoucherModalOpen(false);
+            toast.success('Đã áp dụng voucher');
+        } catch (error) {
+            const err = error as { message?: string; response?: { data?: { message?: string } } };
+            toast.error(err.response?.data?.message || err.message || 'Không thể áp dụng voucher');
+        }
     };
 
     const handleSubmit = async (e: React.FormEvent) => {
@@ -187,6 +327,7 @@ export const Checkout = () => {
                     shippingAddress,
                     note,
                     items: guestItems.map(i => ({ productVariantId: i.productVariantId, quantity: i.quantity })),
+                    shippingFee: SHIPPING_FEE,
                 });
 
                 const orderPayload = orderRes as unknown as { data?: { orderCode?: string }, orderCode?: string };
@@ -227,15 +368,25 @@ export const Checkout = () => {
         setSubmitting(true);
         try {
             const shippingAddressStr = formatAddressLine(selectedAddress);
+            const selectedRecipientName = selectedAddress.recipientName?.trim();
+            const selectedPhone = selectedAddress.phone?.trim();
+            if (!selectedRecipientName || !selectedPhone) {
+                toast.error('Địa chỉ giao hàng thiếu tên người nhận hoặc số điện thoại');
+                setSubmitting(false);
+                return;
+            }
+
             const orderRes = await orderApi.createOrder({
                 customerId,
-                recipientName: selectedAddress.recipientName,
+                recipientName: selectedRecipientName,
                 email,
-                phone: selectedAddress.phone,
+                phone: selectedPhone,
                 shippingAddress: shippingAddressStr,
                 note,
                 paymentMethod,
-                selectedItemIds
+                selectedItemIds,
+                voucherCode: selectedVoucher?.code,
+                shippingFee: SHIPPING_FEE,
             });
 
             const orderPayload = orderRes as unknown as { data?: { id?: string }, id?: string };
@@ -295,6 +446,8 @@ export const Checkout = () => {
     const displayItems = isGuest
         ? guestItems.map(gi => ({ id: gi.productVariantId, productVariantId: gi.productVariantId, quantity: gi.quantity, unitPrice: gi.unitPrice, _guestName: gi.productName, _guestVariant: gi.variantName, _guestImage: gi.imageUrl }))
         : (cart?.items || []);
+    const subtotal = calculateSubtotal();
+    const payableTotal = Math.max(0, subtotal + SHIPPING_FEE - voucherDiscount);
 
     return (
         <div style={{ padding: '4rem 2rem', maxWidth: '1200px', margin: '0 auto' }}>
@@ -421,16 +574,53 @@ export const Checkout = () => {
 
                     <div style={{ borderTop: '1px solid #ddd', paddingTop: '1.5rem', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+                                <TicketPercent size={18} color="#ee4d2d" />
+                                Voucher
+                            </span>
+                            {selectedVoucher ? (
+                                <span style={{ display: 'inline-flex', alignItems: 'center', gap: '8px' }}>
+                                    <strong style={{ color: '#ee4d2d' }}>{selectedVoucher.code}</strong>
+                                    <button
+                                        type="button"
+                                        onClick={resetVoucher}
+                                        aria-label="Bỏ voucher"
+                                        style={{ width: '24px', height: '24px', border: 'none', borderRadius: '50%', background: '#fee2e2', color: '#b91c1c', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}
+                                    >
+                                        <X size={14} />
+                                    </button>
+                                </span>
+                            ) : (
+                                <button
+                                    type="button"
+                                    onClick={() => setIsVoucherModalOpen(true)}
+                                    disabled={isGuest || vouchersLoading}
+                                    style={{ background: 'none', border: 'none', color: isGuest ? '#9ca3af' : '#ee4d2d', fontWeight: 600, cursor: isGuest ? 'not-allowed' : 'pointer' }}
+                                >
+                                    {isGuest ? 'Đăng nhập để dùng' : vouchersLoading ? 'Đang tải...' : 'Chọn voucher'}
+                                </button>
+                            )}
+                        </div>
+                        {selectedVoucher && voucherMessage && (
+                            <div style={{ color: '#16a34a', fontSize: '0.86rem', marginTop: '-0.4rem' }}>{voucherMessage}</div>
+                        )}
+                        <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                             <span>Tạm tính</span>
-                            <strong>{formatCurrency(calculateTotal())}</strong>
+                            <strong>{formatCurrency(subtotal)}</strong>
                         </div>
                         <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                             <span>Phí giao hàng</span>
-                            <strong>Miễn phí</strong>
+                            <strong>{formatCurrency(SHIPPING_FEE)}</strong>
                         </div>
+                        {voucherDiscount > 0 && (
+                            <div style={{ display: 'flex', justifyContent: 'space-between', color: '#16a34a' }}>
+                                <span>Giảm giá</span>
+                                <strong>-{formatCurrency(voucherDiscount)}</strong>
+                            </div>
+                        )}
                         <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '1.25rem', color: 'var(--color-gold)', marginTop: '0.5rem', paddingTop: '0.5rem', borderTop: '1px solid #ddd' }}>
                             <strong>Tổng cộng</strong>
-                            <strong>{formatCurrency(calculateTotal())}</strong>
+                            <strong>{formatCurrency(payableTotal)}</strong>
                         </div>
                     </div>
 
@@ -461,6 +651,44 @@ export const Checkout = () => {
                     </button>
                 </div>
             </form>
+
+            {/* Voucher Selection Modal */}
+            {isVoucherModalOpen && !isGuest && (
+                <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
+                    <div style={{ background: '#fff', padding: '2rem', borderRadius: '12px', width: '90%', maxWidth: '760px', maxHeight: '82vh', overflowY: 'auto' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '1rem', marginBottom: '1.5rem' }}>
+                            <div>
+                                <h2 style={{ margin: 0, fontSize: '1.5rem', color: 'var(--color-black)' }}>Chọn voucher</h2>
+                                <p style={{ margin: '6px 0 0', color: '#6b7280', fontSize: '0.92rem' }}>Tạm tính {formatCurrency(subtotal)}, phí ship {formatCurrency(SHIPPING_FEE)}</p>
+                            </div>
+                            <button type="button" onClick={() => setIsVoucherModalOpen(false)} aria-label="Đóng" style={{ width: '36px', height: '36px', background: '#f3f4f6', border: 'none', borderRadius: '50%', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', color: '#6b7280' }}>
+                                <X size={20} />
+                            </button>
+                        </div>
+
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                            {vouchersLoading ? (
+                                <p style={{ color: '#666', textAlign: 'center', padding: '2rem 0' }}>Đang tải voucher...</p>
+                            ) : vouchers.length === 0 ? (
+                                <p style={{ color: '#666', textAlign: 'center', padding: '2rem 0' }}>Chưa có voucher khả dụng.</p>
+                            ) : (
+                                vouchers.map(voucher => {
+                                    const disabled = subtotal < (voucher.minOrderAmount || 0);
+                                    return (
+                                        <VoucherCard
+                                            key={voucher.id}
+                                            voucher={voucher}
+                                            selected={selectedVoucher?.id === voucher.id}
+                                            disabled={disabled}
+                                            onSelect={() => handleVoucherSelect(voucher)}
+                                        />
+                                    );
+                                })
+                            )}
+                        </div>
+                    </div>
+                </div>
+            )}
 
             {/* Address Selection Modal */}
             {isAddressModalOpen && (
