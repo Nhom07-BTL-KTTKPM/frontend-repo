@@ -27,6 +27,20 @@ export const productManagementApi = {
     });
   },
 
+  getBestSellingProducts: (params?: Record<string, unknown>) => {
+    return axiosClient.get<unknown, PageResponse<CatalogProduct>>(`${catalogProductsPath}/best-selling`, {
+      baseURL: resolveBaseUrl(serviceBase.catalog),
+      params,
+    });
+  },
+
+  getTopRatedProducts: (params?: Record<string, unknown>) => {
+    return axiosClient.get<unknown, PageResponse<CatalogProduct>>(`${catalogProductsPath}/top-rated`, {
+      baseURL: resolveBaseUrl(serviceBase.catalog),
+      params,
+    });
+  },
+
   updateProduct: (productId: string, payload: UpdateProductPayload) => {
     return axiosClient.put<unknown, CatalogProduct>(`${catalogProductsPath}/${productId}`, payload, {
       baseURL: resolveBaseUrl(serviceBase.catalog),
