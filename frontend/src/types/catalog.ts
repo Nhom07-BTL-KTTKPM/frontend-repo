@@ -57,6 +57,16 @@ export interface CatalogProduct {
   description?: string;
   minPrice?: number;
   maxPrice?: number;
+  averageRating?: number;
+  totalReviews?: number;
+  totalSold?: number;
+  isActive?: boolean;
+  isFeatured?: boolean;
+  categoryName?: string;
+  brandName?: string;
+  brandLogoUrl?: string;
+  createdAt?: string;
+  updatedAt?: string;
   images?: CatalogProductImage[];
   variants?: CatalogProductVariant[];
 }
