@@ -1,10 +1,11 @@
-import { useMemo, useState, type FormEvent, type ReactNode } from 'react';
+import { useMemo, useState, useEffect, type FormEvent, type ReactNode } from 'react';
 import { toast } from 'sonner';
 import { BadgeDollarSign, Filter, Plus, Search, Ticket } from 'lucide-react';
 import { VoucherCard } from './voucher-management/components/VoucherCard';
 import { VoucherFormModal } from './voucher-management/components/VoucherFormModal';
 import { emptyVoucherForm, initialVouchers, statusOptions } from './voucher-management/voucherData';
 import type { ModalMode, StatusFilter, Voucher, VoucherFormState, VoucherStatus, VoucherType } from './voucher-management/types';
+import { voucherApi } from '../../api/admin/voucherApi';
 
 type StatusDialogState = {
   voucherId: string;
@@ -174,6 +175,28 @@ export const VoucherManagement = () => {
     closeMenu();
   };
 
+  // Load vouchers from API on mount
+  useEffect(() => {
+    let mounted = true;
+    voucherApi
+      .getVouchers()
+      .then((data) => {
+        if (mounted && Array.isArray(data)) {
+          setVoucherRows(data);
+        }
+      })
+      .catch(() => {
+        toast.error('Không thể tải danh sách voucher');
+      })
+      .finally(() => {
+        /* noop */
+      });
+
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
   const resetForm = () => {
     setModalMode(null);
     setEditingVoucherId(null);
@@ -181,7 +204,7 @@ export const VoucherManagement = () => {
     setFormErrors({});
   };
 
-  const handleFormSubmit = (event: FormEvent<HTMLFormElement>) => {
+  const handleFormSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
     const errors = parseFormErrors(formState);
@@ -198,16 +221,20 @@ export const VoucherManagement = () => {
 
     const voucherPayload = createVoucherFromForm(formState, editingVoucherId ?? undefined);
 
-    setVoucherRows((currentRows) => {
+    try {
       if (modalMode === 'edit' && editingVoucherId) {
-        return currentRows.map((voucher) => (voucher.id === editingVoucherId ? { ...voucher, ...voucherPayload, createdAt: voucher.createdAt } : voucher));
+        const updated = await voucherApi.updateVoucher(editingVoucherId, voucherPayload);
+        setVoucherRows((currentRows) => currentRows.map((v) => (v.id === editingVoucherId ? updated : v)));
+        toast.success('Đã cập nhật voucher.');
+      } else {
+        const created = await voucherApi.createVoucher(voucherPayload);
+        setVoucherRows((currentRows) => [created, ...currentRows]);
+        toast.success('Đã tạo voucher mới.');
       }
-
-      return [voucherPayload, ...currentRows];
-    });
-
-    toast.success(modalMode === 'edit' ? 'Đã cập nhật voucher (mock).' : 'Đã tạo voucher mới (mock).');
-    resetForm();
+      resetForm();
+    } catch (err) {
+      toast.error('Lỗi khi lưu voucher');
+    }
   };
 
   const confirmStatusChange = () => {
@@ -215,9 +242,16 @@ export const VoucherManagement = () => {
       return;
     }
 
-    setVoucherRows((currentRows) => currentRows.map((voucher) => (voucher.id === statusDialog.voucherId ? { ...voucher, status: statusDialog.status } : voucher)));
-    setStatusDialog(null);
-    toast.success('Đã đổi trạng thái voucher (mock).');
+    voucherApi
+      .changeStatus(statusDialog.voucherId, statusDialog.status)
+      .then((updated) => {
+        setVoucherRows((currentRows) => currentRows.map((voucher) => (voucher.id === statusDialog.voucherId ? updated : voucher)));
+        setStatusDialog(null);
+        toast.success('Đã đổi trạng thái voucher.');
+      })
+      .catch(() => {
+        toast.error('Không thể đổi trạng thái voucher');
+      });
   };
 
   const confirmDelete = () => {
@@ -225,9 +259,17 @@ export const VoucherManagement = () => {
       return;
     }
 
-    setVoucherRows((currentRows) => currentRows.filter((voucher) => voucher.id !== deleteDialog.voucherId));
-    setDeleteDialog(null);
-    toast.success('Đã vô hiệu hóa voucher (mock).');
+    // Use status change endpoint to mark voucher as DISABLED (logical delete)
+    voucherApi
+      .changeStatus(deleteDialog.voucherId, 'DISABLED')
+      .then((updated) => {
+        setVoucherRows((currentRows) => currentRows.map((voucher) => (voucher.id === deleteDialog.voucherId ? updated : voucher)));
+        setDeleteDialog(null);
+        toast.success('Đã vô hiệu hóa voucher.');
+      })
+      .catch(() => {
+        toast.error('Không thể vô hiệu hóa voucher');
+      });
   };
 
   return (
@@ -354,10 +396,10 @@ export const VoucherManagement = () => {
                 onChange={(event) => setStatusDialog((current) => (current ? { ...current, status: event.target.value as VoucherStatus } : current))}
                 className="w-full rounded-2xl border border-[#E0D7CD] bg-[#FAF6F1] px-4 py-3 text-sm text-[#1E1E1E] outline-none transition focus:border-[#D4B785]"
               >
-                <option value="ACTIVE">ACTIVE</option>
-                <option value="UPCOMING">UPCOMING</option>
-                <option value="EXPIRED">EXPIRED</option>
-                <option value="DISABLED">DISABLED</option>
+                <option value="ACTIVE">Đang hoạt động</option>
+                <option value="UPCOMING">Sắp diễn ra</option>
+                <option value="EXPIRED">Đã hết hạn</option>
+                <option value="DISABLED">Đã vô hiệu hóa</option>
               </select>
             </label>
 
@@ -422,7 +464,7 @@ const CounterCard = ({ label, value, hint }: { label: string; value: number; hin
 );
 
 const ModalShell = ({ title, children, onClose, narrow = false }: { title: string; children: ReactNode; onClose: () => void; narrow?: boolean }) => (
-  <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/45 px-4 py-8 backdrop-blur-sm" onClick={onClose}>
+  <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/45 px-4 py-8 backdrop-blur-sm">
     <div
       className={`relative w-full ${narrow ? 'max-w-2xl' : 'max-w-4xl'} overflow-hidden rounded-[30px] border border-[#E0D7CD] bg-white shadow-[0_40px_100px_rgba(30,30,30,0.24)]`}
       onClick={(event) => event.stopPropagation()}

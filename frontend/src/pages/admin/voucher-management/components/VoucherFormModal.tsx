@@ -1,4 +1,4 @@
-import { CheckCircle2, X } from 'lucide-react';
+import { CheckCircle2, Info, X } from 'lucide-react';
 import type { FormEvent, ReactNode } from 'react';
 import type { VoucherFormState, VoucherStatus } from '../types';
 
@@ -9,7 +9,10 @@ const typeSegmentClass = (active: boolean) =>
 
 const Field = ({ label, error, children }: { label: string; error?: string; children: ReactNode }) => (
   <label className="block space-y-2">
-    <span className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">{label}</span>
+    <span className="inline-flex items-center gap-1 text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">
+      <span>{label}</span>
+      <Info size={12} className="text-[#1A73E8]" aria-hidden="true" />
+    </span>
     {children}
     {error ? <span className="block text-xs font-medium text-[#C5221F]">{error}</span> : null}
   </label>
@@ -34,7 +37,7 @@ const Segment = ({
 );
 
 const ModalShell = ({ title, children, onClose, narrow = false }: { title: string; children: ReactNode; onClose: () => void; narrow?: boolean }) => (
-  <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/45 px-4 py-8 backdrop-blur-sm" onClick={onClose}>
+  <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/45 px-4 py-8 backdrop-blur-sm">
     <div
       className={`relative w-full ${narrow ? 'max-w-2xl' : 'max-w-4xl'} overflow-hidden rounded-[30px] border border-[#E0D7CD] bg-white shadow-[0_40px_100px_rgba(30,30,30,0.24)]`}
       onClick={(event) => event.stopPropagation()}
@@ -71,6 +74,10 @@ export const VoucherFormModal = ({
   onChange: (patch: Partial<VoucherFormState>) => void;
 }) => {
   const typeValue = formState.type;
+  const discountValueLabel =
+    typeValue === 'PERCENT'
+      ? 'Nhập phần trăm giảm giá'
+      : 'Nhập giá trị giảm giá';
 
   return (
     <ModalShell title={title} onClose={onClose}>
@@ -107,14 +114,14 @@ export const VoucherFormModal = ({
 
         <Field label="Loại voucher *" error={formErrors.type}>
           <div className="grid gap-3 md:grid-cols-3">
-            <Segment active={typeValue === 'PERCENT'} label="PERCENT" onClick={() => onChange({ type: 'PERCENT' })} />
-            <Segment active={typeValue === 'AMOUNT'} label="AMOUNT" onClick={() => onChange({ type: 'AMOUNT' })} />
-            <Segment active={typeValue === 'FREE_SHIPPING'} label="FREE_SHIPPING" onClick={() => onChange({ type: 'FREE_SHIPPING' })} />
+            <Segment active={typeValue === 'PERCENT'} label="Giảm theo %" onClick={() => onChange({ type: 'PERCENT' })} />
+            <Segment active={typeValue === 'AMOUNT'} label="Giảm theo số tiền" onClick={() => onChange({ type: 'AMOUNT' })} />
+            <Segment active={typeValue === 'FREE_SHIPPING'} label="Miễn phí vận chuyển" onClick={() => onChange({ type: 'FREE_SHIPPING' })} />
           </div>
         </Field>
 
         <div className="grid gap-4 md:grid-cols-3">
-          <Field label="Giá trị giảm *" error={formErrors.discountValue}>
+          <Field label={`${discountValueLabel} *`} error={formErrors.discountValue}>
             <input
               type="number"
               min="0"
