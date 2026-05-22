@@ -1,5 +1,5 @@
 import { useMemo, useState, type FormEvent, type ReactNode } from 'react';
-import { Calendar, CheckCircle, Edit3, Mail, Phone, Sparkles, User, XCircle } from 'lucide-react';
+import { Camera, Calendar, CheckCircle, Edit3, Mail, Phone, Sparkles, User, XCircle } from 'lucide-react';
 import { toast } from 'sonner';
 import type { CustomerProfileInfo, CustomerUpdateRequest, UserProfileInfo } from '../../types/api';
 
@@ -7,6 +7,7 @@ type CustomerProfileProps = {
   user: UserProfileInfo;
   customer: CustomerProfileInfo;
   onSave: (data: CustomerUpdateRequest) => Promise<void>;
+  onEditAvatar?: () => void;
 };
 
 const genderOptions = [
@@ -30,7 +31,7 @@ const skinConcernOptions = [
 
 const phoneNumberPattern = /^(03|05|07|08|09)\d{8}$/;
 
-export const CustomerProfile = ({ user, customer, onSave }: CustomerProfileProps) => {
+export const CustomerProfile = ({ user, customer, onSave, onEditAvatar }: CustomerProfileProps) => {
   const [isEditing, setIsEditing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
@@ -127,7 +128,17 @@ export const CustomerProfile = ({ user, customer, onSave }: CustomerProfileProps
     }}>
 
       <div style={{ padding: '0 2.5rem', marginTop: '40px', display: 'flex', alignItems: 'flex-end', gap: '1.5rem', marginBottom: '2.5rem', position: 'relative', zIndex: 10 }}>
-        <div style={{ width: '120px', height: '120px', borderRadius: '50%', background: '#fff', padding: '5px', boxShadow: '0 8px 20px rgba(184, 134, 11, 0.2)', border: '3px solid #D4AF37', flexShrink: 0 }}>
+        <div style={{ width: '120px', height: '120px', borderRadius: '50%', background: '#fff', padding: '5px', boxShadow: '0 8px 20px rgba(184, 134, 11, 0.2)', border: '3px solid #D4AF37', flexShrink: 0, position: 'relative' }}>
+          {onEditAvatar ? (
+            <button
+              type="button"
+              onClick={onEditAvatar}
+              aria-label="Đổi ảnh đại diện"
+              style={{ position: 'absolute', top: 'auto', bottom: '-4px', right: '-4px', width: '32px', height: '32px', borderRadius: '50%', border: '2px solid #fff', background: 'linear-gradient(135deg, #D4AF37, #B8860B)', color: '#fff', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 6px 14px rgba(184, 134, 11, 0.28)', cursor: 'pointer' }}
+            >
+              <Camera size={16} />
+            </button>
+          ) : null}
           {user.avatarUrl ? (
             <img src={user.avatarUrl} alt="Avatar" style={{ width: '100%', height: '100%', borderRadius: '50%', objectFit: 'cover' }} />
           ) : (

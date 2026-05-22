@@ -85,6 +85,11 @@ export interface UserProfileInfo {
   expiresAt: string;
 }
 
+export interface AvatarUpdateResponse {
+  accountId: string;
+  avatarUrl: string;
+}
+
 export interface CustomerProfileInfo {
   id?: string;
   accountId: string;
@@ -105,6 +110,10 @@ export interface CustomerUpdateRequest {
   gender?: string;
   skinType?: string;
   skinConcerns?: string[];
+}
+
+export interface AvatarUpdateRequest {
+  avatarUrl: string;
 }
 
 export interface EmployeeProfileInfo {
