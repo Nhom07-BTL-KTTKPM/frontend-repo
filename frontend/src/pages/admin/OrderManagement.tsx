@@ -236,8 +236,8 @@ export const OrderManagement = () => {
         setKeyword('');
     };
 
-    const handleUpdateStatus = (orderId: string, payload: UpdateOrderStatusRequest) => {
-        updateStatusMutation.mutate({ orderId, payload });
+    const handleUpdateStatus = async (orderId: string, payload: UpdateOrderStatusRequest) => {
+        return updateStatusMutation.mutateAsync({ orderId, payload });
     };
 
     return (
@@ -354,7 +354,6 @@ export const OrderManagement = () => {
                             key={order.id}
                             order={order}
                             onUpdate={handleUpdateStatus}
-                            isUpdating={updateStatusMutation.isPending}
                         />
                     ))}
                 </section>
@@ -366,18 +365,18 @@ export const OrderManagement = () => {
 function OrderCard({
     order,
     onUpdate,
-    isUpdating,
 }: {
     order: OrderResponse;
-    onUpdate: (orderId: string, payload: UpdateOrderStatusRequest) => void;
-    isUpdating: boolean;
+    onUpdate: (orderId: string, payload: UpdateOrderStatusRequest) => Promise<unknown>;
 }) {
     const [nextStatus, setNextStatus] = useState<OrderStatus | ''>('');
     const [cancelReason, setCancelReason] = useState('');
+    const [isSubmitting, setIsSubmitting] = useState(false);
 
     useEffect(() => {
         setNextStatus('');
         setCancelReason('');
+        setIsSubmitting(false);
     }, [order.status, order.id]);
 
     const pendingRefundOrder = isPendingRefund(order);
@@ -389,16 +388,23 @@ function OrderCard({
         : (allowedStatusTransitions[order.status] ?? []);
     const isTransitionAllowed = nextStatus !== '' && allowedNextStatuses.includes(nextStatus as OrderStatus);
 
-    const handleSubmit = () => {
+    const handleSubmit = async () => {
         if (!isTransitionAllowed) {
             toast.error('Chỉ được cập nhật theo đúng trình tự trạng thái.');
             return;
         }
 
-        onUpdate(order.id, {
-            status: nextStatus as OrderStatus,
-            cancelReason: isCancelLikeStatus ? cancelReason.trim() || undefined : undefined,
-        });
+        setIsSubmitting(true);
+        try {
+            await onUpdate(order.id, {
+                status: nextStatus as OrderStatus,
+                cancelReason: isCancelLikeStatus ? cancelReason.trim() || undefined : undefined,
+            });
+        } catch (err) {
+            toast.error(getErrorMessage(err, 'Không thể cập nhật trạng thái đơn hàng.'));
+        } finally {
+            setIsSubmitting(false);
+        }
     };
 
     return (
@@ -522,11 +528,11 @@ function OrderCard({
                         <button
                             type="button"
                             onClick={handleSubmit}
-                            disabled={isUpdating || nextStatus === '' || !isTransitionAllowed}
+                            disabled={isSubmitting || nextStatus === '' || !isTransitionAllowed}
                             className="inline-flex items-center gap-2 rounded-full px-4 py-2.5 text-sm font-bold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50"
                             style={{ background: 'linear-gradient(135deg, #D4AF37, #B8860B)' }}
                         >
-                            {isUpdating ? 'Đang lưu...' : 'Cập nhật'}
+                            {isSubmitting ? 'Đang lưu...' : 'Cập nhật'}
                         </button>
                     </div>
 
