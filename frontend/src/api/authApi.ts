@@ -1,5 +1,5 @@
 import { axiosClient } from './axiosClient';
-import type { ApiResponse, AuthTokenResponse, UserProfileInfo } from '../types/api';
+import type { ApiResponse, AuthTokenResponse, AvatarUpdateResponse, UserProfileInfo } from '../types/api';
 import type { LoginRequest, RegisterRequest, RegisterResponse, ForgotPasswordRequest, ResetPasswordRequest, ChangePasswordRequest } from '../types/auth';
 
 export const authApi = {
@@ -31,6 +31,11 @@ export const authApi = {
   // Truy vấn thông tin tài khoản đang đăng nhập
   getProfile: () => {
     return axiosClient.get<unknown, ApiResponse<UserProfileInfo>>('/auth/me');
+  },
+
+  // Cập nhật avatar cho tài khoản đang đăng nhập
+  updateAvatar: (avatarUrl: string) => {
+    return axiosClient.put<unknown, ApiResponse<AvatarUpdateResponse>>('/auth/me/avatar', { avatarUrl });
   },
 
   // Xác thực email
