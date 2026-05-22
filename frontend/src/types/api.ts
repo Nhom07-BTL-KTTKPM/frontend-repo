@@ -104,6 +104,7 @@ export interface CustomerUpdateRequest {
   dateOfBirth?: string;
   gender?: string;
   skinType?: string;
+  skinConcerns?: string[];
 }
 
 export interface EmployeeProfileInfo {
