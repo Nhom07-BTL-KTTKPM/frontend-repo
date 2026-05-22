@@ -242,38 +242,6 @@ export const OrderManagement = () => {
 
     return (
         <div className="grid gap-6">
-            <section className="relative overflow-hidden rounded-3xl border border-slate-200 bg-gradient-to-br from-slate-950 via-slate-900 to-slate-800 p-6 text-white shadow-[0_20px_50px_rgba(15,23,42,0.22)]">
-                <div
-                    className="absolute inset-0 opacity-30"
-                    style={{
-                        background:
-                            'radial-gradient(circle at top right, rgba(251,191,36,0.22), transparent 28%), radial-gradient(circle at left bottom, rgba(14,165,233,0.22), transparent 26%)',
-                    }}
-                />
-                <div className="relative grid gap-6 lg:grid-cols-[minmax(0,1fr)_300px] lg:items-end">
-                    <div>
-                        <p className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-3 py-1 text-xs font-bold uppercase tracking-[0.18em] text-white/80">
-                            <Package size={14} />
-                            Order control center
-                        </p>
-                        <h1 className="mt-4 text-3xl font-bold tracking-tight md:text-4xl">Quản lý đơn hàng</h1>
-                        <p className="mt-3 max-w-3xl text-sm leading-6 text-white/78 md:text-base">
-                            Nhân viên và admin có thể xem toàn bộ đơn hàng, lọc theo trạng thái hoặc thời gian, rồi cập nhật trạng thái xử lý ngay trên danh sách.
-                        </p>
-                    </div>
-
-                    <div className="grid gap-3 rounded-2xl border border-white/10 bg-white/10 p-4 backdrop-blur-sm">
-                        <div>
-                            <p className="text-xs uppercase tracking-[0.18em] text-white/60">Đơn trong khoảng lọc</p>
-                            <div className="mt-1 text-2xl font-black">{filteredStats.total}</div>
-                        </div>
-                        <p className="text-sm text-white/70">
-                            Summary bên dưới luôn cập nhật theo khoảng thời gian và bộ lọc trạng thái hiện tại.
-                        </p>
-                    </div>
-                </div>
-            </section>
-
             <section className="grid gap-4 md:grid-cols-5">
                 {[
                     { label: 'Chờ xác nhận', value: filteredStats.pending, tone: 'from-amber-500 to-amber-600' },
