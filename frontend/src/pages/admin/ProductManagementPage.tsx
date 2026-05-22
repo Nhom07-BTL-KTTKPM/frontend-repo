@@ -3,17 +3,15 @@ import { Link } from 'react-router-dom';
 import {
   BadgeCheck,
   ChevronDown,
-  Copy,
   Edit2,
   Eye,
+  EyeOff,
   Layers3,
   LayoutGrid,
   Package2,
   Plus,
   Search,
   SlidersHorizontal,
-  ToggleRight,
-  Trash2,
   Upload,
   Users,
 } from 'lucide-react';
@@ -177,10 +175,6 @@ const getTotalStock = (variants?: ProductVariantRow[]) => {
   return (variants || []).reduce((sum, variant) => sum + (variant.stockQuantity || 0), 0);
 };
 
-const getTotalSold = (variants?: ProductVariantRow[]) => {
-  return (variants || []).reduce((sum, variant) => sum + (variant.sold || 0), 0);
-};
-
 const formatDateTime = (value?: string) => {
   if (!value) {
     return 'Chưa có';
@@ -199,12 +193,12 @@ const formatDateTime = (value?: string) => {
 
 const tabStyles = (active: boolean) =>
   active
-    ? 'bg-slate-900 text-white shadow-lg shadow-slate-900/20'
+    ? 'bg-amber-600 text-white shadow-sm'
     : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50';
 
 const resourceCardStyles = (active: boolean) =>
   active
-    ? 'border-amber-300 bg-amber-50/50 shadow-[0_16px_34px_rgba(201,169,110,0.10)]'
+    ? 'border-amber-200 bg-amber-50/40 shadow-sm'
     : 'border-slate-200 bg-white shadow-sm';
 
 const FieldLabel = ({ children }: { children: string }) => (
@@ -222,7 +216,7 @@ const SectionTitle = ({
 }) => (
   <div className="flex flex-wrap items-start justify-between gap-4">
     <div>
-      <p className="m-0 text-[0.72rem] font-bold uppercase tracking-[0.24em] text-amber-700">{eyebrow}</p>
+      <p className="m-0 text-[0.72rem] font-bold uppercase tracking-[0.24em] text-amber-600">{eyebrow}</p>
       <h2 className="m-0 mt-2 text-2xl font-extrabold tracking-tight text-slate-900">{title}</h2>
       {description ? <p className="m-0 mt-2 max-w-3xl text-sm leading-6 text-slate-500">{description}</p> : null}
     </div>
@@ -230,7 +224,7 @@ const SectionTitle = ({
 );
 
 const StatCard = ({ label, value, tone }: { label: string; value: string | number; tone: string }) => (
-  <article className={`rounded-2xl border px-4 py-4 shadow-sm ${tone}`}>
+  <article className={`rounded-lg border px-4 py-4 shadow-sm ${tone}`}>
     <p className="m-0 text-[0.72rem] font-bold uppercase tracking-[0.16em] text-slate-500">{label}</p>
     <p className="m-0 mt-2 text-3xl font-extrabold tracking-tight text-slate-900">{value}</p>
   </article>
@@ -270,7 +264,7 @@ const ProductsTab = ({ products, loading, error }: { products: ProductCardRow[];
 
         <Link
           to="/admin/products/new"
-          className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-indigo-600 to-blue-600 px-6 py-3 font-bold text-white shadow-lg transition hover:shadow-xl"
+          className="inline-flex items-center gap-2 rounded-lg bg-gradient-to-r from-amber-600 to-amber-500 px-6 py-3 font-bold text-white shadow transition hover:shadow-lg"
         >
           <Plus size={16} />
           Thêm sản phẩm
@@ -279,9 +273,9 @@ const ProductsTab = ({ products, loading, error }: { products: ProductCardRow[];
 
       <ProductStats products={products} />
 
-      <section className="grid gap-4 rounded-[28px] border border-slate-200 bg-white p-4 shadow-sm">
+      <section className="grid gap-4 rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
         <div className="grid gap-3 xl:grid-cols-[1.8fr_1fr_1fr_1fr]">
-          <label className="flex items-center gap-3 rounded-xl border border-slate-300 bg-white px-4 py-3 text-slate-600 transition hover:bg-slate-50">
+          <label className="flex items-center gap-3 rounded-lg border border-slate-300 bg-white px-4 py-3 text-slate-600 transition hover:bg-slate-50">
             <Search size={18} />
             <input
               type="text"
@@ -291,7 +285,7 @@ const ProductsTab = ({ products, loading, error }: { products: ProductCardRow[];
             />
           </label>
 
-          <label className="flex cursor-pointer items-center justify-between gap-3 rounded-xl border border-slate-300 bg-white px-4 py-3 text-slate-600 transition hover:bg-slate-50">
+          <label className="flex cursor-pointer items-center justify-between gap-3 rounded-lg border border-slate-300 bg-white px-4 py-3 text-slate-600 transition hover:bg-slate-50">
             <span className="whitespace-nowrap text-sm">Danh mục</span>
             <span className="flex items-center gap-1 text-slate-400">
               <span className="text-sm font-semibold text-slate-900">Tất cả</span>
@@ -299,7 +293,7 @@ const ProductsTab = ({ products, loading, error }: { products: ProductCardRow[];
             </span>
           </label>
 
-          <label className="flex cursor-pointer items-center justify-between gap-3 rounded-xl border border-slate-300 bg-white px-4 py-3 text-slate-600 transition hover:bg-slate-50">
+          <label className="flex cursor-pointer items-center justify-between gap-3 rounded-lg border border-slate-300 bg-white px-4 py-3 text-slate-600 transition hover:bg-slate-50">
             <span className="whitespace-nowrap text-sm">Brand</span>
             <span className="flex items-center gap-1 text-slate-400">
               <span className="text-sm font-semibold text-slate-900">Tất cả</span>
@@ -307,7 +301,7 @@ const ProductsTab = ({ products, loading, error }: { products: ProductCardRow[];
             </span>
           </label>
 
-          <label className="flex cursor-pointer items-center justify-between gap-3 rounded-xl border border-slate-300 bg-white px-4 py-3 text-slate-600 transition hover:bg-slate-50">
+          <label className="flex cursor-pointer items-center justify-between gap-3 rounded-lg border border-slate-300 bg-white px-4 py-3 text-slate-600 transition hover:bg-slate-50">
             <span className="whitespace-nowrap text-sm">Sắp xếp</span>
             <span className="flex items-center gap-1 text-slate-400">
               <span className="text-sm font-semibold text-slate-900">Mới nhất</span>
@@ -342,8 +336,8 @@ const ProductsTab = ({ products, loading, error }: { products: ProductCardRow[];
 
       {loading ? (
         <section className="grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-4 2xl:grid-cols-5">
-          {Array.from({ length: 12 }).map((_, index) => (
-            <article key={index} className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+            {Array.from({ length: 12 }).map((_, index) => (
+            <article key={index} className="overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm">
               <div className="aspect-video animate-pulse bg-gradient-to-r from-slate-200 via-slate-100 to-slate-200" />
               <div className="space-y-2 p-3">
                 <div className="h-3 w-2/5 animate-pulse rounded-full bg-slate-200" />
@@ -355,12 +349,12 @@ const ProductsTab = ({ products, loading, error }: { products: ProductCardRow[];
           ))}
         </section>
       ) : error ? (
-        <section className="rounded-2xl border border-orange-200 bg-orange-50 p-5 text-orange-900">
+        <section className="rounded-lg border border-amber-200 bg-amber-50 p-5 text-amber-900">
           <h3 className="m-0 font-bold">Không thể tải sản phẩm</h3>
           <p className="m-0 mt-2 text-sm">{error}</p>
         </section>
       ) : products.length === 0 ? (
-        <section className="rounded-2xl border border-slate-200 bg-white p-5 text-slate-500">
+        <section className="rounded-lg border border-slate-200 bg-white p-5 text-slate-500">
           Chưa có sản phẩm nào để hiển thị.
         </section>
       ) : (
@@ -371,13 +365,12 @@ const ProductsTab = ({ products, loading, error }: { products: ProductCardRow[];
             const tone = statusTone(product.isActive);
             const displayPrice = getPriceLabel(product);
             const totalStock = getTotalStock(variants);
-            const totalSold = getTotalSold(variants);
             const stockStatus = getStockStatus(totalStock);
 
             return (
               <article
                 key={product.id}
-                className="group grid cursor-pointer overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-md transition-all duration-200 hover:border-slate-300 hover:shadow-lg"
+                className="group grid cursor-pointer overflow-hidden rounded-lg border border-slate-200 bg-white shadow-md transition-all duration-200 hover:border-slate-300 hover:shadow-lg"
               >
                 <div
                   className="relative aspect-video overflow-hidden bg-slate-100"
@@ -406,14 +399,8 @@ const ProductsTab = ({ products, loading, error }: { products: ProductCardRow[];
                     <button className="rounded-full bg-white p-2.5 shadow-lg transition hover:bg-slate-50" title="Chỉnh sửa">
                       <Edit2 size={16} className="text-slate-700" />
                     </button>
-                    <button className="rounded-full bg-white p-2.5 shadow-lg transition hover:bg-slate-50" title="Nhân bản">
-                      <Copy size={16} className="text-slate-700" />
-                    </button>
-                    <button className="rounded-full bg-white p-2.5 shadow-lg transition hover:bg-slate-50" title="Tắt/Bật">
-                      <ToggleRight size={16} className="text-slate-700" />
-                    </button>
-                    <button className="rounded-full bg-white p-2.5 shadow-lg transition hover:bg-red-50" title="Xóa">
-                      <Trash2 size={16} className="text-red-600" />
+                    <button className="rounded-full bg-white p-2.5 shadow-lg transition hover:bg-slate-50" title="Vô hiệu">
+                      <EyeOff size={16} className="text-slate-700" />
                     </button>
                   </div>
                 </div>
@@ -428,19 +415,15 @@ const ProductsTab = ({ products, loading, error }: { products: ProductCardRow[];
                     <strong className="block text-sm font-bold text-slate-900">{displayPrice}</strong>
                   </div>
 
-                  <div className="grid grid-cols-2 gap-2 text-xs">
+                  <div className="grid gap-2 text-xs">
                     <div className="rounded-lg bg-slate-50 p-1.5">
                       <p className="font-semibold text-slate-500">Tồn kho</p>
                       <p className={`font-bold ${stockStatus.className}`}>{totalStock}</p>
                     </div>
-                    <div className="rounded-lg bg-slate-50 p-1.5">
-                      <p className="font-semibold text-slate-500">Đã bán</p>
-                      <p className="font-bold text-slate-900">{totalSold}</p>
-                    </div>
                   </div>
 
                   <div className="flex gap-1 pt-1">
-                    <span className="inline-flex items-center rounded-full bg-blue-50 px-2 py-1 text-xs font-semibold text-blue-700">
+                    <span className="inline-flex items-center rounded-full bg-amber-50 px-2 py-1 text-xs font-semibold text-amber-700">
                       {product.brandName || 'No brand'}
                     </span>
                   </div>
@@ -460,10 +443,10 @@ const ResourceListItem = ({
 }: {
   active: boolean;
   children: React.ReactNode;
-}) => <article className={`rounded-2xl border p-4 transition ${resourceCardStyles(active)}`}>{children}</article>;
+}) => <article className={`rounded-lg border p-4 transition ${resourceCardStyles(active)}`}>{children}</article>;
 
 const DetailRow = ({ label, value }: { label: string; value: React.ReactNode }) => (
-  <div className="rounded-2xl border border-slate-200 bg-slate-50/70 p-4">
+  <div className="rounded-lg border border-slate-200 bg-slate-50/70 p-4">
     <p className="m-0 text-[0.72rem] font-bold uppercase tracking-[0.18em] text-slate-500">{label}</p>
     <div className="mt-2 text-sm font-medium text-slate-900">{value}</div>
   </div>
@@ -472,13 +455,13 @@ const DetailRow = ({ label, value }: { label: string; value: React.ReactNode }) 
 const ImagePreview = ({ src, alt }: { src?: string; alt: string }) => {
   if (!src) {
     return (
-      <div className="flex h-32 items-center justify-center rounded-2xl border border-dashed border-slate-300 bg-slate-50 text-sm text-slate-400">
+      <div className="flex h-32 items-center justify-center rounded-lg border border-dashed border-slate-300 bg-slate-50 text-sm text-slate-400">
         Chưa có hình ảnh
       </div>
     );
   }
 
-  return <img src={src} alt={alt} className="h-32 w-full rounded-2xl border border-slate-200 object-cover" />;
+  return <img src={src} alt={alt} className="h-32 w-full rounded-lg border border-slate-200 object-cover" />;
 };
 
 const CategoryPanel = ({
@@ -541,7 +524,7 @@ const CategoryPanel = ({
             <button
               type="button"
               onClick={onCreateNew}
-              className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 px-4 py-2.5 text-sm font-bold text-white shadow-lg transition hover:shadow-xl"
+              className="inline-flex items-center gap-2 rounded-lg bg-gradient-to-r from-amber-500 to-amber-500 px-4 py-2.5 text-sm font-bold text-white shadow transition hover:shadow-lg"
             >
               <Plus size={16} />
               Thêm category
@@ -571,12 +554,12 @@ const CategoryPanel = ({
               ))}
             </div>
           ) : error ? (
-            <div className="rounded-2xl border border-orange-200 bg-orange-50 p-5 text-orange-900">
+            <div className="rounded-lg border border-amber-200 bg-amber-50 p-5 text-amber-900">
               <p className="m-0 font-bold">Không thể tải category</p>
               <p className="m-0 mt-2 text-sm">{error}</p>
             </div>
           ) : filteredCategories.length === 0 ? (
-            <div className="rounded-2xl border border-slate-200 bg-white p-5 text-slate-500">
+            <div className="rounded-lg border border-slate-200 bg-white p-5 text-slate-500">
               Chưa có category nào phù hợp.
             </div>
           ) : (
@@ -588,7 +571,7 @@ const CategoryPanel = ({
                   <ResourceListItem key={category.id} active={active}>
                     <div className="flex flex-wrap items-start justify-between gap-4">
                       <div className="flex min-w-0 items-start gap-3">
-                        <div className="flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-2xl border border-slate-200 bg-slate-50">
+                          <div className="flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-lg border border-slate-200 bg-slate-50">
                           {category.imageUrl ? (
                             <img src={category.imageUrl} alt={category.name} className="h-full w-full object-cover" />
                           ) : (
@@ -613,7 +596,7 @@ const CategoryPanel = ({
                         <button
                           type="button"
                           onClick={() => onView(category)}
-                          className="inline-flex items-center gap-1 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-bold text-slate-700 transition hover:bg-slate-50"
+                          className="inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-bold text-slate-700 transition hover:bg-slate-50"
                         >
                           <Eye size={14} />
                           Xem
@@ -621,7 +604,7 @@ const CategoryPanel = ({
                         <button
                           type="button"
                           onClick={() => onEdit(category)}
-                          className="inline-flex items-center gap-1 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-bold text-slate-700 transition hover:bg-slate-50"
+                          className="inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-bold text-slate-700 transition hover:bg-slate-50"
                         >
                           <Edit2 size={14} />
                           Sửa
@@ -629,13 +612,13 @@ const CategoryPanel = ({
                         <button
                           type="button"
                           onClick={() => onToggleStatus(category)}
-                          className={`inline-flex items-center gap-1 rounded-xl px-3 py-2 text-xs font-bold transition ${
+                          className={`inline-flex items-center gap-1 rounded-lg px-3 py-2 text-xs font-bold transition ${
                             category.isActive
                               ? 'border border-amber-200 bg-amber-50 text-amber-800 hover:bg-amber-100'
                               : 'border border-emerald-200 bg-emerald-50 text-emerald-800 hover:bg-emerald-100'
                           }`}
                         >
-                          <ToggleRight size={14} />
+                          <EyeOff size={14} />
                           {category.isActive ? 'Ẩn' : 'Hiện'}
                         </button>
                       </div>
@@ -647,12 +630,12 @@ const CategoryPanel = ({
           )}
         </div>
 
-        <aside className="rounded-[28px] border border-slate-200 bg-white p-5 shadow-[0_12px_30px_rgba(15,23,42,0.06)]">
+        <aside className="rounded-lg border border-slate-200 bg-white p-5 shadow-[0_12px_30px_rgba(15,23,42,0.06)]">
           {isViewing && selectedCategory ? (
             <div className="grid gap-5">
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <div>
-                  <p className="m-0 text-[0.72rem] font-bold uppercase tracking-[0.2em] text-amber-700">Chi tiết category</p>
+                  <p className="m-0 text-[0.72rem] font-bold uppercase tracking-[0.2em] text-amber-600">Chi tiết category</p>
                   <h3 className="m-0 mt-2 text-xl font-extrabold text-slate-900">{selectedCategory.name}</h3>
                   <p className="m-0 mt-1 text-sm text-slate-500">{selectedCategory.slug}</p>
                 </div>
@@ -660,7 +643,7 @@ const CategoryPanel = ({
                 <button
                   type="button"
                   onClick={() => onEdit(selectedCategory)}
-                  className="inline-flex items-center gap-2 rounded-xl bg-slate-900 px-3 py-2 text-xs font-bold text-white transition hover:bg-slate-800"
+                  className="inline-flex items-center gap-2 rounded-lg bg-slate-900 px-3 py-2 text-xs font-bold text-white transition hover:bg-slate-800"
                 >
                   <Edit2 size={14} />
                   Chỉnh sửa
@@ -718,7 +701,7 @@ const CategoryPanel = ({
                       }));
                     }}
                     placeholder="Ví dụ: Chăm sóc da"
-                    className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none transition focus:border-amber-400 focus:ring-4 focus:ring-amber-100"
+                    className="w-full rounded-lg border border-slate-200 bg-white px-4 py-3 text-sm outline-none transition focus:border-amber-400 focus:ring-4 focus:ring-amber-100"
                   />
                 </div>
 
@@ -731,7 +714,7 @@ const CategoryPanel = ({
                       setForm((current) => ({ ...current, slug: event.target.value }));
                     }}
                     placeholder="vi-du-cham-soc-da"
-                    className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none transition focus:border-amber-400 focus:ring-4 focus:ring-amber-100"
+                    className="w-full rounded-lg border border-slate-200 bg-white px-4 py-3 text-sm outline-none transition focus:border-orange-400 focus:ring-4 focus:ring-orange-100"
                   />
                 </div>
 
@@ -742,7 +725,7 @@ const CategoryPanel = ({
                     onChange={(event) => setForm((current) => ({ ...current, description: event.target.value }))}
                     rows={4}
                     placeholder="Mô tả category"
-                    className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none transition focus:border-amber-400 focus:ring-4 focus:ring-amber-100"
+                    className="w-full rounded-lg border border-slate-200 bg-white px-4 py-3 text-sm outline-none transition focus:border-orange-400 focus:ring-4 focus:ring-orange-100"
                   />
                 </div>
 
@@ -752,7 +735,7 @@ const CategoryPanel = ({
                     value={form.imageUrl}
                     onChange={(event) => setForm((current) => ({ ...current, imageUrl: event.target.value }))}
                     placeholder="https://..."
-                    className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none transition focus:border-amber-400 focus:ring-4 focus:ring-amber-100"
+                    className="w-full rounded-lg border border-slate-200 bg-white px-4 py-3 text-sm outline-none transition focus:border-orange-400 focus:ring-4 focus:ring-orange-100"
                   />
                 </div>
 
@@ -772,7 +755,7 @@ const CategoryPanel = ({
                   </select>
                 </div>
 
-                <label className="flex items-center justify-between rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-semibold text-slate-700">
+                <label className="flex items-center justify-between rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-semibold text-slate-700">
                   <span>Đang hiển thị</span>
                   <input
                     type="checkbox"
@@ -784,7 +767,7 @@ const CategoryPanel = ({
 
                 <button
                   type="submit"
-                  className="inline-flex items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-amber-500 to-orange-500 px-4 py-3 text-sm font-bold text-white shadow-lg transition hover:shadow-xl"
+                  className="inline-flex items-center justify-center gap-2 rounded-lg bg-gradient-to-r from-amber-600 to-amber-500 px-4 py-3 text-sm font-bold text-white shadow transition hover:shadow-lg"
                 >
                   <Upload size={16} />
                   {isEditing ? 'Lưu thay đổi' : 'Tạo category'}
@@ -886,7 +869,7 @@ const BrandPanel = ({
               ))}
             </div>
           ) : error ? (
-            <div className="rounded-2xl border border-orange-200 bg-orange-50 p-5 text-orange-900">
+            <div className="rounded-lg border border-amber-200 bg-amber-50 p-5 text-amber-900">
               <p className="m-0 font-bold">Không thể tải brand</p>
               <p className="m-0 mt-2 text-sm">{error}</p>
             </div>
@@ -944,13 +927,13 @@ const BrandPanel = ({
                         <button
                           type="button"
                           onClick={() => onToggleStatus(brand)}
-                          className={`inline-flex items-center gap-1 rounded-xl px-3 py-2 text-xs font-bold transition ${
+                          className={`inline-flex items-center gap-1 rounded-lg px-3 py-2 text-xs font-bold transition ${
                             brand.isActive
                               ? 'border border-amber-200 bg-amber-50 text-amber-800 hover:bg-amber-100'
                               : 'border border-emerald-200 bg-emerald-50 text-emerald-800 hover:bg-emerald-100'
                           }`}
                         >
-                          <ToggleRight size={14} />
+                          <EyeOff size={14} />
                           {brand.isActive ? 'Ẩn' : 'Hiện'}
                         </button>
                       </div>
@@ -962,12 +945,12 @@ const BrandPanel = ({
           )}
         </div>
 
-        <aside className="rounded-[28px] border border-slate-200 bg-white p-5 shadow-[0_12px_30px_rgba(15,23,42,0.06)]">
+        <aside className="rounded-lg border border-slate-200 bg-white p-5 shadow-[0_12px_30px_rgba(15,23,42,0.06)]">
           {isViewing && selectedBrand ? (
             <div className="grid gap-5">
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <div>
-                  <p className="m-0 text-[0.72rem] font-bold uppercase tracking-[0.2em] text-indigo-700">Chi tiết brand</p>
+                  <p className="m-0 text-[0.72rem] font-bold uppercase tracking-[0.2em] text-amber-600">Chi tiết brand</p>
                   <h3 className="m-0 mt-2 text-xl font-extrabold text-slate-900">{selectedBrand.name}</h3>
                   <p className="m-0 mt-1 text-sm text-slate-500">{selectedBrand.slug}</p>
                 </div>
@@ -975,7 +958,7 @@ const BrandPanel = ({
                 <button
                   type="button"
                   onClick={() => onEdit(selectedBrand)}
-                  className="inline-flex items-center gap-2 rounded-xl bg-slate-900 px-3 py-2 text-xs font-bold text-white transition hover:bg-slate-800"
+                  className="inline-flex items-center gap-2 rounded-lg bg-slate-900 px-3 py-2 text-xs font-bold text-white transition hover:bg-slate-800"
                 >
                   <Edit2 size={14} />
                   Chỉnh sửa
