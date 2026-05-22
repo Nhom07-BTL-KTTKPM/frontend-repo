@@ -448,7 +448,11 @@ const ResourceListItem = ({
 }: {
   active: boolean;
   children: React.ReactNode;
-}) => <article className={`rounded-lg border p-4 transition ${resourceCardStyles(active)}`}>{children}</article>;
+}) => (
+  <article className={`relative rounded-lg border p-4 transition ${resourceCardStyles(active)}`} style={{ overflow: 'visible' }}>
+    {children}
+  </article>
+);
 
 const DetailRow = ({ label, value }: { label: string; value: React.ReactNode }) => (
   <div className="rounded-lg border border-slate-200 bg-slate-50/70 p-4">
@@ -534,9 +538,9 @@ const CategoryPanel = ({
           </label>
 
           <div className="grid gap-4 sm:grid-cols-3">
-            <StatCard label="Tổng category" value={categories.length} tone="bg-white border-slate-200" />
-            <StatCard label="Đang hiển thị" value={categories.filter((item) => item.isActive).length} tone="bg-white border-slate-200" />
-            <StatCard label="Root category" value={categories.filter((item) => !item.parentId).length} tone="bg-white border-slate-200" />
+            <StatCard label="Tổng danh mục" value={categories.length} tone="bg-white border-slate-200" />
+            <StatCard label="Đang hoạt động" value={categories.filter((item) => item.isActive).length} tone="bg-white border-slate-200" />
+            <StatCard label="Danh mục cha" value={categories.filter((item) => !item.parentId).length} tone="bg-white border-slate-200" />
           </div>
 
           {loading ? (
@@ -561,61 +565,61 @@ const CategoryPanel = ({
 
                 return (
                   <ResourceListItem key={category.id} active={active}>
-                    <div className="flex flex-wrap items-start justify-between gap-4">
-                      <div className="flex min-w-0 items-start gap-3">
-                          <div className="flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-lg border border-slate-200 bg-slate-50">
-                          {category.imageUrl ? (
-                            <img src={category.imageUrl} alt={category.name} className="h-full w-full object-cover" />
-                          ) : (
-                            <Layers3 size={18} className="text-slate-400" />
-                          )}
-                        </div>
-                        <div className="min-w-0">
-                          <div className="flex flex-wrap items-center gap-2">
-                            <h3 className="m-0 text-base font-bold text-slate-900">{category.name}</h3>
-                            <span className={`rounded-full px-2.5 py-1 text-xs font-bold ${category.isActive ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-600'}`}>
-                              {category.isActive ? 'Đang hiển thị' : 'Đã ẩn'}
-                            </span>
+                      <div className="relative">
+                        <div className="flex min-w-0 items-start gap-3 pr-28">
+                            <div className="flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-lg border border-slate-200 bg-slate-50">
+                            {category.imageUrl ? (
+                              <img src={category.imageUrl} alt={category.name} className="h-full w-full object-cover" />
+                            ) : (
+                              <Layers3 size={18} className="text-slate-400" />
+                            )}
                           </div>
-                          <p className="m-0 mt-1 text-sm text-slate-500">{category.slug}</p>
-                          <p className="m-0 mt-2 line-clamp-2 text-sm leading-6 text-slate-600">
-                            {category.description || 'Chưa có mô tả'}
-                          </p>
+                          <div className="min-w-0">
+                            <div className="flex flex-wrap items-center gap-2">
+                              <h3 className="m-0 text-base font-bold text-slate-900 truncate">{category.name}</h3>
+                              <span className={`rounded-full px-2.5 py-1 text-xs font-bold ${category.isActive ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-600'}`}>
+                                {category.isActive ? 'Đang hoạt động' : 'Đã ẩn'}
+                              </span>
+                            </div>
+                            <p className="m-0 mt-1 text-sm text-slate-500">{category.slug}</p>
+                            <p className="m-0 mt-2 line-clamp-2 text-sm leading-6 text-slate-600">
+                              {category.description || 'Chưa có mô tả'}
+                            </p>
+                          </div>
+                        </div>
+
+                        <div className="absolute right-4 top-4 flex flex-wrap gap-2">
+                          <button
+                            type="button"
+                            onClick={() => onView(category)}
+                            className="inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-bold text-slate-700 transition hover:bg-slate-50"
+                          >
+                            <Eye size={14} />
+                            Xem
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => onEdit(category)}
+                            className="inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-bold text-slate-700 transition hover:bg-slate-50"
+                          >
+                            <Edit2 size={14} />
+                            Sửa
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => onToggleStatus(category)}
+                            className={`inline-flex items-center gap-1 rounded-lg px-3 py-2 text-xs font-bold transition ${
+                              category.isActive
+                                ? 'border border-amber-200 bg-amber-50 text-amber-800 hover:bg-amber-100'
+                                : 'border border-emerald-200 bg-emerald-50 text-emerald-800 hover:bg-emerald-100'
+                            }`}
+                          >
+                            <EyeOff size={14} />
+                            {category.isActive ? 'Ẩn' : 'Hiện'}
+                          </button>
                         </div>
                       </div>
-
-                      <div className="flex flex-wrap gap-2">
-                        <button
-                          type="button"
-                          onClick={() => onView(category)}
-                          className="inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-bold text-slate-700 transition hover:bg-slate-50"
-                        >
-                          <Eye size={14} />
-                          Xem
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => onEdit(category)}
-                          className="inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-bold text-slate-700 transition hover:bg-slate-50"
-                        >
-                          <Edit2 size={14} />
-                          Sửa
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => onToggleStatus(category)}
-                          className={`inline-flex items-center gap-1 rounded-lg px-3 py-2 text-xs font-bold transition ${
-                            category.isActive
-                              ? 'border border-amber-200 bg-amber-50 text-amber-800 hover:bg-amber-100'
-                              : 'border border-emerald-200 bg-emerald-50 text-emerald-800 hover:bg-emerald-100'
-                          }`}
-                        >
-                          <EyeOff size={14} />
-                          {category.isActive ? 'Ẩn' : 'Hiện'}
-                        </button>
-                      </div>
-                    </div>
-                  </ResourceListItem>
+                    </ResourceListItem>
                 );
               })}
             </div>
@@ -651,7 +655,7 @@ const CategoryPanel = ({
                 <DetailRow label="Mô tả" value={selectedCategory.description || 'Chưa có'} />
                 <DetailRow label="Ảnh" value={selectedCategory.imageUrl || 'Chưa có'} />
                 <DetailRow label="Parent" value={selectedCategory.parentId || 'Root'} />
-                <DetailRow label="Trạng thái" value={selectedCategory.isActive ? 'Đang hiển thị' : 'Đã ẩn'} />
+                <DetailRow label="Trạng thái" value={selectedCategory.isActive ? 'Đang hoạt động' : 'Đã ẩn'} />
                 <DetailRow label="Tạo lúc" value={formatDateTime(selectedCategory.createdAt)} />
                 <DetailRow label="Cập nhật lúc" value={formatDateTime(selectedCategory.updatedAt)} />
               </div>
@@ -736,10 +740,22 @@ const BrandPanel = ({
           </label>
 
           <div className="grid gap-4 sm:grid-cols-3">
-            <StatCard label="Tổng brand" value={brands.length} tone="bg-white border-slate-200" />
-            <StatCard label="Đang hiển thị" value={brands.filter((item) => item.isActive).length} tone="bg-white border-slate-200" />
-            <StatCard label="Có logo" value={brands.filter((item) => Boolean(item.logoUrl)).length} tone="bg-white border-slate-200" />
-          </div>
+            <StatCard 
+                label="Tổng nhãn hàng" 
+                value={brands.length} 
+                tone="bg-white border-slate-300" 
+            />
+            <StatCard 
+                label="Đang hoạt động" 
+                value={brands.filter((item) => item.isActive).length} 
+                tone="bg-white border-slate-300" 
+            />
+            <StatCard 
+                label="Đã ẩn" 
+                value={brands.filter((item) => !item.isActive).length} 
+                tone="bg-white border-slate-300" 
+            />
+            </div>
 
           {loading ? (
             <div className="grid gap-4">
@@ -763,61 +779,61 @@ const BrandPanel = ({
 
                 return (
                   <ResourceListItem key={brand.id} active={active}>
-                    <div className="flex flex-wrap items-start justify-between gap-4">
-                      <div className="flex min-w-0 items-start gap-3">
-                        <div className="flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-2xl border border-slate-200 bg-slate-50">
-                          {brand.logoUrl ? (
-                            <img src={brand.logoUrl} alt={brand.name} className="h-full w-full object-cover" />
-                          ) : (
-                            <Users size={18} className="text-slate-400" />
-                          )}
-                        </div>
-                        <div className="min-w-0">
-                          <div className="flex flex-wrap items-center gap-2">
-                            <h3 className="m-0 text-base font-bold text-slate-900">{brand.name}</h3>
-                            <span className={`rounded-full px-2.5 py-1 text-xs font-bold ${brand.isActive ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-600'}`}>
-                              {brand.isActive ? 'Đang hiển thị' : 'Đã ẩn'}
-                            </span>
+                      <div className="relative">
+                        <div className="flex min-w-0 items-start gap-3 pr-28">
+                          <div className="flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-2xl border border-slate-200 bg-slate-50">
+                            {brand.logoUrl ? (
+                              <img src={brand.logoUrl} alt={brand.name} className="h-full w-full object-cover" />
+                            ) : (
+                              <Users size={18} className="text-slate-400" />
+                            )}
                           </div>
-                          <p className="m-0 mt-1 text-sm text-slate-500">{brand.slug}</p>
-                          <p className="m-0 mt-2 line-clamp-2 text-sm leading-6 text-slate-600">
-                            {brand.description || 'Chưa có mô tả'}
-                          </p>
+                          <div className="min-w-0">
+                            <div className="flex flex-wrap items-center gap-2">
+                              <h3 className="m-0 text-base font-bold text-slate-900">{brand.name}</h3>
+                              <span className={`rounded-full px-2.5 py-1 text-xs font-bold ${brand.isActive ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-600'}`}>
+                                {brand.isActive ? 'Đang hoạt động' : 'Đã ẩn'}
+                              </span>
+                            </div>
+                            <p className="m-0 mt-1 text-sm text-slate-500">{brand.slug}</p>
+                            <p className="m-0 mt-2 line-clamp-2 text-sm leading-6 text-slate-600">
+                              {brand.description || 'Chưa có mô tả'}
+                            </p>
+                          </div>
+                        </div>
+
+                        <div className="absolute right-4 top-4 flex flex-wrap gap-2">
+                          <button
+                            type="button"
+                            onClick={() => onView(brand)}
+                            className="inline-flex flex-none items-center gap-1 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-bold text-slate-700 transition hover:bg-slate-50"
+                          >
+                            <Eye size={14} />
+                            Xem
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => onEdit(brand)}
+                            className="inline-flex flex-none items-center gap-1 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-bold text-slate-700 transition hover:bg-slate-50"
+                          >
+                            <Edit2 size={14} />
+                            Sửa
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => onToggleStatus(brand)}
+                            className={`inline-flex flex-none items-center gap-1 rounded-lg px-3 py-2 text-xs font-bold transition ${
+                              brand.isActive
+                                ? 'border border-amber-200 bg-amber-50 text-amber-800 hover:bg-amber-100'
+                                : 'border border-emerald-200 bg-emerald-50 text-emerald-800 hover:bg-emerald-100'
+                            }`}
+                          >
+                            <EyeOff size={14} />
+                            {brand.isActive ? 'Ẩn' : 'Hiện'}
+                          </button>
                         </div>
                       </div>
-
-                      <div className="flex flex-wrap gap-2">
-                        <button
-                          type="button"
-                          onClick={() => onView(brand)}
-                          className="inline-flex items-center gap-1 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-bold text-slate-700 transition hover:bg-slate-50"
-                        >
-                          <Eye size={14} />
-                          Xem
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => onEdit(brand)}
-                          className="inline-flex items-center gap-1 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-bold text-slate-700 transition hover:bg-slate-50"
-                        >
-                          <Edit2 size={14} />
-                          Sửa
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => onToggleStatus(brand)}
-                          className={`inline-flex items-center gap-1 rounded-lg px-3 py-2 text-xs font-bold transition ${
-                            brand.isActive
-                              ? 'border border-amber-200 bg-amber-50 text-amber-800 hover:bg-amber-100'
-                              : 'border border-emerald-200 bg-emerald-50 text-emerald-800 hover:bg-emerald-100'
-                          }`}
-                        >
-                          <EyeOff size={14} />
-                          {brand.isActive ? 'Ẩn' : 'Hiện'}
-                        </button>
-                      </div>
-                    </div>
-                  </ResourceListItem>
+                    </ResourceListItem>
                 );
               })}
             </div>
@@ -854,7 +870,7 @@ const BrandPanel = ({
                 <DetailRow label="Logo" value={selectedBrand.logoUrl || 'Chưa có'} />
                 <DetailRow label="Quốc gia" value={selectedBrand.originCountry || 'Chưa có'} />
                 <DetailRow label="Website" value={selectedBrand.websiteUrl || 'Chưa có'} />
-                <DetailRow label="Trạng thái" value={selectedBrand.isActive ? 'Đang hiển thị' : 'Đã ẩn'} />
+                <DetailRow label="Trạng thái" value={selectedBrand.isActive ? 'Đang hoạt động' : 'Đã ẩn'} />
                 <DetailRow label="Tạo lúc" value={formatDateTime(selectedBrand.createdAt)} />
                 <DetailRow label="Cập nhật lúc" value={formatDateTime(selectedBrand.updatedAt)} />
               </div>
@@ -1458,7 +1474,15 @@ export const ProductManagement = () => {
 
                 <div className="grid gap-2">
                   <FieldLabel>Tên</FieldLabel>
-                  <input placeholder="Tên danh mục" value={(categoryForm as CategoryFormState).name} onChange={(e) => setCategoryForm((c) => ({ ...(c as CategoryFormState), name: e.target.value }))} className="w-full rounded-lg border border-slate-300 bg-white px-4 py-3 text-sm outline-none placeholder:text-slate-400 transition-all focus:border-amber-600 focus:ring-2 focus:ring-amber-500/10" />
+                  <input
+                    placeholder="Tên danh mục"
+                    value={(categoryForm as CategoryFormState).name}
+                    onChange={(e) => {
+                      const name = e.target.value;
+                      setCategoryForm((c) => ({ ...(c as CategoryFormState), name, slug: categoryPanelMode === 'create' ? slugify(name) : (c as CategoryFormState).slug }));
+                    }}
+                    className="w-full rounded-lg border border-slate-300 bg-white px-4 py-3 text-sm outline-none placeholder:text-slate-400 transition-all focus:border-amber-600 focus:ring-2 focus:ring-amber-500/10"
+                  />
                 </div>
 
                 <div className="grid gap-2">
