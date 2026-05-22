@@ -15,6 +15,10 @@ import {
   Users,
 } from 'lucide-react';
 import { uploadSingleMedia } from '../../api/uploadApi';
+// @ts-ignore - optional dependency, install `react-select` + `react-select-country-list` to enable enhanced selects
+import Select from 'react-select';
+// @ts-ignore - optional dependency
+import countryList from 'react-select-country-list';
 import { toast } from 'sonner';
 import { productManagementApi } from '../../api/admin/productManagementApi';
 import { brandApi } from '../../api/brandApi';
@@ -883,7 +887,7 @@ export const ProductManagement = () => {
   const [categorySearch, setCategorySearch] = useState('');
   const [categoryPanelMode, setCategoryPanelMode] = useState<PanelMode>('create');
   const [categorySelected, setCategorySelected] = useState<CategoryResponse | null>(null);
-  const [, setCategoryForm] = useState<CategoryFormState>(emptyCategoryForm());
+  const [categoryForm, setCategoryForm] = useState<CategoryFormState>(emptyCategoryForm());
   
 
   const [brands, setBrands] = useState<BrandResponse[]>([]);
@@ -897,6 +901,9 @@ export const ProductManagement = () => {
   const [brandModalOpen, setBrandModalOpen] = useState(false);
   const brandFileInputRef = useRef<HTMLInputElement | null>(null);
   const [brandUploading, setBrandUploading] = useState(false);
+  const [categoryModalOpen, setCategoryModalOpen] = useState(false);
+  const categoryFileInputRef = useRef<HTMLInputElement | null>(null);
+  const [categoryUploading, setCategoryUploading] = useState(false);
 
   const loadProducts = async () => {
     try {
@@ -960,6 +967,7 @@ export const ProductManagement = () => {
     setCategoryPanelMode('create');
     setCategorySelected(null);
     setCategoryForm(emptyCategoryForm());
+    setCategoryModalOpen(true);
   };
 
   const openCategoryView = (category: CategoryResponse) => {
@@ -986,6 +994,7 @@ export const ProductManagement = () => {
       parentId: category.parentId || '',
       isActive: category.isActive,
     });
+    setCategoryModalOpen(true);
   };
 
   const openCreateBrand = () => {
@@ -1079,6 +1088,56 @@ export const ProductManagement = () => {
     }
   };
 
+  const submitCategory = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+
+    const payload = {
+      name: (categoryForm as CategoryFormState).name.trim(),
+      slug: (categoryForm as CategoryFormState).slug.trim(),
+      description: trimOrUndefined((categoryForm as CategoryFormState).description),
+      imageUrl: trimOrUndefined((categoryForm as CategoryFormState).imageUrl),
+      parentId: (categoryForm as CategoryFormState).parentId || undefined,
+      isActive: (categoryForm as CategoryFormState).isActive,
+    } as unknown as any;
+
+    try {
+      if (categoryPanelMode === 'edit' && categorySelected) {
+        const updated = await categoryApi.updateCategory(categorySelected.id, payload);
+        setCategories((current) => current.map((item) => (item.id === updated.id ? updated : item)));
+        setCategorySelected(updated);
+        setCategoryForm({
+          name: updated.name,
+          slug: updated.slug,
+          description: updated.description || '',
+          imageUrl: updated.imageUrl || '',
+          parentId: updated.parentId || '',
+          isActive: updated.isActive,
+        });
+        setCategoryPanelMode('view');
+        toast.success('Đã cập nhật category.');
+        if (categoryModalOpen) setCategoryModalOpen(false);
+      } else {
+        const created = await categoryApi.createCategory(payload);
+        setCategories((current) => [created, ...current]);
+        setCategorySelected(created);
+        setCategoryForm({
+          name: created.name,
+          slug: created.slug,
+          description: created.description || '',
+          imageUrl: created.imageUrl || '',
+          parentId: created.parentId || '',
+          isActive: created.isActive,
+        });
+        setCategoryPanelMode('view');
+        toast.success('Đã tạo category mới.');
+        if (categoryModalOpen) setCategoryModalOpen(false);
+      }
+    } catch (requestError) {
+      const message = requestError instanceof Error ? requestError.message : 'Không thể lưu category.';
+      toast.error(message);
+    }
+  };
+
   const toggleCategoryStatus = async (category: CategoryResponse) => {
     const payload: CategoryStatusRequest = { isActive: !category.isActive };
 
@@ -1129,6 +1188,20 @@ export const ProductManagement = () => {
     }
   };
 
+  const handleCategoryFile = async (file: File | null) => {
+    if (!file) return;
+    setCategoryUploading(true);
+    try {
+      const uploaded = await uploadSingleMedia(file, 'PRODUCT');
+      setCategoryForm((cur) => ({ ...cur, imageUrl: uploaded.url }));
+      toast.success('Ảnh category đã được tải lên.');
+    } catch (err) {
+      toast.error('Không thể upload ảnh.');
+    } finally {
+      setCategoryUploading(false);
+    }
+  };
+
   const onBrandFileInput = (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0] || null;
     void handleBrandFile(file);
@@ -1141,6 +1214,7 @@ export const ProductManagement = () => {
   };
 
   const openBrandFilePicker = () => brandFileInputRef.current?.click();
+  const openCategoryFilePicker = () => categoryFileInputRef.current?.click();
 
   const filteredCategories = useMemo(() => {
     const keyword = categorySearch.trim().toLowerCase();
@@ -1165,6 +1239,36 @@ export const ProductManagement = () => {
       return haystack.includes(keyword);
     });
   }, [brandSearch, brands]);
+
+  // react-select country options for brand origin
+  const countryOptions = useMemo(() => {
+    try {
+      return countryList().getData();
+    } catch (err) {
+      return [] as { value: string; label: string }[];
+    }
+  }, []);
+
+  const parentCategoryOptions = useMemo(() => {
+    return categories.map((c) => ({ value: c.id, label: c.name }));
+  }, [categories]);
+
+  const reactSelectStyles = useMemo(() => ({
+    control: (base: any) => ({
+      ...base,
+      borderRadius: 8,
+      borderColor: '#cbd5e1', // slate-300
+      minHeight: 44,
+      paddingLeft: 8,
+      paddingRight: 8,
+      boxShadow: 'none',
+      '&:hover': {
+        borderColor: '#f59e0b', // amber-500
+      },
+    }),
+    menu: (base: any) => ({ ...base, zIndex: 60 }),
+    singleValue: (base: any) => ({ ...base, color: '#0f172a' }),
+  }), []);
 
   
 
@@ -1286,19 +1390,18 @@ export const ProductManagement = () => {
                 <div className="grid gap-2 sm:grid-cols-2">
                   <div>
                     <FieldLabel>Quốc gia</FieldLabel>
-                    <select value={brandForm.originCountry} onChange={(e) => setBrandForm((c) => ({ ...c, originCountry: e.target.value }))} className="w-full rounded-lg border border-slate-300 bg-white px-4 py-3 text-sm outline-none">
-                      <option value="">Chọn quốc gia</option>
-                      <option value="Vietnam">Vietnam</option>
-                      <option value="France">France</option>
-                      <option value="United States">United States</option>
-                      <option value="United Kingdom">United Kingdom</option>
-                      <option value="China">China</option>
-                      <option value="Japan">Japan</option>
-                      <option value="Korea">Korea</option>
-                      <option value="Germany">Germany</option>
-                      <option value="Spain">Spain</option>
-                      <option value="Italy">Italy</option>
-                    </select>
+                    <Select
+                      options={countryOptions}
+                      value={countryOptions.find((o: any) => o.label === brandForm.originCountry) || null}
+                      onChange={(opt: any) => setBrandForm((c) => ({ ...c, originCountry: opt?.label || '' }))}
+                      isClearable
+                      placeholder="Chọn quốc gia"
+                      styles={reactSelectStyles}
+                      menuPlacement="top"
+                      menuPosition="fixed"
+                      className="w-full"
+                      classNamePrefix="react-select"
+                    />
                   </div>
 
                   <div>
@@ -1312,6 +1415,88 @@ export const ProductManagement = () => {
                 <div className="flex items-center justify-end gap-2">
                   <button type="button" onClick={() => setBrandModalOpen(false)} className="rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700">Hủy</button>
                   <button type="submit" className="rounded-lg bg-gradient-to-r from-amber-600 to-amber-500 px-4 py-2 text-sm font-bold text-white">{brandPanelMode === 'edit' ? 'Lưu' : 'Tạo'}</button>
+                </div>
+              </div>
+            </form>
+          </div>
+        </div>
+      ) : null}
+      {categoryModalOpen ? (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+          <div className="mx-4 w-full max-w-2xl rounded-lg bg-white p-6 shadow-lg">
+            <form onSubmit={submitCategory} className="grid gap-4">
+              <div className="flex items-start justify-between gap-4">
+                <div>
+                  <p className="m-0 text-[0.72rem] font-bold uppercase tracking-[0.18em] text-amber-600">Thêm / Sửa category</p>
+                  <h3 className="m-0 mt-2 text-xl font-extrabold text-slate-900">{categoryPanelMode === 'edit' ? 'Chỉnh sửa category' : 'Tạo category'}</h3>
+                </div>
+                <button type="button" onClick={() => setCategoryModalOpen(false)} className="text-sm text-slate-500 hover:text-slate-700">Đóng</button>
+              </div>
+
+              <div className="grid gap-3">
+                <div>
+                  <FieldLabel>Ảnh danh mục</FieldLabel>
+                  <div
+                    onDrop={(e) => { e.preventDefault(); const file = e.dataTransfer.files?.[0] || null; void handleCategoryFile(file); }}
+                    onDragOver={(e) => e.preventDefault()}
+                    className="relative mt-2 flex items-center justify-center gap-4 rounded-lg border-2 border-dashed border-slate-200 bg-slate-50 p-4 text-center"
+                  >
+                    <input ref={categoryFileInputRef} type="file" accept="image/*" onChange={(e) => { const file = e.target.files?.[0] || null; void handleCategoryFile(file); }} className="hidden" />
+                    {(categoryForm as CategoryFormState).imageUrl ? (
+                      <div className="flex h-28 w-28 items-center justify-center overflow-hidden rounded-md border border-slate-200 bg-white p-1">
+                        <img src={(categoryForm as CategoryFormState).imageUrl} alt="category" className="max-h-full max-w-full object-contain" />
+                      </div>
+                    ) : (
+                      <div className="flex flex-col items-center gap-2">
+                        <p className="text-sm text-slate-500">Kéo thả hoặc</p>
+                        <button type="button" onClick={openCategoryFilePicker} className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-semibold text-slate-700">Chọn file</button>
+                      </div>
+                    )}
+                    {categoryUploading ? <div className="absolute right-3 top-3 text-xs text-slate-500">Đang upload...</div> : null}
+                  </div>
+                </div>
+
+                <div className="grid gap-2">
+                  <FieldLabel>Tên</FieldLabel>
+                  <input placeholder="Tên danh mục" value={(categoryForm as CategoryFormState).name} onChange={(e) => setCategoryForm((c) => ({ ...(c as CategoryFormState), name: e.target.value }))} className="w-full rounded-lg border border-slate-300 bg-white px-4 py-3 text-sm outline-none placeholder:text-slate-400 transition-all focus:border-amber-600 focus:ring-2 focus:ring-amber-500/10" />
+                </div>
+
+                <div className="grid gap-2">
+                  <FieldLabel>Slug (tự động)</FieldLabel>
+                  <input placeholder="Tự động sinh" readOnly value={(categoryForm as CategoryFormState).slug} className="w-full rounded-lg border border-slate-300 bg-slate-50 px-4 py-3 text-sm text-slate-700 outline-none" />
+                </div>
+
+                <div className="grid gap-2">
+                  <FieldLabel>Mô tả</FieldLabel>
+                  <textarea value={(categoryForm as CategoryFormState).description} onChange={(e) => setCategoryForm((c) => ({ ...(c as CategoryFormState), description: e.target.value }))} rows={4} className="w-full rounded-lg border border-slate-300 bg-white px-4 py-3 text-sm outline-none transition-all focus:border-amber-600 focus:ring-2 focus:ring-amber-500/10" />
+                </div>
+
+                <div className="grid gap-2 sm:grid-cols-2">
+                  <div>
+                    <FieldLabel>Parent</FieldLabel>
+                    <Select
+                      options={parentCategoryOptions}
+                      value={parentCategoryOptions.find((o: any) => o.value === (categoryForm as CategoryFormState).parentId) || null}
+                      onChange={(opt: any) => setCategoryForm((c) => ({ ...(c as CategoryFormState), parentId: (opt as any)?.value || '' }))}
+                      isClearable
+                      placeholder="Chọn parent"
+                      styles={reactSelectStyles}
+                      menuPlacement="top"
+                      menuPosition="fixed"
+                      className="w-full"
+                      classNamePrefix="react-select"
+                    />
+                  </div>
+
+                  <div>
+                    <FieldLabel>Ẩn / Hiện</FieldLabel>
+                    <p className="text-sm text-slate-500 mt-2">Trạng thái mặc định: đang hiển thị</p>
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-end gap-2">
+                  <button type="button" onClick={() => setCategoryModalOpen(false)} className="rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700">Hủy</button>
+                  <button type="submit" className="rounded-lg bg-gradient-to-r from-amber-600 to-amber-500 px-4 py-2 text-sm font-bold text-white">{categoryPanelMode === 'edit' ? 'Lưu' : 'Tạo'}</button>
                 </div>
               </div>
             </form>
