@@ -1,6 +1,7 @@
 import { useNavigate } from 'react-router-dom';
 export { ProductList } from './ProductList';
 export { ProductDetail } from './ProductDetail';
+export { OrderHistory } from './OrderHistory';
 
 export const Home = () => {
     return (
