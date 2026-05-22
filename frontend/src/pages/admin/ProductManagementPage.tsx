@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type FormEvent } from 'react';
+import { useEffect, useMemo, useRef, useState, type FormEvent, type ChangeEvent, type DragEvent } from 'react';
 import { Link } from 'react-router-dom';
 import {
   BadgeCheck,
@@ -12,14 +12,14 @@ import {
   Plus,
   Search,
   SlidersHorizontal,
-  Upload,
   Users,
 } from 'lucide-react';
+import { uploadSingleMedia } from '../../api/uploadApi';
 import { toast } from 'sonner';
 import { productManagementApi } from '../../api/admin/productManagementApi';
 import { brandApi } from '../../api/brandApi';
 import { categoryApi } from '../../api/categoryApi';
-import type { BrandRequest, BrandResponse, BrandStatusRequest, CategoryRequest, CategoryResponse, CategoryStatusRequest } from '../../types/catalog';
+import type { BrandRequest, BrandResponse, BrandStatusRequest, CategoryResponse, CategoryStatusRequest } from '../../types/catalog';
 
 type ProductVariantRow = {
   id: string;
@@ -110,6 +110,7 @@ const formatCurrency = (value?: number | null) => {
   }).format(value);
 };
 
+// slugify removed — creation now handled via modal or server-side
 const slugify = (value: string) =>
   value
     .toLowerCase()
@@ -473,16 +474,10 @@ const CategoryPanel = ({
   filteredCategories,
   selectedCategory,
   panelMode,
-  form,
-  setForm,
-  slugTouched,
-  setSlugTouched,
   onCreateNew,
   onEdit,
   onView,
   onToggleStatus,
-  onSubmit,
-  parentOptions,
 }: {
   categories: CategoryResponse[];
   loading: boolean;
@@ -492,18 +487,11 @@ const CategoryPanel = ({
   filteredCategories: CategoryResponse[];
   selectedCategory: CategoryResponse | null;
   panelMode: PanelMode;
-  form: CategoryFormState;
-  setForm: React.Dispatch<React.SetStateAction<CategoryFormState>>;
-  slugTouched: boolean;
-  setSlugTouched: React.Dispatch<React.SetStateAction<boolean>>;
   onCreateNew: () => void;
   onEdit: (category: CategoryResponse) => void;
   onView: (category: CategoryResponse) => void;
   onToggleStatus: (category: CategoryResponse) => void;
-  onSubmit: (event: FormEvent<HTMLFormElement>) => void;
-  parentOptions: CategoryResponse[];
 }) => {
-  const isEditing = panelMode === 'edit';
   const isViewing = panelMode === 'view' && Boolean(selectedCategory);
 
   return (
@@ -665,115 +653,13 @@ const CategoryPanel = ({
               </div>
             </div>
           ) : (
-            <form className="grid gap-4" onSubmit={onSubmit}>
-              <div className="flex flex-wrap items-start justify-between gap-3">
-                <div>
-                  <p className="m-0 text-[0.72rem] font-bold uppercase tracking-[0.2em] text-amber-700">
-                    {isEditing ? 'Chỉnh sửa category' : 'Thêm category mới'}
-                  </p>
-                  <h3 className="m-0 mt-2 text-xl font-extrabold text-slate-900">
-                    {isEditing ? selectedCategory?.name || 'Category' : 'Tạo category'}
-                  </h3>
-                </div>
-
-                {panelMode !== 'create' ? (
-                  <button
-                    type="button"
-                    onClick={onCreateNew}
-                    className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-bold text-slate-700 transition hover:bg-slate-50"
-                  >
-                    Tạo mới
-                  </button>
-                ) : null}
+            <div className="grid gap-3">
+              <p className="m-0 text-sm text-slate-600">Chọn một category từ danh sách để xem chi tiết.</p>
+              <p className="m-0 text-sm text-slate-500">Để tạo category mới, hãy bấm nút "Thêm category" ở bên trái (sẽ mở modal).</p>
+              <div className="mt-4 flex justify-end">
+                <button type="button" onClick={onCreateNew} className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-bold text-slate-700">Tạo category</button>
               </div>
-
-              <div className="grid gap-3">
-                <div className="grid gap-2">
-                  <FieldLabel>Tên category</FieldLabel>
-                  <input
-                    value={form.name}
-                    onChange={(event) => {
-                      const value = event.target.value;
-                      setForm((current) => ({
-                        ...current,
-                        name: value,
-                        slug: slugTouched ? current.slug : slugify(value),
-                      }));
-                    }}
-                    placeholder="Ví dụ: Chăm sóc da"
-                    className="w-full rounded-lg border border-slate-200 bg-white px-4 py-3 text-sm outline-none transition focus:border-amber-400 focus:ring-4 focus:ring-amber-100"
-                  />
-                </div>
-
-                <div className="grid gap-2">
-                  <FieldLabel>Slug</FieldLabel>
-                  <input
-                    value={form.slug}
-                    onChange={(event) => {
-                      setSlugTouched(true);
-                      setForm((current) => ({ ...current, slug: event.target.value }));
-                    }}
-                    placeholder="vi-du-cham-soc-da"
-                    className="w-full rounded-lg border border-slate-200 bg-white px-4 py-3 text-sm outline-none transition focus:border-orange-400 focus:ring-4 focus:ring-orange-100"
-                  />
-                </div>
-
-                <div className="grid gap-2">
-                  <FieldLabel>Mô tả</FieldLabel>
-                  <textarea
-                    value={form.description}
-                    onChange={(event) => setForm((current) => ({ ...current, description: event.target.value }))}
-                    rows={4}
-                    placeholder="Mô tả category"
-                    className="w-full rounded-lg border border-slate-200 bg-white px-4 py-3 text-sm outline-none transition focus:border-orange-400 focus:ring-4 focus:ring-orange-100"
-                  />
-                </div>
-
-                <div className="grid gap-2">
-                  <FieldLabel>Ảnh category</FieldLabel>
-                  <input
-                    value={form.imageUrl}
-                    onChange={(event) => setForm((current) => ({ ...current, imageUrl: event.target.value }))}
-                    placeholder="https://..."
-                    className="w-full rounded-lg border border-slate-200 bg-white px-4 py-3 text-sm outline-none transition focus:border-orange-400 focus:ring-4 focus:ring-orange-100"
-                  />
-                </div>
-
-                <div className="grid gap-2">
-                  <FieldLabel>Category cha</FieldLabel>
-                  <select
-                    value={form.parentId}
-                    onChange={(event) => setForm((current) => ({ ...current, parentId: event.target.value }))}
-                    className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none transition focus:border-amber-400 focus:ring-4 focus:ring-amber-100"
-                  >
-                    <option value="">Root category</option>
-                    {parentOptions.map((option) => (
-                      <option key={option.id} value={option.id}>
-                        {option.name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                <label className="flex items-center justify-between rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-semibold text-slate-700">
-                  <span>Đang hiển thị</span>
-                  <input
-                    type="checkbox"
-                    checked={form.isActive}
-                    onChange={(event) => setForm((current) => ({ ...current, isActive: event.target.checked }))}
-                    className="h-4 w-4 accent-amber-600"
-                  />
-                </label>
-
-                <button
-                  type="submit"
-                  className="inline-flex items-center justify-center gap-2 rounded-lg bg-gradient-to-r from-amber-600 to-amber-500 px-4 py-3 text-sm font-bold text-white shadow transition hover:shadow-lg"
-                >
-                  <Upload size={16} />
-                  {isEditing ? 'Lưu thay đổi' : 'Tạo category'}
-                </button>
-              </div>
-            </form>
+            </div>
           )}
         </aside>
       </div>
@@ -790,15 +676,10 @@ const BrandPanel = ({
   filteredBrands,
   selectedBrand,
   panelMode,
-  form,
-  setForm,
-  slugTouched,
-  setSlugTouched,
   onCreateNew,
   onEdit,
   onView,
   onToggleStatus,
-  onSubmit,
 }: {
   brands: BrandResponse[];
   loading: boolean;
@@ -808,17 +689,11 @@ const BrandPanel = ({
   filteredBrands: BrandResponse[];
   selectedBrand: BrandResponse | null;
   panelMode: PanelMode;
-  form: BrandFormState;
-  setForm: React.Dispatch<React.SetStateAction<BrandFormState>>;
-  slugTouched: boolean;
-  setSlugTouched: React.Dispatch<React.SetStateAction<boolean>>;
   onCreateNew: () => void;
   onEdit: (brand: BrandResponse) => void;
   onView: (brand: BrandResponse) => void;
   onToggleStatus: (brand: BrandResponse) => void;
-  onSubmit: (event: FormEvent<HTMLFormElement>) => void;
 }) => {
-  const isEditing = panelMode === 'edit';
   const isViewing = panelMode === 'view' && Boolean(selectedBrand);
 
   return (
@@ -981,121 +856,13 @@ const BrandPanel = ({
               </div>
             </div>
           ) : (
-            <form className="grid gap-4" onSubmit={onSubmit}>
-              <div className="flex flex-wrap items-start justify-between gap-3">
-                <div>
-                  <p className="m-0 text-[0.72rem] font-bold uppercase tracking-[0.2em] text-indigo-700">
-                    {isEditing ? 'Chỉnh sửa brand' : 'Thêm brand mới'}
-                  </p>
-                  <h3 className="m-0 mt-2 text-xl font-extrabold text-slate-900">
-                    {isEditing ? selectedBrand?.name || 'Brand' : 'Tạo brand'}
-                  </h3>
-                </div>
-
-                {panelMode !== 'create' ? (
-                  <button
-                    type="button"
-                    onClick={onCreateNew}
-                    className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-bold text-slate-700 transition hover:bg-slate-50"
-                  >
-                    Tạo mới
-                  </button>
-                ) : null}
+            <div className="grid gap-3">
+              <p className="m-0 text-sm text-slate-600">Chọn một brand từ danh sách để xem chi tiết.</p>
+              <p className="m-0 text-sm text-slate-500">Để tạo brand mới, hãy bấm nút "Thêm brand" ở bên trái (sẽ mở modal).</p>
+              <div className="mt-4 flex justify-end">
+                <button type="button" onClick={onCreateNew} className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-bold text-slate-700">Tạo brand</button>
               </div>
-
-              <div className="grid gap-3">
-                <div className="grid gap-2">
-                  <FieldLabel>Tên brand</FieldLabel>
-                  <input
-                    value={form.name}
-                    onChange={(event) => {
-                      const value = event.target.value;
-                      setForm((current) => ({
-                        ...current,
-                        name: value,
-                        slug: slugTouched ? current.slug : slugify(value),
-                      }));
-                    }}
-                    placeholder="Ví dụ: L'Oréal Paris"
-                    className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none transition focus:border-indigo-400 focus:ring-4 focus:ring-indigo-100"
-                  />
-                </div>
-
-                <div className="grid gap-2">
-                  <FieldLabel>Slug</FieldLabel>
-                  <input
-                    value={form.slug}
-                    onChange={(event) => {
-                      setSlugTouched(true);
-                      setForm((current) => ({ ...current, slug: event.target.value }));
-                    }}
-                    placeholder="loreal-paris"
-                    className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none transition focus:border-indigo-400 focus:ring-4 focus:ring-indigo-100"
-                  />
-                </div>
-
-                <div className="grid gap-2">
-                  <FieldLabel>Mô tả</FieldLabel>
-                  <textarea
-                    value={form.description}
-                    onChange={(event) => setForm((current) => ({ ...current, description: event.target.value }))}
-                    rows={4}
-                    placeholder="Mô tả brand"
-                    className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none transition focus:border-indigo-400 focus:ring-4 focus:ring-indigo-100"
-                  />
-                </div>
-
-                <div className="grid gap-2">
-                  <FieldLabel>Logo URL</FieldLabel>
-                  <input
-                    value={form.logoUrl}
-                    onChange={(event) => setForm((current) => ({ ...current, logoUrl: event.target.value }))}
-                    placeholder="https://..."
-                    className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none transition focus:border-indigo-400 focus:ring-4 focus:ring-indigo-100"
-                  />
-                </div>
-
-                <div className="grid gap-2 sm:grid-cols-2">
-                  <div className="grid gap-2">
-                    <FieldLabel>Quốc gia</FieldLabel>
-                    <input
-                      value={form.originCountry}
-                      onChange={(event) => setForm((current) => ({ ...current, originCountry: event.target.value }))}
-                      placeholder="France"
-                      className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none transition focus:border-indigo-400 focus:ring-4 focus:ring-indigo-100"
-                    />
-                  </div>
-
-                  <div className="grid gap-2">
-                    <FieldLabel>Website</FieldLabel>
-                    <input
-                      value={form.websiteUrl}
-                      onChange={(event) => setForm((current) => ({ ...current, websiteUrl: event.target.value }))}
-                      placeholder="https://..."
-                      className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none transition focus:border-indigo-400 focus:ring-4 focus:ring-indigo-100"
-                    />
-                  </div>
-                </div>
-
-                <label className="flex items-center justify-between rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-semibold text-slate-700">
-                  <span>Đang hiển thị</span>
-                  <input
-                    type="checkbox"
-                    checked={form.isActive}
-                    onChange={(event) => setForm((current) => ({ ...current, isActive: event.target.checked }))}
-                    className="h-4 w-4 accent-indigo-600"
-                  />
-                </label>
-
-                <button
-                  type="submit"
-                  className="inline-flex items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-indigo-600 to-blue-600 px-4 py-3 text-sm font-bold text-white shadow-lg transition hover:shadow-xl"
-                >
-                  <Upload size={16} />
-                  {isEditing ? 'Lưu thay đổi' : 'Tạo brand'}
-                </button>
-              </div>
-            </form>
+            </div>
           )}
         </aside>
       </div>
@@ -1116,8 +883,8 @@ export const ProductManagement = () => {
   const [categorySearch, setCategorySearch] = useState('');
   const [categoryPanelMode, setCategoryPanelMode] = useState<PanelMode>('create');
   const [categorySelected, setCategorySelected] = useState<CategoryResponse | null>(null);
-  const [categoryForm, setCategoryForm] = useState<CategoryFormState>(emptyCategoryForm());
-  const [categorySlugTouched, setCategorySlugTouched] = useState(false);
+  const [, setCategoryForm] = useState<CategoryFormState>(emptyCategoryForm());
+  
 
   const [brands, setBrands] = useState<BrandResponse[]>([]);
   const [brandLoading, setBrandLoading] = useState(false);
@@ -1126,7 +893,10 @@ export const ProductManagement = () => {
   const [brandPanelMode, setBrandPanelMode] = useState<PanelMode>('create');
   const [brandSelected, setBrandSelected] = useState<BrandResponse | null>(null);
   const [brandForm, setBrandForm] = useState<BrandFormState>(emptyBrandForm());
-  const [brandSlugTouched, setBrandSlugTouched] = useState(false);
+  
+  const [brandModalOpen, setBrandModalOpen] = useState(false);
+  const brandFileInputRef = useRef<HTMLInputElement | null>(null);
+  const [brandUploading, setBrandUploading] = useState(false);
 
   const loadProducts = async () => {
     try {
@@ -1190,7 +960,6 @@ export const ProductManagement = () => {
     setCategoryPanelMode('create');
     setCategorySelected(null);
     setCategoryForm(emptyCategoryForm());
-    setCategorySlugTouched(false);
   };
 
   const openCategoryView = (category: CategoryResponse) => {
@@ -1204,7 +973,6 @@ export const ProductManagement = () => {
       parentId: category.parentId || '',
       isActive: category.isActive,
     });
-    setCategorySlugTouched(true);
   };
 
   const openCategoryEdit = (category: CategoryResponse) => {
@@ -1218,14 +986,13 @@ export const ProductManagement = () => {
       parentId: category.parentId || '',
       isActive: category.isActive,
     });
-    setCategorySlugTouched(true);
   };
 
   const openCreateBrand = () => {
     setBrandPanelMode('create');
     setBrandSelected(null);
     setBrandForm(emptyBrandForm());
-    setBrandSlugTouched(false);
+    setBrandModalOpen(true);
   };
 
   const openBrandView = (brand: BrandResponse) => {
@@ -1240,7 +1007,6 @@ export const ProductManagement = () => {
       websiteUrl: brand.websiteUrl || '',
       isActive: brand.isActive,
     });
-    setBrandSlugTouched(true);
   };
 
   const openBrandEdit = (brand: BrandResponse) => {
@@ -1255,58 +1021,10 @@ export const ProductManagement = () => {
       websiteUrl: brand.websiteUrl || '',
       isActive: brand.isActive,
     });
-    setBrandSlugTouched(true);
+    setBrandModalOpen(true);
   };
 
-  const submitCategory = async (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-
-    const payload: CategoryRequest = {
-      name: categoryForm.name.trim(),
-      slug: categoryForm.slug.trim(),
-      description: trimOrUndefined(categoryForm.description),
-      imageUrl: trimOrUndefined(categoryForm.imageUrl),
-      parentId: categoryForm.parentId.trim() || null,
-      isActive: categoryForm.isActive,
-    };
-
-    try {
-      if (categoryPanelMode === 'edit' && categorySelected) {
-        const updated = await categoryApi.updateCategory(categorySelected.id, payload);
-        setCategories((current) => current.map((item) => (item.id === updated.id ? updated : item)));
-        setCategorySelected(updated);
-        setCategoryForm({
-          name: updated.name,
-          slug: updated.slug,
-          description: updated.description || '',
-          imageUrl: updated.imageUrl || '',
-          parentId: updated.parentId || '',
-          isActive: updated.isActive,
-        });
-        setCategoryPanelMode('view');
-        setCategorySlugTouched(true);
-        toast.success('Đã cập nhật category.');
-      } else {
-        const created = await categoryApi.createCategory(payload);
-        setCategories((current) => [created, ...current]);
-        setCategorySelected(created);
-        setCategoryForm({
-          name: created.name,
-          slug: created.slug,
-          description: created.description || '',
-          imageUrl: created.imageUrl || '',
-          parentId: created.parentId || '',
-          isActive: created.isActive,
-        });
-        setCategoryPanelMode('view');
-        setCategorySlugTouched(true);
-        toast.success('Đã tạo category mới.');
-      }
-    } catch (requestError) {
-      const message = requestError instanceof Error ? requestError.message : 'Không thể lưu category.';
-      toast.error(message);
-    }
-  };
+  
 
   const submitBrand = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -1336,8 +1054,8 @@ export const ProductManagement = () => {
           isActive: updated.isActive,
         });
         setBrandPanelMode('view');
-        setBrandSlugTouched(true);
         toast.success('Đã cập nhật brand.');
+        if (brandModalOpen) setBrandModalOpen(false);
       } else {
         const created = await brandApi.createBrand(payload);
         setBrands((current) => [created, ...current]);
@@ -1352,8 +1070,8 @@ export const ProductManagement = () => {
           isActive: created.isActive,
         });
         setBrandPanelMode('view');
-        setBrandSlugTouched(true);
         toast.success('Đã tạo brand mới.');
+        if (brandModalOpen) setBrandModalOpen(false);
       }
     } catch (requestError) {
       const message = requestError instanceof Error ? requestError.message : 'Không thể lưu brand.';
@@ -1396,6 +1114,34 @@ export const ProductManagement = () => {
     }
   };
 
+  // Brand upload helpers for modal
+  const handleBrandFile = async (file: File | null) => {
+    if (!file) return;
+    setBrandUploading(true);
+    try {
+      const uploaded = await uploadSingleMedia(file, 'AVATAR');
+      setBrandForm((cur) => ({ ...cur, logoUrl: uploaded.url }));
+      toast.success('Ảnh logo đã được tải lên.');
+    } catch (err) {
+      toast.error('Không thể upload ảnh.');
+    } finally {
+      setBrandUploading(false);
+    }
+  };
+
+  const onBrandFileInput = (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0] || null;
+    void handleBrandFile(file);
+  };
+
+  const onBrandDrop = (event: DragEvent<HTMLDivElement>) => {
+    event.preventDefault();
+    const file = event.dataTransfer.files?.[0] || null;
+    void handleBrandFile(file);
+  };
+
+  const openBrandFilePicker = () => brandFileInputRef.current?.click();
+
   const filteredCategories = useMemo(() => {
     const keyword = categorySearch.trim().toLowerCase();
     if (!keyword) {
@@ -1420,10 +1166,7 @@ export const ProductManagement = () => {
     });
   }, [brandSearch, brands]);
 
-  const parentCategoryOptions = useMemo(
-    () => categories.filter((category) => category.id !== categorySelected?.id),
-    [categories, categorySelected?.id],
-  );
+  
 
   return (
     <div className="grid gap-6">
@@ -1464,16 +1207,10 @@ export const ProductManagement = () => {
           filteredCategories={filteredCategories}
           selectedCategory={categorySelected}
           panelMode={categoryPanelMode}
-          form={categoryForm}
-          setForm={setCategoryForm}
-          slugTouched={categorySlugTouched}
-          setSlugTouched={setCategorySlugTouched}
           onCreateNew={openCreateCategory}
           onEdit={openCategoryEdit}
           onView={openCategoryView}
           onToggleStatus={toggleCategoryStatus}
-          onSubmit={submitCategory}
-          parentOptions={parentCategoryOptions}
         />
       ) : null}
 
@@ -1487,16 +1224,99 @@ export const ProductManagement = () => {
           filteredBrands={filteredBrands}
           selectedBrand={brandSelected}
           panelMode={brandPanelMode}
-          form={brandForm}
-          setForm={setBrandForm}
-          slugTouched={brandSlugTouched}
-          setSlugTouched={setBrandSlugTouched}
           onCreateNew={openCreateBrand}
           onEdit={openBrandEdit}
           onView={openBrandView}
           onToggleStatus={toggleBrandStatus}
-          onSubmit={submitBrand}
         />
+      ) : null}
+      {brandModalOpen ? (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+          <div className="mx-4 w-full max-w-2xl rounded-lg bg-white p-6 shadow-lg">
+            <form onSubmit={submitBrand} className="grid gap-4">
+              <div className="flex items-start justify-between gap-4">
+                <div>
+                  <p className="m-0 text-[0.72rem] font-bold uppercase tracking-[0.18em] text-amber-600">Thêm / Sửa brand</p>
+                  <h3 className="m-0 mt-2 text-xl font-extrabold text-slate-900">{brandPanelMode === 'edit' ? 'Chỉnh sửa brand' : 'Tạo brand'}</h3>
+                </div>
+                <button type="button" onClick={() => setBrandModalOpen(false)} className="text-sm text-slate-500 hover:text-slate-700">Đóng</button>
+              </div>
+
+              <div className="grid gap-3">
+                <div>
+                  <FieldLabel>Logo (1:1)</FieldLabel>
+                  <div
+                    onDrop={onBrandDrop}
+                    onDragOver={(e) => e.preventDefault()}
+                    className="relative mt-2 flex items-center justify-center gap-4 rounded-lg border-2 border-dashed border-slate-200 bg-slate-50 p-4 text-center"
+                  >
+                    <input ref={brandFileInputRef} type="file" accept="image/*" onChange={onBrandFileInput} className="hidden" />
+                    {brandForm.logoUrl ? (
+                      <div className="flex h-28 w-28 items-center justify-center overflow-hidden rounded-md border border-slate-200 bg-white p-1">
+                        <img src={brandForm.logoUrl} alt="logo" className="max-h-full max-w-full object-contain" />
+                      </div>
+                    ) : (
+                      <div className="flex flex-col items-center gap-2">
+                        <p className="text-sm text-slate-500">Kéo thả hoặc</p>
+                        <button type="button" onClick={openBrandFilePicker} className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-semibold text-slate-700">Chọn file</button>
+                      </div>
+                    )}
+                    {brandUploading ? <div className="absolute right-3 top-3 text-xs text-slate-500">Đang upload...</div> : null}
+                  </div>
+                </div>
+
+                <div className="grid gap-2">
+                  <FieldLabel>Tên brand</FieldLabel>
+                  <input placeholder="Ví dụ: L'Oréal Paris" value={brandForm.name} onChange={(e) => {
+                      const name = e.target.value;
+                      setBrandForm((c) => ({ ...c, name, slug: brandPanelMode === 'create' ? slugify(name) : c.slug }));
+                    }} className="w-full rounded-lg border border-b-slate-900 bg-white px-4 py-3 text-sm outline-none placeholder:text-slate-400 transition-all focus:border-amber-600 focus:ring-2 focus:ring-amber-500/10" />
+                </div>
+
+                <div className="grid gap-2">
+                  <FieldLabel>Slug (tự động)</FieldLabel>
+                  <input placeholder="Tự động sinh từ tên" readOnly value={brandForm.slug} className="w-full rounded-lg border border-slate-300 bg-slate-50 px-4 py-3 text-sm text-slate-700 outline-none" />
+                </div>
+
+                <div className="grid gap-2">
+                  <FieldLabel>Mô tả</FieldLabel>
+                  <textarea  value={brandForm.description} onChange={(e) => setBrandForm((c) => ({ ...c, description: e.target.value }))} rows={4} className="w-full rounded-lg border border-slate-300 bg-white px-4 py-3 text-sm outline-none transition-all focus:border-amber-600 focus:ring-2 focus:ring-amber-500/10" />
+                </div>
+
+                <div className="grid gap-2 sm:grid-cols-2">
+                  <div>
+                    <FieldLabel>Quốc gia</FieldLabel>
+                    <select value={brandForm.originCountry} onChange={(e) => setBrandForm((c) => ({ ...c, originCountry: e.target.value }))} className="w-full rounded-lg border border-slate-300 bg-white px-4 py-3 text-sm outline-none">
+                      <option value="">Chọn quốc gia</option>
+                      <option value="Vietnam">Vietnam</option>
+                      <option value="France">France</option>
+                      <option value="United States">United States</option>
+                      <option value="United Kingdom">United Kingdom</option>
+                      <option value="China">China</option>
+                      <option value="Japan">Japan</option>
+                      <option value="Korea">Korea</option>
+                      <option value="Germany">Germany</option>
+                      <option value="Spain">Spain</option>
+                      <option value="Italy">Italy</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <FieldLabel>Website</FieldLabel>
+                    <input value={brandForm.websiteUrl} onChange={(e) => setBrandForm((c) => ({ ...c, websiteUrl: e.target.value }))} placeholder="https://example.com" className="w-full rounded-lg border border-slate-300 bg-white px-4 py-3 text-sm outline-none placeholder:text-slate-400" />
+                  </div>
+                </div>
+
+                {/* Đang hiển thị mặc định true; không hiển thị checkbox theo yêu cầu */}
+
+                <div className="flex items-center justify-end gap-2">
+                  <button type="button" onClick={() => setBrandModalOpen(false)} className="rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700">Hủy</button>
+                  <button type="submit" className="rounded-lg bg-gradient-to-r from-amber-600 to-amber-500 px-4 py-2 text-sm font-bold text-white">{brandPanelMode === 'edit' ? 'Lưu' : 'Tạo'}</button>
+                </div>
+              </div>
+            </form>
+          </div>
+        </div>
       ) : null}
     </div>
   );

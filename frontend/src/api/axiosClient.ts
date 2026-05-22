@@ -48,11 +48,14 @@ const processQueue = (error: unknown, token: string | null = null) => {
 
 axiosClient.interceptors.request.use(
   (config: InternalAxiosRequestConfig) => {
-    const isPublicCatalogEndpoint =
+    // Allow unauthenticated access for public catalog GET endpoints only.
+    const method = config.method?.toLowerCase() || 'get';
+    const isCatalogPath =
       config.url?.includes('/catalog/categories') ||
-      config.url?.includes('/catalog/brands');
+      config.url?.includes('/catalog/brands') ||
+      config.url?.includes('/catalog/products');
 
-    if (isPublicCatalogEndpoint) {
+    if (method === 'get' && isCatalogPath) {
       return config;
     }
 
