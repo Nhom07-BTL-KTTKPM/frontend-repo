@@ -253,7 +253,17 @@ const ProductStats = ({ products }: { products: ProductCardRow[] }) => {
   );
 };
 
-const ProductsTab = ({ products, loading, error }: { products: ProductCardRow[]; loading: boolean; error: string | null }) => {
+const ProductsTab = ({
+  products,
+  loading,
+  error,
+  onToggleStatus,
+}: {
+  products: ProductCardRow[];
+  loading: boolean;
+  error: string | null;
+  onToggleStatus: (product: ProductCardRow) => void;
+}) => {
   const totalVariants = products.reduce((sum, product) => sum + (product.variants?.length || 0), 0);
 
   return (
@@ -404,8 +414,13 @@ const ProductsTab = ({ products, loading, error }: { products: ProductCardRow[];
                     <button className="rounded-full bg-white p-2.5 shadow-lg transition hover:bg-slate-50" title="Chỉnh sửa">
                       <Edit2 size={16} className="text-slate-700" />
                     </button>
-                    <button className="rounded-full bg-white p-2.5 shadow-lg transition hover:bg-slate-50" title="Vô hiệu">
-                      <EyeOff size={16} className="text-slate-700" />
+                    <button
+                      type="button"
+                      className="rounded-full bg-rose-50 p-2.5 text-rose-600 shadow-lg transition hover:bg-rose-100"
+                      title={product.isActive ? 'Vô hiệu' : 'Kích hoạt'}
+                      onClick={() => onToggleStatus(product)}
+                    >
+                      <EyeOff size={16} className="text-rose-600" />
                     </button>
                   </div>
                 </div>
@@ -926,7 +941,7 @@ export const ProductManagement = () => {
       setProductLoading(true);
       setProductError(null);
 
-      const response = await productManagementApi.getProducts({ page: 0, size: 20 });
+      const response = await productManagementApi.getAllProducts({ page: 0, size: 20, sort: 'createdAt,desc' });
       setProducts((response.content || []) as ProductCardRow[]);
     } catch (requestError) {
       const message = requestError instanceof Error ? requestError.message : 'Không thể tải danh sách sản phẩm.';
@@ -1189,6 +1204,19 @@ export const ProductManagement = () => {
     }
   };
 
+  const toggleProductStatus = async (product: ProductCardRow) => {
+    const payload = { isActive: !product.isActive };
+
+    try {
+      const updated = await productManagementApi.changeProductStatus(product.id, payload);
+      setProducts((current) => current.map((item) => (item.id === updated.id ? { ...item, isActive: updated.isActive } : item)));
+      toast.success(updated.isActive ? 'Đã hiển thị product.' : 'Đã ẩn product.');
+    } catch (requestError) {
+      const message = requestError instanceof Error ? requestError.message : 'Không thể thay đổi trạng thái product.';
+      toast.error(message);
+    }
+  };
+
   // Brand upload helpers for modal
   const handleBrandFile = async (file: File | null) => {
     if (!file) return;
@@ -1314,7 +1342,7 @@ export const ProductManagement = () => {
       </div>
 
       {activeTab === 'products' ? (
-        <ProductsTab products={products} loading={productLoading} error={productError} />
+        <ProductsTab products={products} loading={productLoading} error={productError} onToggleStatus={toggleProductStatus} />
       ) : null}
 
       {activeTab === 'categories' ? (

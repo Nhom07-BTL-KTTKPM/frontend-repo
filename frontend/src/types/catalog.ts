@@ -54,6 +54,10 @@ export interface BrandStatusRequest {
   isActive: boolean;
 }
 
+export interface ProductStatusRequest {
+  isActive: boolean;
+}
+
 // Lightweight projections returned by /summary endpoints
 export interface BrandSummaryResponse {
   id: string;
