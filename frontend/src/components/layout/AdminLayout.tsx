@@ -1,13 +1,14 @@
+import { useState } from 'react';
 import { Outlet, useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../../store/authStore';
 import { useAuth } from '../../hooks/useAuth';
 import { AdminSidebar } from '../admin/AdminSidebar';
-import { LogOut } from 'lucide-react';
 
 export const AdminLayout = () => {
   const user = useAuthStore((state) => state.user);
   const navigate = useNavigate();
   const { logoutMutation } = useAuth();
+  const [collapsed, setCollapsed] = useState(false);
 
   const handleLogout = () => {
     logoutMutation.mutate(undefined, {
@@ -18,8 +19,21 @@ export const AdminLayout = () => {
   };
 
   return (
-    <div style={{ minHeight: '100vh', display: 'grid', gridTemplateColumns: '280px 1fr', background: 'var(--color-cream)' }}>
-      <AdminSidebar />
+    <div
+      style={{
+        minHeight: '100vh',
+        display: 'grid',
+        gridTemplateColumns: collapsed ? '76px 1fr' : '264px 1fr',
+        background: 'var(--color-cream)',
+        transition: 'grid-template-columns 0.25s ease',
+      }}
+    >
+      <AdminSidebar
+        collapsed={collapsed}
+        onToggleCollapsed={() => setCollapsed((value) => !value)}
+        onLogout={handleLogout}
+        isLogoutPending={logoutMutation.isPending}
+      />
 
       <div style={{ display: 'flex', flexDirection: 'column', minWidth: 0 }}>
         <header
@@ -44,28 +58,6 @@ export const AdminLayout = () => {
               <p style={{ margin: 0, fontWeight: 700, color: 'var(--color-black)' }}>{user?.email || 'admin@gmail.com'}</p>
               <p style={{ margin: 0, color: 'var(--color-gray-500)', fontSize: '0.85rem' }}>Khu vực nội bộ</p>
             </div>
-            <button
-              onClick={handleLogout}
-              disabled={logoutMutation.isPending}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '0.5rem',
-                border: '1px solid rgba(201,169,110,0.35)',
-                borderRadius: '8px',
-                padding: '0.6rem 1rem',
-                background: 'var(--color-cream)',
-                color: 'var(--color-black)',
-                fontWeight: 600,
-                fontSize: '0.85rem',
-                cursor: logoutMutation.isPending ? 'not-allowed' : 'pointer',
-                opacity: logoutMutation.isPending ? 0.6 : 1,
-                transition: 'all 0.3s ease',
-              }}
-            >
-              <LogOut size={16} />
-              {logoutMutation.isPending ? 'Đang đăng xuất...' : 'Đăng xuất'}
-            </button>
           </div>
         </header>
 
