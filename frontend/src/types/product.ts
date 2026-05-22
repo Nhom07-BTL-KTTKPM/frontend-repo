@@ -27,7 +27,8 @@ export interface Category {
 }
 
 export interface Product {
-  productId: string;
+  id: string;          // Chuẩn mới từ nhánh develop
+  productId?: string;  // Giữ lại từ nhánh HEAD dạng optional để fallback
   name: string;
   slug: string;
   description?: string;

@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 import { useNavigate } from 'react-router-dom';
 export { ProductList } from './ProductList';
 export { ProductDetail } from './ProductDetail';
@@ -36,6 +37,20 @@ export const Checkout = () => {
     );
 };
 
+=======
+export { ProductList } from './ProductList';
+export { ProductDetail } from './ProductDetail';
+export { HomePage as Home } from './HomePage';
+export { CategoryDetailPage } from './CategoryDetailPage';
+export { BrandDetailPage } from './BrandDetailPage';
+export { Cart } from './Cart';
+export { Checkout } from './Checkout';
+export { OrderLookup } from './OrderLookup';
+export { OrderHistory } from './OrderHistory';
+export { OrderDetail } from './OrderDetail';
+export { OrderSuccess } from './OrderSuccess';
+export { OrderFailed } from './OrderFailed';
+>>>>>>> develop
 export const Payment = () => {
     return (
         <div style={{ padding: '4rem', textAlign: 'center' }}>
@@ -45,15 +60,17 @@ export const Payment = () => {
     );
 };
 
-export const Dashboard = () => {
-    return (
-        <div style={{ padding: '4rem', textAlign: 'center' }}>
-            <h1 style={{ fontFamily: 'var(--font-display)', fontSize: '3rem', color: 'var(--color-error)' }}>Dashboard (Nội bộ)</h1>
-            <p>Trang quản trị dành riêng cho nhân viên và admin</p>
-        </div>
-    );
-};
+// export const Dashboard = () => {
+//     return (
+//         <div style={{ padding: '4rem', textAlign: 'center' }}>
+//             <h1 style={{ fontFamily: 'var(--font-display)', fontSize: '3rem', color: 'var(--color-error)' }}>Dashboard (Nội bộ)</h1>
+//             <p>Trang quản trị dành riêng cho nhân viên và admin</p>
+//         </div>
+//     );
+// };
 
+export { Chat } from './Chat';
 export { VerifyEmail } from './VerifyEmail';
 export { ForgotPassword } from './ForgotPassword';
 export { ResetPassword } from './ResetPassword';
+export { HomePage } from './HomePage';

@@ -3,7 +3,7 @@ import type { InternalAxiosRequestConfig } from 'axios';
 import { useAuthStore } from '../store/authStore';
 import type { ApiResponse, AuthTokenResponse, ApiError } from '../types/api';
 
-const baseURL = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8083';
+const baseURL = import.meta.env.VITE_API_BASE_URL || import.meta.env.VITE_AUTH_API_URL || 'http://localhost:8081';
 
 // Main axios instance for general API requests
 export const axiosClient = axios.create({
@@ -48,6 +48,14 @@ const processQueue = (error: unknown, token: string | null = null) => {
 
 axiosClient.interceptors.request.use(
   (config: InternalAxiosRequestConfig) => {
+    const isPublicCatalogEndpoint =
+      config.url?.includes('/catalog/categories') ||
+      config.url?.includes('/catalog/brands');
+
+    if (isPublicCatalogEndpoint) {
+      return config;
+    }
+
     const token = useAuthStore.getState().accessToken;
     if (token && config.headers) {
       config.headers.Authorization = `Bearer ${token}`;

@@ -1,9 +1,48 @@
 import { axiosClient } from './axiosClient';
-import type { OrderResponse } from '../types/order';
-import type { ApiResponse } from '../types/api';
+import { resolveBaseUrl, serviceBase } from './serviceBase';
+import type { CreateOrderRequest, CreateGuestOrderRequest, UpdateOrderStatusRequest, OrderResponse } from '../types/order';
 
 export const orderApi = {
+  createOrder: (payload: CreateOrderRequest) => {
+    return axiosClient.post<unknown, OrderResponse>('/orders', payload, {
+      baseURL: resolveBaseUrl(serviceBase.order),
+    });
+  },
+
+  createGuestOrder: (payload: CreateGuestOrderRequest) => {
+    return axiosClient.post<unknown, OrderResponse>('/orders/guest', payload, {
+      baseURL: resolveBaseUrl(serviceBase.order),
+    });
+  },
+
+  getOrderById: (orderId: string) => {
+    return axiosClient.get<unknown, OrderResponse>(`/orders/${orderId}`, {
+      baseURL: resolveBaseUrl(serviceBase.order),
+    });
+  },
+
   getOrdersByCustomerId: (customerId: string) => {
-    return axiosClient.get<unknown, ApiResponse<OrderResponse[]>>(`/order/customer/${customerId}`);
-  }
+    return axiosClient.get<unknown, OrderResponse[]>(`/orders/customer/${customerId}`, {
+      baseURL: resolveBaseUrl(serviceBase.order),
+    });
+  },
+
+  getAllOrders: () => {
+    return axiosClient.get<unknown, OrderResponse[]>('/orders', {
+      baseURL: resolveBaseUrl(serviceBase.order),
+    });
+  },
+
+  updateOrderStatus: (orderId: string, payload: UpdateOrderStatusRequest) => {
+    return axiosClient.put<unknown, OrderResponse>(`/orders/${orderId}/status`, payload, {
+      baseURL: resolveBaseUrl(serviceBase.order),
+       });
+  },
+  
+  lookupOrder: (orderCode: string, email: string) => {
+    return axiosClient.get<unknown, OrderResponse>('/orders/lookup', {
+      baseURL: resolveBaseUrl(serviceBase.order),
+      params: { orderCode, email },
+    });
+  },
 };

@@ -1,12 +1,54 @@
 import { Link, useNavigate } from 'react-router-dom';
-import { useAuthStore, useIsAdmin, useIsEmployee } from '../../store/authStore';
+import { useEffect, useState } from 'react';
+import { useAuthStore, useIsAdmin, useIsEmployee, useIsCustomer } from '../../store/authStore';
 import { useAuth } from '../../hooks/useAuth';
-import { Search, ShoppingBag, UserCircle } from 'lucide-react';
+import { cartApi } from '../../api/cartApi';
+import { useGuestCartStore } from '../../store/guestCartStore';
+import { Search, ShoppingBag, UserCircle, ClipboardList } from 'lucide-react';
 
 export const Header = () => {
   const navigate = useNavigate();
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
+  const accountId = useAuthStore((state) => state.user?.accountId);
   const { logoutMutation } = useAuth();
+  const isCustomer = useIsCustomer();
+  const guestCartCount = useGuestCartStore((s) => s.items.reduce((sum, i) => sum + i.quantity, 0));
+  const [cartCount, setCartCount] = useState(0);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const loadCartCount = async () => {
+      if (!isAuthenticated || !accountId || !isCustomer) {
+        setCartCount(0);
+        return;
+      }
+      try {
+        const res = await cartApi.getCartByAccountId(accountId);
+        if (isMounted) {
+          const total = res.items?.reduce((sum, item) => sum + item.quantity, 0) ?? 0;
+          setCartCount(total);
+        }
+      } catch {
+        if (isMounted) {
+          setCartCount(0);
+        }
+      }
+    };
+
+    loadCartCount();
+    const handler = () => loadCartCount();
+    window.addEventListener('cart:updated', handler);
+
+    return () => {
+      isMounted = false;
+      window.removeEventListener('cart:updated', handler);
+    };
+  }, [isAuthenticated, accountId, isCustomer]);
+
+  const displayCartCount = isCustomer ? cartCount : (!isAuthenticated ? guestCartCount : 0);
+  const showCartIcon = isCustomer || !isAuthenticated;
+
 
   const isAdmin = useIsAdmin();
   const isEmployee = useIsEmployee();
@@ -33,7 +75,7 @@ export const Header = () => {
             </li>
             {canAccessDashboard && (
               <li className="nav__item">
-                <Link to="/dashboard" className="nav__link" style={{ color: 'var(--color-error)', fontWeight: 'bold' }}>Dashboard Nội Bộ</Link>
+                <Link to="/admin/dashboard" className="nav__link" style={{ color: 'var(--color-error)', fontWeight: 'bold' }}>Dashboard Nội Bộ</Link>
               </li>
             )}
           </ul>
@@ -44,13 +86,20 @@ export const Header = () => {
           <button className="header__action-btn" aria-label="Tìm kiếm" style={{ border: 'none', background: 'none', fontSize: '1.1rem', cursor: 'pointer', padding: '10px' }}>
             <Search size={20} />
           </button>
-          <Link to="/cart" className="header__action-btn" aria-label="Giỏ hàng" style={{ border: 'none', background: 'none', fontSize: '1.1rem', cursor: 'pointer', padding: '10px', position: 'relative' }}>
-            <ShoppingBag size={20} />
-            <span className="badge" style={{ position: 'absolute', top: 0, right: 0, background: 'var(--color-gold)', color: '#fff', fontSize: '10px', padding: '2px 6px', borderRadius: '50%' }}>0</span>
-          </Link>
+          {showCartIcon && (
+            <Link to="/cart" className="header__action-btn" aria-label="Giỏ hàng" style={{ border: 'none', background: 'none', fontSize: '1.1rem', cursor: 'pointer', padding: '10px', position: 'relative' }}>
+              <ShoppingBag size={20} />
+              {displayCartCount > 0 && (
+                <span className="badge" style={{ position: 'absolute', top: 0, right: 0, background: 'var(--color-gold)', color: '#fff', fontSize: '10px', padding: '2px 6px', borderRadius: '50%' }}>{displayCartCount}</span>
+              )}
+            </Link>
+          )}
 
           {isAuthenticated ? (
             <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
+              <Link to="/orders" className="header__action-btn" aria-label="Đơn hàng" style={{ border: 'none', background: 'none', fontSize: '1.1rem', cursor: 'pointer', padding: '10px' }}>
+                <ClipboardList size={20} />
+              </Link>
               <Link to="/profile" className="header__action-btn" aria-label="Tài khoản" style={{ border: 'none', background: 'none', fontSize: '1.1rem', cursor: 'pointer', padding: '10px' }}>
                 <UserCircle size={20} />
               </Link>
@@ -59,9 +108,12 @@ export const Header = () => {
               </button>
             </div>
           ) : (
-            <button onClick={() => navigate('/login')} className="btn btn--primary btn--sm" style={{ padding: '8px 20px', background: 'linear-gradient(135deg, var(--color-gold), var(--color-gold-dark))', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer' }}>
-              Đăng nhập
-            </button>
+            <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
+              <Link to="/order-lookup" className="nav__link" style={{ fontSize: '0.85rem', whiteSpace: 'nowrap' }}>Tra cứu đơn</Link>
+              <button onClick={() => navigate('/login')} className="btn btn--primary btn--sm" style={{ padding: '8px 20px', background: 'linear-gradient(135deg, var(--color-gold), var(--color-gold-dark))', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer' }}>
+                Đăng nhập
+              </button>
+            </div>
           )}
         </div>
       </div>

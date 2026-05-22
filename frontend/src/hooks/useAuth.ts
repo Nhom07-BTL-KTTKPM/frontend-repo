@@ -1,7 +1,10 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { authApi } from '../api/authApi';
+import { employeeApi } from '../api/employeeApi';
+import { userApi } from '../api/userApi';
 import { useAuthStore } from '../store/authStore';
 import type { LoginRequest, RegisterRequest, ForgotPasswordRequest, ResetPasswordRequest, ChangePasswordRequest } from '../types/auth';
+import type { EmployeeProfileInfo, UserProfileInfo } from '../types/api';
 
 export const useAuth = () => {
   const queryClient = useQueryClient();
@@ -9,9 +12,41 @@ export const useAuth = () => {
   const logout = useAuthStore((state) => state.logout);
   const setInitialized = useAuthStore((state) => state.setInitialized);
 
+  const fetchProfileWithUserService = async (): Promise<UserProfileInfo> => {
+    const profileRes = await authApi.getProfile();
+    const authProfile = profileRes.data;
+
+    try {
+      if (authProfile.role === 'CUSTOMER') {
+        const customerRes = await userApi.getCustomerByAccountId(authProfile.accountId);
+        const customer = customerRes.data;
+
+        return {
+          ...authProfile,
+          fullName: customer.fullName ?? authProfile.fullName,
+          phoneNumber: customer.phoneNumber ?? authProfile.phoneNumber,
+          dateOfBirth: customer.dateOfBirth ?? authProfile.dateOfBirth,
+          gender: customer.gender ?? authProfile.gender,
+          skinType: customer.skinType ?? authProfile.skinType,
+          loyaltyPoints: customer.loyaltyPoints ?? authProfile.loyaltyPoints,
+          skinConcerns: customer.skinConcerns ?? authProfile.skinConcerns,
+        };
+      }
+
+      if (authProfile.role === 'EMPLOYEE') {
+        const employeeRes = await employeeApi.getEmployeeByAccountId(authProfile.accountId);
+        return mergeEmployeeProfile(authProfile, employeeRes.data);
+      }
+
+      return authProfile;
+    } catch {
+      return authProfile;
+    }
+  };
+
   const useMeQuery = (enabled = true) => useQuery({
     queryKey: ['auth', 'me'],
-    queryFn: () => authApi.getProfile(),
+    queryFn: () => fetchProfileWithUserService(),
     enabled,
     retry: false,
     staleTime: 5 * 60 * 1000,
@@ -23,8 +58,8 @@ export const useAuth = () => {
       const token = res.data.accessToken;
       try {
         useAuthStore.getState().setAccessToken(token);
-        const profileRes = await authApi.getProfile();
-        setCredentials(profileRes.data, token);
+        const profile = await fetchProfileWithUserService();
+        setCredentials(profile, token);
       } catch {
         logout();
       }
@@ -37,8 +72,8 @@ export const useAuth = () => {
       const token = res.data.accessToken;
       try {
         useAuthStore.getState().setAccessToken(token);
-        const profileRes = await authApi.getProfile();
-        setCredentials(profileRes.data, token);
+        const profile = await fetchProfileWithUserService();
+        setCredentials(profile, token);
       } catch {
         logout();
       }
@@ -92,9 +127,9 @@ export const useAuth = () => {
         useAuthStore.getState().setAccessToken(token);
       }
 
-      const res = await authApi.getProfile();
+      const res = await fetchProfileWithUserService();
       if (token) {
-        setCredentials(res.data, token);
+        setCredentials(res, token);
       }
     } catch {
       logout();
@@ -117,3 +152,20 @@ export const useAuth = () => {
     initSession
   };
 };
+
+function mergeEmployeeProfile(
+  authProfile: UserProfileInfo,
+  employee: EmployeeProfileInfo,
+): UserProfileInfo {
+  return {
+    ...authProfile,
+    fullName: employee.fullName ?? authProfile.fullName,
+    phoneNumber: employee.phoneNumber ?? authProfile.phoneNumber,
+    employeeCode: employee.employeeCode,
+    hireDate: employee.hireDate,
+    createdAt: employee.hireDate ?? authProfile.createdAt,
+    status: employee.active ? 'ACTIVE' : 'DISABLED',
+    skinConcerns: authProfile.skinConcerns,
+    loyaltyPoints: authProfile.loyaltyPoints,
+  };
+}
