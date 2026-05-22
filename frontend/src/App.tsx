@@ -15,7 +15,7 @@ import { AdminRoute } from './routes/AdminRoute';
 import { Login } from './pages/Login';
 import { Register } from './pages/Register';
 import { Profile } from './pages/Profile';
-import { Home, ProductList, ProductDetail, Cart, Checkout, OrderHistory, OrderDetail, OrderSuccess, OrderFailed, Payment, VerifyEmail, ForgotPassword, ResetPassword, CategoryDetailPage, BrandDetailPage, Chat, OrderLookup,Payment, Dashboard, , ResetPassword, OrderHistory} from './pages';
+import { Home, ProductList, ProductDetail, Cart, Checkout, OrderHistory, OrderDetail, OrderSuccess, OrderFailed, Payment, VerifyEmail, ForgotPassword, ResetPassword, CategoryDetailPage, BrandDetailPage, Chat, OrderLookup } from './pages';
 import { Dashboard as AdminDashboard } from './pages/admin/Dashboard';
 import { ProductManagement } from './pages/admin/ProductManagement';
 import { UserManagement} from './pages/admin/UserManagement';

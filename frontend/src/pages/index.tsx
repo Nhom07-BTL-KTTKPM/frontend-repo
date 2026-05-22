@@ -1,46 +1,7 @@
-<<<<<<< HEAD
-import { useNavigate } from 'react-router-dom';
+// Tập trung tất cả các exports từ các file riêng biệt (Theo cấu trúc của develop)
 export { ProductList } from './ProductList';
 export { ProductDetail } from './ProductDetail';
-export { OrderHistory } from './OrderHistory';
-
-export const Home = () => {
-    return (
-        <div style={{ padding: '4rem', textAlign: 'center' }}>
-            <h1 style={{ fontFamily: 'var(--font-display)', fontSize: '3rem', color: 'var(--color-gold)' }}>Home Page</h1>
-            <p>Trang chủ - Trưng bày sản phẩm</p>
-        </div>
-    );
-};
-
-// ProductList and ProductDetail are moved to their own files
-
-export const Cart = () => {
-    const navigate = useNavigate();
-    return (
-        <div style={{ padding: '4rem', textAlign: 'center' }}>
-            <h1 style={{ fontFamily: 'var(--font-display)', fontSize: '3rem', color: 'var(--color-gold)' }}>Giỏ hàng</h1>
-            <p>Danh sách item trong giỏ</p>
-            <button className="btn btn--primary" style={{ marginTop: '1rem', padding: '10px 20px', background: 'var(--color-gold)', border: 'none', borderRadius: '4px', color: 'white', cursor: 'pointer' }} onClick={() => navigate('/checkout')}>Tiến hành thanh toán</button>
-        </div>
-    );
-};
-
-export const Checkout = () => {
-    const navigate = useNavigate();
-    return (
-        <div style={{ padding: '4rem', textAlign: 'center' }}>
-            <h1 style={{ fontFamily: 'var(--font-display)', fontSize: '3rem', color: 'var(--color-gold)' }}>Thanh toán</h1>
-            <p>Nhập thông tin giao hàng</p>
-            <button className="btn btn--primary" style={{ marginTop: '1rem', padding: '10px 20px', background: 'var(--color-gold)', border: 'none', borderRadius: '4px', color: 'white', cursor: 'pointer' }} onClick={() => navigate('/payment')}>Sang cổng giả lập Payment</button>
-        </div>
-    );
-};
-
-=======
-export { ProductList } from './ProductList';
-export { ProductDetail } from './ProductDetail';
-export { HomePage as Home } from './HomePage';
+export { HomePage as Home, HomePage } from './HomePage';
 export { CategoryDetailPage } from './CategoryDetailPage';
 export { BrandDetailPage } from './BrandDetailPage';
 export { Cart } from './Cart';
@@ -50,7 +11,12 @@ export { OrderHistory } from './OrderHistory';
 export { OrderDetail } from './OrderDetail';
 export { OrderSuccess } from './OrderSuccess';
 export { OrderFailed } from './OrderFailed';
->>>>>>> develop
+export { Chat } from './Chat';
+export { VerifyEmail } from './VerifyEmail';
+export { ForgotPassword } from './ForgotPassword';
+export { ResetPassword } from './ResetPassword';
+
+// Component giả lập chưa được tách file
 export const Payment = () => {
     return (
         <div style={{ padding: '4rem', textAlign: 'center' }}>
@@ -60,6 +26,7 @@ export const Payment = () => {
     );
 };
 
+// Component nội bộ đang bị ẩn
 // export const Dashboard = () => {
 //     return (
 //         <div style={{ padding: '4rem', textAlign: 'center' }}>
@@ -68,9 +35,3 @@ export const Payment = () => {
 //         </div>
 //     );
 // };
-
-export { Chat } from './Chat';
-export { VerifyEmail } from './VerifyEmail';
-export { ForgotPassword } from './ForgotPassword';
-export { ResetPassword } from './ResetPassword';
-export { HomePage } from './HomePage';
