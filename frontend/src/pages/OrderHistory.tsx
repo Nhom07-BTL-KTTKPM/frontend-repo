@@ -68,7 +68,8 @@ export const OrderHistory = () => {
     const [orderList, setOrderList] = useState<OrderResponse[]>([]);
     const [loading, setLoading] = useState(true);
     // Merge state review từ nhánh HEAD
-    const [reviewingItem, setReviewingItem] = useState<{ productId: string, orderItemId: string } | null>(null);
+    const [reviewingItem, setReviewingItem] = useState<{ productId: string, orderItemId: string, customerId: string } | null>(null);
+    const [customerId, setCustomerId] = useState<string>('');
 
     useEffect(() => {
         const fetchOrders = async () => {
@@ -83,6 +84,7 @@ export const OrderHistory = () => {
                     toast.error('Không tìm thấy thông tin khách hàng');
                     return;
                 }
+                setCustomerId(cId);
 
                 // 2. Get orders
                 const ordersRes = await orderApi.getOrdersByCustomerId(cId);
@@ -157,8 +159,9 @@ export const OrderHistory = () => {
                                                 <button 
                                                     style={{ padding: '6px 12px', borderRadius: '6px', background: 'var(--color-gold)', color: '#fff', border: 'none', cursor: 'pointer', fontSize: '0.85rem' }}
                                                     onClick={() => setReviewingItem({ 
-                                                        productId: (item as any).productVariantId || (item as any).productId || '', 
-                                                        orderItemId: item.id 
+                                                        productId: (item as any).productId || (item as any).productVariantId || '', 
+                                                        orderItemId: item.id,
+                                                        customerId: customerId
                                                     })}
                                                 >
                                                     Đánh giá
@@ -201,7 +204,8 @@ export const OrderHistory = () => {
                     <div style={{ width: '100%', maxWidth: 600 }}>
                         <ReviewForm 
                             productId={reviewingItem.productId} 
-                            orderItemId={reviewingItem.orderItemId} 
+                            orderItemId={reviewingItem.orderItemId}
+                            customerId={reviewingItem.customerId}
                             onCancel={() => setReviewingItem(null)}
                             onSuccess={() => {
                                 toast.success('Cảm ơn bạn đã đánh giá!');

@@ -6,16 +6,10 @@ import { serviceBase } from './serviceBase';
 import type { ApiError } from '../types/api';
 export const uploadApi = {
   uploadFile: async (file: File): Promise<string> => {
-    const formData = new FormData();
-    formData.append('file', file);
-    
-    // Upload service trả về URL dạng string trong ApiResponse.data
-    const response = await axiosClient.post<unknown, ApiResponse<string>>('/upload', formData, {
-      headers: {
-        'Content-Type': 'multipart/form-data',
-      },
-    });
-    return response.data;
+    // Delegate to uploadSingleMedia with purpose COMMENT
+    // uploadSingleMedia returns MediaUploadResult through the interceptor
+    const result: any = await uploadSingleMedia(file, 'COMMENT');
+    return result.url;
   }
 };
 

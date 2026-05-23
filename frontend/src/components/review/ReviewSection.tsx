@@ -12,7 +12,7 @@ export const ReviewSection: React.FC<ReviewSectionProps> = ({ productId }) => {
 
   const { data: pageData, isLoading, error } = useQuery({
     queryKey: ['reviews', productId, page],
-    queryFn: () => reviewApi.getReviewsByProductId(productId, page, size).then(res => res.data),
+    queryFn: () => reviewApi.getReviewsByProductId(productId, page, size),
     enabled: !!productId,
   });
 

@@ -8,11 +8,12 @@ import type { ReviewRequest } from '../../types/review';
 interface ReviewFormProps {
   productId: string;
   orderItemId: string;
+  customerId: string;
   onSuccess?: () => void;
   onCancel?: () => void;
 }
 
-export const ReviewForm: React.FC<ReviewFormProps> = ({ productId, orderItemId, onSuccess, onCancel }) => {
+export const ReviewForm: React.FC<ReviewFormProps> = ({ productId, orderItemId, customerId, onSuccess, onCancel }) => {
   const queryClient = useQueryClient();
   const { user } = useAuthStore();
   
@@ -46,8 +47,8 @@ export const ReviewForm: React.FC<ReviewFormProps> = ({ productId, orderItemId, 
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!user?.accountId) {
-      setError('Vui lòng đăng nhập để đánh giá');
+    if (!customerId) {
+      setError('Không tìm thấy thông tin khách hàng để đánh giá');
       return;
     }
 
@@ -62,10 +63,9 @@ export const ReviewForm: React.FC<ReviewFormProps> = ({ productId, orderItemId, 
         imageUrls.push(url);
       }
 
-      // Create review
+      // Create review - productId is resolved by backend from orderItem's variant
       const request: ReviewRequest = {
-        productId,
-        customerId: user.accountId, // Assuming accountId maps to customerId here, or we need to fetch customer info
+        customerId,
         orderItemId,
         rating,
         comment,

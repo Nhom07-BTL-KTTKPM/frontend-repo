@@ -11,7 +11,7 @@ export interface ReviewResponse {
 }
 
 export interface ReviewRequest {
-  productId: string;
+  productId?: string;
   customerId: string;
   orderItemId: string;
   rating: number;
