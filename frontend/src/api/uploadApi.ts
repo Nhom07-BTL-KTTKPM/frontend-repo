@@ -1,7 +1,17 @@
+import { axiosClient } from './axiosClient';
+import type { ApiResponse } from '../types/api';
 import axios, { AxiosError } from 'axios';
 import { useAuthStore } from '../store/authStore';
 import { serviceBase } from './serviceBase';
 import type { ApiError } from '../types/api';
+export const uploadApi = {
+  uploadFile: async (file: File): Promise<string> => {
+    // Delegate to uploadSingleMedia with purpose COMMENT
+    // uploadSingleMedia returns MediaUploadResult through the interceptor
+    const result: any = await uploadSingleMedia(file, 'COMMENT');
+    return result.url;
+  }
+};
 
 export type MediaUploadPurpose = 'AVATAR' | 'COMMENT' | 'PRODUCT';
 

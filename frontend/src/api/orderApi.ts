@@ -1,6 +1,5 @@
 import { axiosClient } from './axiosClient';
 import { resolveBaseUrl, serviceBase } from './serviceBase';
-
 import type { CreateOrderRequest, CreateGuestOrderRequest, UpdateOrderStatusRequest, OrderResponse } from '../types/order';
 
 export const orderApi = {

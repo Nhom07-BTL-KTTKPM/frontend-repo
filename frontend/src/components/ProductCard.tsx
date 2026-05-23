@@ -22,7 +22,8 @@ export const ProductCard: React.FC<Props> = ({ product }) => {
       display: 'flex',
       flexDirection: 'column'
     }}>
-      <Link to={`/product/${product.slug}`} style={{ textDecoration: 'none', color: 'inherit', flex: 1, display: 'flex', flexDirection: 'column' }}>
+      {/* Fallback sử dụng slug, nếu không có sẽ tự lùi về productId */}
+      <Link to={`/product/${product.slug || product.productId}`} style={{ textDecoration: 'none', color: 'inherit', flex: 1, display: 'flex', flexDirection: 'column' }}>
         <div style={{ height: 160, display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', borderRadius: 4, marginBottom: 8 }}>
           {image ? <img src={image} alt={product.name} style={{ maxWidth: '100%', maxHeight: '100%' }} /> : <div style={{ color: '#999' }}>No image</div>}
         </div>
@@ -67,6 +68,13 @@ export const ProductCard: React.FC<Props> = ({ product }) => {
         onMouseLeave={(e) => {
           e.currentTarget.style.transform = 'scale(1)';
           e.currentTarget.style.boxShadow = '0 2px 8px rgba(0,0,0,0.1)';
+        }}
+        onClick={(e) => {
+          // Khuyến nghị: Thêm preventDefault/stopPropagation để khi bấm 
+          // nút giỏ hàng không bị kích hoạt chuyển trang của thẻ Link
+          e.preventDefault();
+          e.stopPropagation();
+          // Logic xử lý thêm vào giỏ hàng
         }}
         title="Thêm vào giỏ hàng"
       >

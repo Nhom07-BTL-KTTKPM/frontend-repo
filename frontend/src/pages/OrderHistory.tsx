@@ -6,6 +6,7 @@ import { userApi } from '../api/userApi';
 import type { OrderResponse, OrderStatus, PaymentStatus } from '../types/order';
 import { toast } from 'sonner';
 import { Package, Clock, CheckCircle, Truck, XCircle } from 'lucide-react';
+import { ReviewForm } from '../components/review/ReviewForm';
 
 const formatCurrency = (value?: number) => {
     if (value === null || value === undefined) {
@@ -66,6 +67,9 @@ export const OrderHistory = () => {
     const { user } = useAuthStore();
     const [orderList, setOrderList] = useState<OrderResponse[]>([]);
     const [loading, setLoading] = useState(true);
+    // Merge state review từ nhánh HEAD
+    const [reviewingItem, setReviewingItem] = useState<{ productId: string, orderItemId: string, customerId: string } | null>(null);
+    const [customerId, setCustomerId] = useState<string>('');
 
     useEffect(() => {
         const fetchOrders = async () => {
@@ -80,6 +84,7 @@ export const OrderHistory = () => {
                     toast.error('Không tìm thấy thông tin khách hàng');
                     return;
                 }
+                setCustomerId(cId);
 
                 // 2. Get orders
                 const ordersRes = await orderApi.getOrdersByCustomerId(cId);
@@ -94,6 +99,10 @@ export const OrderHistory = () => {
 
         fetchOrders();
     }, [user]);
+
+    if (!user) {
+        return <div style={{ padding: '4rem 0', textAlign: 'center' }}>Vui lòng đăng nhập để xem đơn hàng.</div>;
+    }
 
     if (loading) {
         return <div style={{ padding: '4rem', textAlign: 'center' }}>Đang tải lịch sử đơn hàng...</div>;
@@ -141,8 +150,23 @@ export const OrderHistory = () => {
                                             {item.variantName && <p style={{ margin: '2px 0', fontSize: '0.8rem', color: 'var(--color-gray-500)' }}>Phân loại: {item.variantName}</p>}
                                             <p style={{ margin: 0, fontSize: '0.85rem' }}>x{item.quantity}</p>
                                         </div>
-                                        <div style={{ fontWeight: 500 }}>
-                                            {formatCurrency(item.totalPrice)}
+                                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '8px' }}>
+                                            <div style={{ fontWeight: 500 }}>
+                                                {formatCurrency(item.totalPrice)}
+                                            </div>
+                                            {/* Merge nút Đánh giá từ HEAD */}
+                                            {order.status === 'DELIVERED' && (
+                                                <button 
+                                                    style={{ padding: '6px 12px', borderRadius: '6px', background: 'var(--color-gold)', color: '#fff', border: 'none', cursor: 'pointer', fontSize: '0.85rem' }}
+                                                    onClick={() => setReviewingItem({ 
+                                                        productId: (item as any).productId || (item as any).productVariantId || '', 
+                                                        orderItemId: item.id,
+                                                        customerId: customerId
+                                                    })}
+                                                >
+                                                    Đánh giá
+                                                </button>
+                                            )}
                                         </div>
                                     </div>
                                 ))}
@@ -160,7 +184,7 @@ export const OrderHistory = () => {
                                     </div>
                                     <Link
                                         to={`/orders/${order.id}`}
-                                        style={{ padding: '8px 14px', borderRadius: '6px', background: 'var(--color-gold)', color: '#fff', textDecoration: 'none', fontSize: '0.85rem', fontWeight: 600 }}
+                                        style={{ padding: '8px 14px', borderRadius: '6px', background: '#f3f4f6', color: '#374151', textDecoration: 'none', fontSize: '0.85rem', fontWeight: 600 }}
                                     >
                                         Xem chi tiết
                                     </Link>
@@ -170,6 +194,29 @@ export const OrderHistory = () => {
                     );
                 })}
             </div>
+
+            {/* Merge Modal Đánh Giá từ nhánh HEAD */}
+            {reviewingItem && (
+                <div style={{
+                    position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh',
+                    background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000
+                }}>
+                    <div style={{ width: '100%', maxWidth: 600 }}>
+                        <ReviewForm 
+                            productId={reviewingItem.productId} 
+                            orderItemId={reviewingItem.orderItemId}
+                            customerId={reviewingItem.customerId}
+                            onCancel={() => setReviewingItem(null)}
+                            onSuccess={() => {
+                                toast.success('Cảm ơn bạn đã đánh giá!');
+                                setReviewingItem(null);
+                            }}
+                        />
+                    </div>
+                </div>
+            )}
         </div>
     );
 };
+
+export default OrderHistory;
