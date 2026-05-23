@@ -3,6 +3,7 @@ import { resolveBaseUrl, serviceBase } from './serviceBase';
 import type {
   CreateOrderRequest,
   CreateGuestOrderRequest,
+  UpdateOrderStatusRequest,
   OrderResponse,
   VoucherResponse,
   VoucherValidationRequest,
@@ -34,6 +35,18 @@ export const orderApi = {
     });
   },
 
+  getAllOrders: () => {
+    return axiosClient.get<unknown, OrderResponse[]>('/orders', {
+      baseURL: resolveBaseUrl(serviceBase.order),
+    });
+  },
+
+  updateOrderStatus: (orderId: string, payload: UpdateOrderStatusRequest) => {
+    return axiosClient.put<unknown, OrderResponse>(`/orders/${orderId}/status`, payload, {
+      baseURL: resolveBaseUrl(serviceBase.order),
+       });
+  },
+  
   lookupOrder: (orderCode: string, email: string) => {
     return axiosClient.get<unknown, OrderResponse>('/orders/lookup', {
       baseURL: resolveBaseUrl(serviceBase.order),

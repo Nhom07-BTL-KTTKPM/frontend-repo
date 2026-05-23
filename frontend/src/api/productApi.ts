@@ -1,6 +1,7 @@
 import { axiosClient } from './axiosClient';
-import type { PageResponse } from '../types/api';
 import type { Product } from '../types/product';
+import type { PageResponse } from '../types/api';
+
 
 const catalogProductsPath = '/catalog/products';
 

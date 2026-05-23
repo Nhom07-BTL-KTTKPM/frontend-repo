@@ -8,6 +8,7 @@ import { useAuthStore } from '../store/authStore';
 import { useCustomerId } from '../hooks/useCustomerId';
 import { useGuestCartStore } from '../store/guestCartStore';
 import type { Product, ProductVariant } from '../types/product';
+import { ReviewSection } from '../components/review/ReviewSection';
 
 export const ProductDetail: React.FC = () => {
   const { slug } = useParams<{ slug: string }>();
@@ -71,6 +72,9 @@ export const ProductDetail: React.FC = () => {
     }
   };
 
+  // Lấy ID của sản phẩm để truyền cho ReviewSection (ưu tiên productId, fallback về id)
+  const actualProductId = product.productId || product.id;
+
   return (
     <div style={{ padding: '2rem', backgroundColor: '#f9f7f4' }}>
       {/* Breadcrumb Navigation */}
@@ -87,7 +91,7 @@ export const ProductDetail: React.FC = () => {
       </div>
 
       {/* Main Layout */}
-      <div style={{ display: 'flex', gap: '3rem', backgroundColor: 'white', padding: '2rem', borderRadius: '12px' }}>
+      <div style={{ display: 'flex', gap: '3rem', backgroundColor: 'white', padding: '2rem', borderRadius: '12px', marginBottom: '2rem' }}>
         {/* Left: Product Image */}
         <div style={{ width: '400px', flexShrink: 0 }}>
           <div style={{ background: 'white', padding: '1rem', borderRadius: '8px', overflow: 'hidden' }}>
@@ -199,6 +203,13 @@ export const ProductDetail: React.FC = () => {
           )}
         </div>
       </div>
+
+      {/* Tích hợp Review Section từ nhánh HEAD */}
+      {actualProductId && (
+        <div style={{ backgroundColor: 'white', padding: '2rem', borderRadius: '12px' }}>
+          <ReviewSection productId={actualProductId as string} />
+        </div>
+      )}
     </div>
   );
 };

@@ -7,7 +7,8 @@ import type { Product } from '../types/product';
 export const ProductList: React.FC = () => {
   const { data, isLoading, error } = useQuery({
     queryKey: ['products'],
-    queryFn: () => productApi.getProducts().then((res) => res.content ?? []),
+    // Ưu tiên lấy res.content từ develop (chuẩn Spring Boot Page), fallback về res.data của HEAD
+    queryFn: () => productApi.getProducts().then((res: any) => res.content ?? res.data ?? []),
   });
 
   return (
@@ -19,7 +20,8 @@ export const ProductList: React.FC = () => {
 
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 16, marginTop: 16 }}>
         {data && data.map((p: Product) => (
-          <ProductCard key={p.id} product={p} />
+          // Dùng fallback id || productId cho an toàn
+          <ProductCard key={p.id || p.productId} product={p} />
         ))}
       </div>
     </div>

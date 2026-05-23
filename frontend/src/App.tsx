@@ -15,12 +15,13 @@ import { AdminRoute } from './routes/AdminRoute';
 import { Login } from './pages/Login';
 import { Register } from './pages/Register';
 import { Profile } from './pages/Profile';
-import { Home, ProductList, ProductDetail, Cart, Checkout, OrderHistory, OrderDetail, OrderSuccess, OrderFailed, Payment, VerifyEmail, ForgotPassword, ResetPassword, CategoryDetailPage, BrandDetailPage, Chat, OrderLookup} from './pages';
+import { Home, ProductList, ProductDetail, Cart, Checkout, OrderHistory, OrderDetail, OrderSuccess, OrderFailed, Payment, VerifyEmail, ForgotPassword, ResetPassword, CategoryDetailPage, BrandDetailPage, Chat, OrderLookup } from './pages';
 import { Dashboard as AdminDashboard } from './pages/admin/Dashboard';
 import { ProductManagement } from './pages/admin/ProductManagement';
-import { UserManagement } from './pages/admin/UserManagement';
+import { UserManagement} from './pages/admin/UserManagement';
+import { OrderManagement } from './pages/admin/OrderManagement';
 import { ProductCreatePage } from './pages/admin/product-create/ProductCreatePage';
-
+import { VoucherManagement } from './pages/admin/VoucherManagement';
 
 function App() {
   const { initSession } = useAuth();
@@ -77,6 +78,7 @@ function App() {
             <Route path="/ai-chat" element={<Chat />} />
             <Route path="/orders" element={<OrderHistory />} />
             <Route path="/orders/:orderId" element={<OrderDetail />} />
+            <Route path="/orders" element={<OrderHistory />} />
           </Route>
 
           {/* Employee/Admin Routes */}
@@ -91,6 +93,8 @@ function App() {
               <Route path="dashboard" element={<AdminDashboard />} />
               <Route path="products" element={<ProductManagement />} />
               <Route path="products/new" element={<ProductCreatePage />} />
+              <Route path="orders" element={<OrderManagement />} />
+              <Route path="vouchers" element={<VoucherManagement />} />
               <Route path="users" element={<UserManagement />} />
               <Route path="profile" element={<Profile />} />
             </Route>

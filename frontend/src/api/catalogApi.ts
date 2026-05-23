@@ -16,6 +16,12 @@ export const catalogApi = {
     });
   },
 
+  getProductById: (id: string) => {
+    return axiosClient.get<unknown, CatalogProduct>(`/catalog/products/${id}`, {
+      baseURL: resolveBaseUrl(serviceBase.catalog),
+    });
+  },
+
   getVariantById: (variantId: string) => {
     return axiosClient.get<unknown, CatalogProductVariant>(`/catalog/variants/${variantId}`, {
       baseURL: resolveBaseUrl(serviceBase.catalog),

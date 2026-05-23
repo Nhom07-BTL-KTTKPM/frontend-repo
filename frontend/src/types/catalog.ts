@@ -27,6 +27,37 @@ export interface BrandResponse {
 export interface Category extends CategoryResponse {}
 export interface Brand extends BrandResponse {}
 
+export interface CategoryRequest {
+  name: string;
+  slug: string;
+  description?: string;
+  imageUrl?: string;
+  parentId?: string | null;
+  isActive: boolean;
+}
+
+export interface CategoryStatusRequest {
+  isActive: boolean;
+}
+
+export interface BrandRequest {
+  name: string;
+  slug: string;
+  description?: string;
+  logoUrl?: string;
+  originCountry?: string;
+  websiteUrl?: string;
+  isActive: boolean;
+}
+
+export interface BrandStatusRequest {
+  isActive: boolean;
+}
+
+export interface ProductStatusRequest {
+  isActive: boolean;
+}
+
 // Lightweight projections returned by /summary endpoints
 export interface BrandSummaryResponse {
   id: string;
@@ -57,6 +88,16 @@ export interface CatalogProduct {
   description?: string;
   minPrice?: number;
   maxPrice?: number;
+  averageRating?: number;
+  totalReviews?: number;
+  totalSold?: number;
+  isActive?: boolean;
+  isFeatured?: boolean;
+  categoryName?: string;
+  brandName?: string;
+  brandLogoUrl?: string;
+  createdAt?: string;
+  updatedAt?: string;
   images?: CatalogProductImage[];
   variants?: CatalogProductVariant[];
 }

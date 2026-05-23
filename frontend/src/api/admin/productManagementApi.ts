@@ -1,7 +1,7 @@
 import { axiosClient } from '../axiosClient';
 import { resolveBaseUrl, serviceBase } from '../serviceBase';
 import type { PageResponse } from '../../types/api';
-import type { CatalogProduct, CatalogProductCreateRequest, CatalogProductDetail } from '../../types/catalog';
+import type { CatalogProduct, CatalogProductCreateRequest, CatalogProductDetail, ProductStatusRequest } from '../../types/catalog';
 
 export interface UpdateProductPayload {
   name?: string;
@@ -27,8 +27,35 @@ export const productManagementApi = {
     });
   },
 
+  getAllProducts: (params?: Record<string, unknown>) => {
+    return axiosClient.get<unknown, PageResponse<CatalogProduct>>(`${catalogProductsPath}/admin`, {
+      baseURL: resolveBaseUrl(serviceBase.catalog),
+      params,
+    });
+  },
+
+  getBestSellingProducts: (params?: Record<string, unknown>) => {
+    return axiosClient.get<unknown, PageResponse<CatalogProduct>>(`${catalogProductsPath}/best-selling`, {
+      baseURL: resolveBaseUrl(serviceBase.catalog),
+      params,
+    });
+  },
+
+  getTopRatedProducts: (params?: Record<string, unknown>) => {
+    return axiosClient.get<unknown, PageResponse<CatalogProduct>>(`${catalogProductsPath}/top-rated`, {
+      baseURL: resolveBaseUrl(serviceBase.catalog),
+      params,
+    });
+  },
+
   updateProduct: (productId: string, payload: UpdateProductPayload) => {
     return axiosClient.put<unknown, CatalogProduct>(`${catalogProductsPath}/${productId}`, payload, {
+      baseURL: resolveBaseUrl(serviceBase.catalog),
+    });
+  },
+
+  changeProductStatus: (productId: string, payload: ProductStatusRequest) => {
+    return axiosClient.patch<unknown, CatalogProduct>(`${catalogProductsPath}/${productId}/status`, payload, {
       baseURL: resolveBaseUrl(serviceBase.catalog),
     });
   },

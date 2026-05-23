@@ -1,4 +1,13 @@
-export type OrderStatus = 'PENDING' | 'CONFIRMED' | 'PROCESSING' | 'SHIPPING' | 'DELIVERED' | 'CANCELLED' | 'REFUNDED';
+export type OrderStatus = 
+  | 'PENDING' 
+  | 'CONFIRMED' 
+  | 'PROCESSING' 
+  | 'SHIPPED' // Từ nhánh HEAD
+  | 'SHIPPING' // Từ nhánh develop
+  | 'DELIVERED' 
+  | 'CANCELLED' 
+  | 'REFUNDED' 
+  | 'DELIVERY_FAILED';
 
 export type PaymentMethod = 'COD' | 'VNPAY' | 'BANK_TRANSFER';
 
@@ -49,6 +58,10 @@ export interface OrderItemResponse {
   quantity: number;
   unitPrice: number;
   totalPrice: number;
+  // Giữ lại các field cũ của HEAD dạng optional để tránh lỗi ts ở các component chưa cập nhật
+  orderId?: string; 
+  price?: number; 
+  productId?: string; // Dành cho logic ReviewForm của nhánh HEAD
 }
 
 export interface OrderResponse {
@@ -62,16 +75,20 @@ export interface OrderResponse {
   voucherCode?: string | null;
   shippingFee: number;
   total: number;
-  paymentMethod: PaymentMethod;
+  paymentMethod: PaymentMethod | string;
   paymentStatus: PaymentStatus;
   recipientName: string;
   shippingAddress: string;
   email: string;
   phone: string;
   note?: string;
+  cancelReason?: string;
   orderDate: string;
   updatedAt: string;
   items: OrderItemResponse[];
+  // Giữ lại các field cũ của HEAD dạng optional
+  totalAmount?: number;
+  createdAt?: string;
 }
 
 export interface CreateOrderRequest {
@@ -85,6 +102,11 @@ export interface CreateOrderRequest {
   selectedItemIds: string[];
   voucherCode?: string;
   shippingFee?: number;
+}
+
+export interface UpdateOrderStatusRequest {
+  status: OrderStatus;
+  cancelReason?: string;
 }
 
 export interface GuestOrderItem {

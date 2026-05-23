@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState, type FormEvent, type ReactNode } from 'react';
-import { Calendar, CheckCircle, Edit3, Mail, Phone, User, XCircle } from 'lucide-react';
+import { Camera, Calendar, CheckCircle, Edit3, Mail, Phone, User, XCircle } from 'lucide-react';
 import { toast } from 'sonner';
 import type { EmployeeProfileInfo, EmployeeUpdateRequest, UserProfileInfo } from '../../types/api';
 
@@ -7,9 +7,10 @@ type EmployeeProfileProps = {
   user: UserProfileInfo;
   employee: EmployeeProfileInfo;
   onSave: (data: EmployeeUpdateRequest) => Promise<void>;
+  onEditAvatar?: () => void;
 };
 
-export const EmployeeProfile = ({ user, employee, onSave }: EmployeeProfileProps) => {
+export const EmployeeProfile = ({ user, employee, onSave, onEditAvatar }: EmployeeProfileProps) => {
   const [isEditing, setIsEditing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
@@ -97,8 +98,19 @@ export const EmployeeProfile = ({ user, employee, onSave }: EmployeeProfileProps
           padding: '5px',
           boxShadow: '0 8px 20px rgba(184, 134, 11, 0.2)',
           border: '3px solid #D4AF37', // Màu vàng Gold mã chuẩn
-          flexShrink: 0
+          flexShrink: 0,
+          position: 'relative'
         }}>
+          {onEditAvatar ? (
+            <button
+              type="button"
+              onClick={onEditAvatar}
+              aria-label="Đổi ảnh đại diện"
+              style={{ position: 'absolute', top: 'auto', bottom: '-4px', right: '-4px', width: '32px', height: '32px', borderRadius: '50%', border: '2px solid #fff', background: 'linear-gradient(135deg, #D4AF37, #B8860B)', color: '#fff', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 6px 14px rgba(184, 134, 11, 0.28)', cursor: 'pointer' }}
+            >
+              <Camera size={16} />
+            </button>
+          ) : null}
           {user.avatarUrl ? (
             <img src={user.avatarUrl} alt="Avatar" style={{ width: '100%', height: '100%', borderRadius: '50%', objectFit: 'cover' }} />
           ) : (
