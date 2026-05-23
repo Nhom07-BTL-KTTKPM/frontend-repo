@@ -7,6 +7,7 @@ export interface ReviewResponse {
   rating: number;
   comment: string;
   imageUrls: string[];
+  isEdited: boolean;
   createdAt: string;
 }
 

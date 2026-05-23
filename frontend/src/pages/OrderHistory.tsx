@@ -3,7 +3,9 @@ import { Link } from 'react-router-dom';
 import { useAuthStore } from '../store/authStore';
 import { orderApi } from '../api/orderApi';
 import { userApi } from '../api/userApi';
+import { reviewApi } from '../api/reviewApi';
 import type { OrderResponse, OrderStatus, PaymentStatus } from '../types/order';
+import type { ReviewResponse } from '../types/review';
 import { toast } from 'sonner';
 import { Package, Clock, CheckCircle, Truck, XCircle } from 'lucide-react';
 import { ReviewForm } from '../components/review/ReviewForm';
@@ -68,8 +70,9 @@ export const OrderHistory = () => {
     const [orderList, setOrderList] = useState<OrderResponse[]>([]);
     const [loading, setLoading] = useState(true);
     // Merge state review từ nhánh HEAD
-    const [reviewingItem, setReviewingItem] = useState<{ productId: string, orderItemId: string, customerId: string } | null>(null);
+    const [reviewingItem, setReviewingItem] = useState<{ productId: string, orderItemId: string, customerId: string, existingReview?: ReviewResponse } | null>(null);
     const [customerId, setCustomerId] = useState<string>('');
+    const [customerReviews, setCustomerReviews] = useState<ReviewResponse[]>([]);
 
     useEffect(() => {
         const fetchOrders = async () => {
@@ -90,6 +93,15 @@ export const OrderHistory = () => {
                 const ordersRes = await orderApi.getOrdersByCustomerId(cId);
                 const data = ((ordersRes as unknown as { data?: OrderResponse[] }).data ?? ordersRes) as OrderResponse[];
                 setOrderList(Array.isArray(data) ? data : []);
+
+                // 3. Get customer reviews
+                try {
+                    const reviewsRes = await reviewApi.getReviewsByCustomerId(cId);
+                    const revData = ((reviewsRes as unknown as { data?: ReviewResponse[] }).data ?? reviewsRes) as ReviewResponse[];
+                    setCustomerReviews(Array.isArray(revData) ? revData : []);
+                } catch {
+                    // Ignore review error if it fails
+                }
             } catch {
                 toast.error('Lỗi khi tải danh sách đơn hàng');
             } finally {
@@ -155,18 +167,36 @@ export const OrderHistory = () => {
                                                 {formatCurrency(item.totalPrice)}
                                             </div>
                                             {/* Merge nút Đánh giá từ HEAD */}
-                                            {order.status === 'DELIVERED' && (
-                                                <button 
-                                                    style={{ padding: '6px 12px', borderRadius: '6px', background: 'var(--color-gold)', color: '#fff', border: 'none', cursor: 'pointer', fontSize: '0.85rem' }}
-                                                    onClick={() => setReviewingItem({ 
-                                                        productId: (item as any).productId || (item as any).productVariantId || '', 
-                                                        orderItemId: item.id,
-                                                        customerId: customerId
-                                                    })}
-                                                >
-                                                    Đánh giá
-                                                </button>
-                                            )}
+                                            {order.status === 'DELIVERED' && (() => {
+                                                const review = customerReviews.find(r => r.orderItemId === item.id);
+                                                const isReviewed = !!review;
+                                                const isEdited = review?.isEdited === true;
+
+                                                if (isReviewed && isEdited) {
+                                                    return (
+                                                        <button 
+                                                            style={{ padding: '6px 12px', borderRadius: '6px', background: 'var(--color-gray-300)', color: '#fff', border: 'none', cursor: 'not-allowed', fontSize: '0.85rem' }}
+                                                            disabled
+                                                        >
+                                                            Đã đánh giá
+                                                        </button>
+                                                    );
+                                                }
+
+                                                return (
+                                                    <button 
+                                                        style={{ padding: '6px 12px', borderRadius: '6px', background: isReviewed ? '#3b82f6' : 'var(--color-gold)', color: '#fff', border: 'none', cursor: 'pointer', fontSize: '0.85rem' }}
+                                                        onClick={() => setReviewingItem({ 
+                                                            productId: (item as any).productId || (item as any).productVariantId || '', 
+                                                            orderItemId: item.id,
+                                                            customerId: customerId,
+                                                            existingReview: review
+                                                        })}
+                                                    >
+                                                        {isReviewed ? 'Chỉnh sửa' : 'Đánh giá'}
+                                                    </button>
+                                                );
+                                            })()}
                                         </div>
                                     </div>
                                 ))}
@@ -206,10 +236,16 @@ export const OrderHistory = () => {
                             productId={reviewingItem.productId} 
                             orderItemId={reviewingItem.orderItemId}
                             customerId={reviewingItem.customerId}
+                            existingReview={reviewingItem.existingReview}
                             onCancel={() => setReviewingItem(null)}
                             onSuccess={() => {
-                                toast.success('Cảm ơn bạn đã đánh giá!');
+                                toast.success(reviewingItem.existingReview ? 'Cập nhật đánh giá thành công!' : 'Cảm ơn bạn đã đánh giá!');
                                 setReviewingItem(null);
+                                // Refresh customer reviews
+                                reviewApi.getReviewsByCustomerId(customerId).then(res => {
+                                    const revData = ((res as unknown as { data?: ReviewResponse[] }).data ?? res) as ReviewResponse[];
+                                    setCustomerReviews(Array.isArray(revData) ? revData : []);
+                                }).catch(() => {});
                             }}
                         />
                     </div>
