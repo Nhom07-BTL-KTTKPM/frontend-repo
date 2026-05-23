@@ -48,18 +48,21 @@ const processQueue = (error: unknown, token: string | null = null) => {
 
 axiosClient.interceptors.request.use(
   (config: InternalAxiosRequestConfig) => {
-    // Allow unauthenticated access for public catalog GET endpoints only.
+    // Allow unauthenticated access only for public catalog GET endpoints.
     const method = config.method?.toLowerCase() || 'get';
     const isCatalogPath =
       config.url?.includes('/catalog/categories') ||
       config.url?.includes('/catalog/brands') ||
       config.url?.includes('/catalog/products');
+    const isAdminCatalogGet = config.url?.includes('/catalog/products/admin');
 
-    if (method === 'get' && isCatalogPath) {
+    if (method === 'get' && isCatalogPath && !isAdminCatalogGet) {
       return config;
     }
 
-    const token = useAuthStore.getState().accessToken;
+    const token =
+      useAuthStore.getState().accessToken ||
+      (typeof window !== 'undefined' ? window.localStorage.getItem('auth-access-token') : null);
     if (token && config.headers) {
       config.headers.Authorization = `Bearer ${token}`;
     }
