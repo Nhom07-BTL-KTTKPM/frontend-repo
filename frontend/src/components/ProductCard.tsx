@@ -128,8 +128,8 @@ export const ProductCard: React.FC<Props> = ({ product }) => {
         </h3>
         <div style={{ color: 'var(--color-gold)', fontWeight: 700, marginTop: 'auto' }}>
           {showPriceRange
-            ? `${minPrice.toLocaleString()} đ - ${maxPrice.toLocaleString()} đ`
-            : `${(minPrice || maxPrice).toLocaleString()} đ`}
+            ? `${minPrice.toLocaleString('vi-VN')}đ - ${maxPrice.toLocaleString('vi-VN')}đ`
+            : `${(minPrice || maxPrice).toLocaleString('vi-VN')}đ`}
         </div>
       </Link>
 

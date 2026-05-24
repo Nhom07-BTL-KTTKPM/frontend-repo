@@ -236,6 +236,8 @@ export const ProductList: React.FC = () => {
     </div>
   );
 
+  const formatCurrency = (value: number) => `${value.toLocaleString('vi-VN')}đ`;
+
   const renderFilterPanel = () => (
     <>
       <div className="product-list__filter-group">
@@ -302,8 +304,8 @@ export const ProductList: React.FC = () => {
         <h3>Giá</h3>
         <div className="product-list__price-range">
           <div className="product-list__price-labels">
-            <span>{priceMin.toLocaleString()}</span>
-            <span>{priceMax.toLocaleString()}</span>
+            <span>{formatCurrency(priceMin)}</span>
+            <span>{formatCurrency(priceMax)}</span>
           </div>
           <input
             type="range"
@@ -419,7 +421,9 @@ export const ProductList: React.FC = () => {
         <div className="product-list__active-filters">
           <span className="chip is-highlight">Bộ lọc đang áp dụng</span>
           {isSearching ? <span className="chip">Từ khóa: {searchKeyword}</span> : null}
-          <span className="chip">Giá: ${priceMin.toFixed(2)} - ${priceMax.toFixed(2)}</span>
+          <span className="chip">
+            Giá: {priceMin.toLocaleString('vi-VN')}đ - {priceMax.toLocaleString('vi-VN')}đ
+          </span>
           <span className="chip">Còn hàng</span>
         </div>
 
