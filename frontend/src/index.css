@@ -3647,6 +3647,49 @@
             font-size: 0.85rem;
         }
 
+        .product-list__filter-skeleton {
+            display: grid;
+            gap: var(--space-lg);
+        }
+
+        .product-list__skeleton-block {
+            display: grid;
+            gap: 10px;
+            padding: 2px 0;
+        }
+
+        .product-list__skeleton-title,
+        .product-list__skeleton-line {
+            border-radius: 999px;
+            background: linear-gradient(90deg, rgba(201, 169, 110, 0.12), rgba(201, 169, 110, 0.24), rgba(201, 169, 110, 0.12));
+            background-size: 200% 100%;
+            animation: product-list-skeleton-shimmer 1.35s ease-in-out infinite;
+        }
+
+        .product-list__skeleton-title {
+            height: 14px;
+            width: 42%;
+            margin-bottom: 6px;
+        }
+
+        .product-list__skeleton-line {
+            height: 10px;
+            width: 100%;
+        }
+
+        .product-list__skeleton-line.short {
+            width: 68%;
+        }
+
+        @keyframes product-list-skeleton-shimmer {
+            0% {
+                background-position: 200% 0;
+            }
+            100% {
+                background-position: -200% 0;
+            }
+        }
+
         .product-list__empty {
             grid-column: 1 / -1;
             text-align: center;

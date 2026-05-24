@@ -1,20 +1,23 @@
 import React, { useMemo, useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { keepPreviousData, useQuery } from '@tanstack/react-query';
 import { ChevronLeft, ChevronRight, Search, SlidersHorizontal, Star, X } from 'lucide-react';
 import { productApi } from '../api/productApi';
 import ProductCard from '../components/ProductCard';
 import type { Product } from '../types/product';
+import type { PageResponse } from '../types/api';
+
+type ProductListItem = Product & {
+  price?: number;
+  averageRating?: number;
+  totalReviews?: number;
+  totalSold?: number;
+  suitableSkinTypes?: string[];
+};
 
 export const ProductList: React.FC = () => {
-  const { data, isLoading, error } = useQuery({
-    queryKey: ['products'],
-    // Ưu tiên lấy res.content từ develop (chuẩn Spring Boot Page), fallback về res.data của HEAD
-    queryFn: () => productApi.getProducts().then((res: any) => res.content ?? res.data ?? []),
-  });
-
-  const products = (data ?? []) as Product[];
   const [searchInput, setSearchInput] = useState('');
   const [searchKeyword, setSearchKeyword] = useState('');
+
   const [isFilterDrawerOpen, setIsFilterDrawerOpen] = useState(false);
   const [sortBy, setSortBy] = useState('default');
 
@@ -33,6 +36,29 @@ export const ProductList: React.FC = () => {
 
   // Lazy load filter lists only when user interacts with filter area or opens drawer
   const [shouldLoadFilters, setShouldLoadFilters] = useState(false);
+
+  React.useEffect(() => {
+    // Nếu màn hình lớn hơn kích thước mobile (ví dụ 1024px), tự động bật load bộ lọc
+    if (window.innerWidth >= 1024) {
+      setShouldLoadFilters(true);
+    }
+  }, []);
+
+  const isSearching = searchKeyword.trim().length > 0;
+
+  const { data: pageData, isLoading, error } = useQuery<PageResponse<ProductListItem>>({
+    queryKey: ['products', searchKeyword, currentPage, pageSize],
+    queryFn: async (): Promise<PageResponse<ProductListItem>> => {
+      const params = { page: currentPage - 1, size: pageSize };
+      if (isSearching) {
+        return productApi.searchProducts(searchKeyword.trim(), params) as unknown as PageResponse<ProductListItem>;
+      }
+      return productApi.getProducts(params) as unknown as PageResponse<ProductListItem>;
+    },
+    placeholderData: keepPreviousData,
+  });
+
+  const products = (pageData?.content ?? []) as ProductListItem[];
 
   // fetch summaries lazily via productApi
   const {
@@ -139,19 +165,15 @@ export const ProductList: React.FC = () => {
     }
   }, [products]);
 
-  const totalPages = Math.max(1, Math.ceil(displayedProducts.length / pageSize));
+  const totalPages = Math.max(1, pageData?.totalPages ?? 1);
   const safeCurrentPage = Math.min(currentPage, totalPages);
-  const paginatedProducts = displayedProducts.slice((safeCurrentPage - 1) * pageSize, safeCurrentPage * pageSize);
+  const paginatedProducts = displayedProducts;
   const pageStart = displayedProducts.length === 0 ? 0 : (safeCurrentPage - 1) * pageSize + 1;
-  const pageEnd = Math.min(safeCurrentPage * pageSize, displayedProducts.length);
+  const pageEnd = Math.min((safeCurrentPage - 1) * pageSize + displayedProducts.length, pageData?.totalElements ?? displayedProducts.length);
 
   React.useEffect(() => {
     setCurrentPage(1);
   }, [searchKeyword]);
-
-  React.useEffect(() => {
-    setCurrentPage(1);
-  }, [selectedCategories, selectedBrands, selectedSkinTypes, priceMin, priceMax, selectedRatings]);
 
   // Scroll to top of product list when user navigates pages
   React.useEffect(() => {
@@ -182,8 +204,37 @@ export const ProductList: React.FC = () => {
 
   const onSubmitSearch = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    setSearchKeyword(searchInput);
+    setSearchKeyword(searchInput.trim());
+    setCurrentPage(1);
   };
+
+  const clearSearch = () => {
+    setSearchInput('');
+    setSearchKeyword('');
+    setCurrentPage(1);
+  };
+
+  const showFilterSkeleton = shouldLoadFilters && (isLoadingCategories || isLoadingBrands);
+
+  const renderFilterSkeleton = () => (
+    <div className="product-list__filter-skeleton">
+      <div className="product-list__skeleton-block">
+        <div className="product-list__skeleton-title" />
+        <div className="product-list__skeleton-line" />
+        <div className="product-list__skeleton-line" />
+        <div className="product-list__skeleton-line short" />
+      </div>
+      <div className="product-list__skeleton-block">
+        <div className="product-list__skeleton-title" />
+        <div className="product-list__skeleton-line" />
+        <div className="product-list__skeleton-line short" />
+      </div>
+      <div className="product-list__skeleton-block">
+        <div className="product-list__skeleton-title" />
+        <div className="product-list__skeleton-line" />
+      </div>
+    </div>
+  );
 
   const renderFilterPanel = () => (
     <>
@@ -340,6 +391,16 @@ export const ProductList: React.FC = () => {
               placeholder="Tìm theo tên sản phẩm"
               aria-label="Tìm sản phẩm"
             />
+            {searchKeyword && (
+              <button
+                type="button"
+                onClick={clearSearch}
+                aria-label="Xóa tìm kiếm"
+                title="Xóa tìm kiếm"
+              >
+                <X size={16} />
+              </button>
+            )}
             <button type="submit">Tìm kiếm</button>
           </form>
           <button
@@ -357,6 +418,7 @@ export const ProductList: React.FC = () => {
 
         <div className="product-list__active-filters">
           <span className="chip is-highlight">Bộ lọc đang áp dụng</span>
+          {isSearching ? <span className="chip">Từ khóa: {searchKeyword}</span> : null}
           <span className="chip">Giá: ${priceMin.toFixed(2)} - ${priceMax.toFixed(2)}</span>
           <span className="chip">Còn hàng</span>
         </div>
@@ -381,20 +443,10 @@ export const ProductList: React.FC = () => {
         {error && <p className="product-list__status is-error">Không thể tải sản phẩm</p>}
 
         <div className="product-list__layout">
-          <aside
-            className="product-list__sidebar"
-            tabIndex={0}
-            onClick={() => {
-              if (!shouldLoadFilters) setShouldLoadFilters(true);
-            }}
-            onFocus={() => {
-              if (!shouldLoadFilters) setShouldLoadFilters(true);
-            }}
-            onMouseEnter={() => {
-              if (!shouldLoadFilters) setShouldLoadFilters(true);
-            }}
-          >
-            {shouldLoadFilters ? (
+          <aside className="product-list__sidebar">
+            {showFilterSkeleton ? (
+              renderFilterSkeleton()
+            ) : shouldLoadFilters ? (
               renderFilterPanel()
             ) : (
               <div className="product-list__filter-placeholder">Nhấn vào đây để tải bộ lọc</div>
@@ -413,7 +465,7 @@ export const ProductList: React.FC = () => {
           </div>
         </div>
 
-        {displayedProducts.length > 0 && totalPages > 1 && (
+        {pageData?.totalElements && totalPages > 1 && (
           <nav className="product-list__pagination" aria-label="Product pagination">
             <button
               type="button"
