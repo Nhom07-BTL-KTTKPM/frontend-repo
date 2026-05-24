@@ -3,6 +3,8 @@ import { useLocation } from 'react-router-dom';
 import { orderApi } from '../api/orderApi';
 import type { OrderResponse } from '../types/order';
 import { toast } from 'sonner';
+import { XCircle } from 'lucide-react';
+import { CancelOrderModal } from '../components/order/CancelOrderModal';
 
 const formatCurrency = (value?: number) => {
     if (value === null || value === undefined) return '--';
@@ -26,6 +28,7 @@ export const OrderLookup = () => {
     const [order, setOrder] = useState<OrderResponse | null>(null);
     const [loading, setLoading] = useState(false);
     const [searched, setSearched] = useState(false);
+    const [isCancelModalOpen, setIsCancelModalOpen] = useState(false);
 
     const handleLookup = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -45,6 +48,19 @@ export const OrderLookup = () => {
             toast.error('Không tìm thấy đơn hàng. Vui lòng kiểm tra lại mã đơn và email.');
         } finally {
             setLoading(false);
+        }
+    };
+
+    const confirmCancelOrder = async (reason: string) => {
+        if (!order) return;
+        try {
+            await orderApi.updateOrderStatus(order.id, { status: 'CANCELLED', cancelReason: reason });
+            toast.success('Hủy đơn hàng thành công');
+            setOrder(prev => prev ? { ...prev, status: 'CANCELLED' as any } : null);
+        } catch (error) {
+            toast.error('Lỗi khi hủy đơn hàng');
+        } finally {
+            setIsCancelModalOpen(false);
         }
     };
 
@@ -80,9 +96,25 @@ export const OrderLookup = () => {
                             <h2 style={{ margin: 0, fontSize: '1.3rem', color: 'var(--color-black)' }}>Đơn hàng: {order.orderCode}</h2>
                             <p style={{ margin: '0.25rem 0 0', color: 'var(--color-gray-500)', fontSize: '0.9rem' }}>Ngày đặt: {new Date(order.orderDate).toLocaleDateString('vi-VN')}</p>
                         </div>
-                        <span style={{ padding: '6px 16px', borderRadius: '20px', fontSize: '0.85rem', fontWeight: 600, background: order.status === 'DELIVERED' ? '#e8f5e9' : order.status === 'CANCELLED' ? '#ffebee' : '#fff3e0', color: order.status === 'DELIVERED' ? '#2e7d32' : order.status === 'CANCELLED' ? '#c62828' : '#e65100' }}>
-                            {statusLabels[order.status] || order.status}
-                        </span>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                            {order.status === 'PENDING' && (
+                                <button
+                                    onClick={() => setIsCancelModalOpen(true)}
+                                    style={{ padding: '6px 12px', borderRadius: '20px', background: 'transparent', color: '#ef4444', border: '1px solid #ef4444', cursor: 'pointer', fontSize: '0.85rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '4px' }}
+                                >
+                                    <XCircle size={14} />
+                                    Hủy đơn
+                                </button>
+                            )}
+                            {order.status !== 'PENDING' && !['CANCELLED', 'DELIVERED', 'REFUNDED'].includes(order.status) && (
+                                <span style={{ fontSize: '0.8rem', color: 'var(--color-gray-500)', fontStyle: 'italic', marginRight: '4px' }}>
+                                    Liên hệ CSKH để hủy
+                                </span>
+                            )}
+                            <span style={{ padding: '6px 16px', borderRadius: '20px', fontSize: '0.85rem', fontWeight: 600, background: order.status === 'DELIVERED' ? '#e8f5e9' : order.status === 'CANCELLED' ? '#ffebee' : '#fff3e0', color: order.status === 'DELIVERED' ? '#2e7d32' : order.status === 'CANCELLED' ? '#c62828' : '#e65100' }}>
+                                {statusLabels[order.status] || order.status}
+                            </span>
+                        </div>
                     </div>
 
                     <div style={{ marginBottom: '1.5rem' }}>
@@ -116,6 +148,12 @@ export const OrderLookup = () => {
                     </div>
                 </div>
             )}
+
+            <CancelOrderModal 
+                isOpen={isCancelModalOpen} 
+                onClose={() => setIsCancelModalOpen(false)} 
+                onConfirm={confirmCancelOrder} 
+            />
         </div>
     );
 };

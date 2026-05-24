@@ -4,6 +4,7 @@ import { orderApi } from '../api/orderApi';
 import type { OrderResponse, OrderStatus, PaymentStatus } from '../types/order';
 import { toast } from 'sonner';
 import { Package, Clock, CheckCircle, Truck, XCircle } from 'lucide-react';
+import { CancelOrderModal } from '../components/order/CancelOrderModal';
 
 const formatCurrency = (value?: number) => {
     if (value === null || value === undefined) {
@@ -65,6 +66,7 @@ export const OrderDetail = () => {
     const navigate = useNavigate();
     const [order, setOrder] = useState<OrderResponse | null>(null);
     const [loading, setLoading] = useState(true);
+    const [isCancelModalOpen, setIsCancelModalOpen] = useState(false);
 
     useEffect(() => {
         if (!orderId) {
@@ -88,6 +90,19 @@ export const OrderDetail = () => {
         fetchOrder();
     }, [orderId, navigate]);
 
+    const confirmCancelOrder = async (reason: string) => {
+        if (!order) return;
+        try {
+            await orderApi.updateOrderStatus(order.id, { status: 'CANCELLED', cancelReason: reason });
+            toast.success('Hủy đơn hàng thành công');
+            setOrder(prev => prev ? { ...prev, status: 'CANCELLED' as OrderStatus } : null);
+        } catch (error) {
+            toast.error('Lỗi khi hủy đơn hàng');
+        } finally {
+            setIsCancelModalOpen(false);
+        }
+    };
+
     if (loading) {
         return <div style={{ padding: '4rem', textAlign: 'center' }}>Đang tải chi tiết đơn hàng...</div>;
     }
@@ -108,9 +123,25 @@ export const OrderDetail = () => {
                         <h3 style={{ margin: 0, fontSize: '1.1rem' }}>Đơn hàng <span style={{ color: 'var(--color-gold)' }}>#{order.orderCode}</span></h3>
                         <span style={{ fontSize: '0.85rem', color: 'var(--color-gray-500)' }}>Đặt lúc: {formatDate(order.orderDate)}</span>
                     </div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: statusConfig.color, background: `${statusConfig.color}15`, padding: '6px 12px', borderRadius: '20px', fontSize: '0.85rem', fontWeight: 600 }}>
-                        {statusConfig.icon}
-                        {statusConfig.label}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                        {order.status === 'PENDING' && (
+                            <button
+                                onClick={() => setIsCancelModalOpen(true)}
+                                style={{ padding: '6px 12px', borderRadius: '20px', background: 'transparent', color: '#ef4444', border: '1px solid #ef4444', cursor: 'pointer', fontSize: '0.85rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '4px' }}
+                            >
+                                <XCircle size={14} />
+                                Hủy đơn
+                            </button>
+                        )}
+                        {order.status !== 'PENDING' && !['CANCELLED', 'DELIVERED', 'REFUNDED'].includes(order.status) && (
+                            <span style={{ fontSize: '0.8rem', color: 'var(--color-gray-500)', fontStyle: 'italic', marginRight: '4px' }}>
+                                Liên hệ CSKH để hủy
+                            </span>
+                        )}
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: statusConfig.color, background: `${statusConfig.color}15`, padding: '6px 12px', borderRadius: '20px', fontSize: '0.85rem', fontWeight: 600 }}>
+                            {statusConfig.icon}
+                            {statusConfig.label}
+                        </div>
                     </div>
                 </div>
 
@@ -195,6 +226,12 @@ export const OrderDetail = () => {
                     </div>
                 </div>
             </div>
+            
+            <CancelOrderModal 
+                isOpen={isCancelModalOpen} 
+                onClose={() => setIsCancelModalOpen(false)} 
+                onConfirm={confirmCancelOrder} 
+            />
         </div>
     );
 };

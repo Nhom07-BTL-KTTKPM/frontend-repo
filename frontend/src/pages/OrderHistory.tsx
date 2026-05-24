@@ -9,6 +9,7 @@ import type { ReviewResponse } from '../types/review';
 import { toast } from 'sonner';
 import { Package, Clock, CheckCircle, Truck, XCircle } from 'lucide-react';
 import { ReviewForm } from '../components/review/ReviewForm';
+import { CancelOrderModal } from '../components/order/CancelOrderModal';
 
 const formatCurrency = (value?: number) => {
     if (value === null || value === undefined) {
@@ -73,6 +74,7 @@ export const OrderHistory = () => {
     const [reviewingItem, setReviewingItem] = useState<{ productId: string, orderItemId: string, customerId: string, existingReview?: ReviewResponse } | null>(null);
     const [customerId, setCustomerId] = useState<string>('');
     const [customerReviews, setCustomerReviews] = useState<ReviewResponse[]>([]);
+    const [cancelingOrderId, setCancelingOrderId] = useState<string | null>(null);
 
     useEffect(() => {
         const fetchOrders = async () => {
@@ -112,6 +114,21 @@ export const OrderHistory = () => {
         fetchOrders();
     }, [user]);
 
+    const confirmCancelOrder = async (reason: string) => {
+        if (!cancelingOrderId) return;
+        try {
+            await orderApi.updateOrderStatus(cancelingOrderId, { status: 'CANCELLED', cancelReason: reason });
+            toast.success('Hủy đơn hàng thành công');
+            setOrderList(prev => prev.map(order => 
+                order.id === cancelingOrderId ? { ...order, status: 'CANCELLED' as OrderStatus } : order
+            ));
+        } catch (error) {
+            toast.error('Lỗi khi hủy đơn hàng');
+        } finally {
+            setCancelingOrderId(null);
+        }
+    };
+
     if (!user) {
         return <div style={{ padding: '4rem 0', textAlign: 'center' }}>Vui lòng đăng nhập để xem đơn hàng.</div>;
     }
@@ -143,9 +160,25 @@ export const OrderHistory = () => {
                                     <h3 style={{ margin: 0, fontSize: '1.1rem' }}>Đơn hàng <span style={{ color: 'var(--color-gold)' }}>#{order.orderCode}</span></h3>
                                     <span style={{ fontSize: '0.85rem', color: 'var(--color-gray-500)' }}>Đặt lúc: {formatDate(order.orderDate)}</span>
                                 </div>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: statusConfig.color, background: `${statusConfig.color}15`, padding: '6px 12px', borderRadius: '20px', fontSize: '0.85rem', fontWeight: 600 }}>
-                                    {statusConfig.icon}
-                                    {statusConfig.label}
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                    {order.status === 'PENDING' && (
+                                        <button
+                                            onClick={() => setCancelingOrderId(order.id)}
+                                            style={{ padding: '6px 12px', borderRadius: '20px', background: 'transparent', color: '#ef4444', border: '1px solid #ef4444', cursor: 'pointer', fontSize: '0.85rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '4px' }}
+                                        >
+                                            <XCircle size={14} />
+                                            Hủy đơn
+                                        </button>
+                                    )}
+                                    {order.status !== 'PENDING' && !['CANCELLED', 'DELIVERED', 'REFUNDED'].includes(order.status) && (
+                                        <span style={{ fontSize: '0.8rem', color: 'var(--color-gray-500)', fontStyle: 'italic', marginRight: '4px' }}>
+                                            Liên hệ CSKH để hủy
+                                        </span>
+                                    )}
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: statusConfig.color, background: `${statusConfig.color}15`, padding: '6px 12px', borderRadius: '20px', fontSize: '0.85rem', fontWeight: 600 }}>
+                                        {statusConfig.icon}
+                                        {statusConfig.label}
+                                    </div>
                                 </div>
                             </div>
 
@@ -251,6 +284,12 @@ export const OrderHistory = () => {
                     </div>
                 </div>
             )}
+
+            <CancelOrderModal 
+                isOpen={!!cancelingOrderId} 
+                onClose={() => setCancelingOrderId(null)} 
+                onConfirm={confirmCancelOrder} 
+            />
         </div>
     );
 };
