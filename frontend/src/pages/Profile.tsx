@@ -1,3 +1,6 @@
+
+import { useMemo, useState, useEffect } from 'react';
+import { useLocation } from 'react-router-dom';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Camera, Key, Mail, User, XCircle } from 'lucide-react';
@@ -7,6 +10,7 @@ import { uploadSingleMedia } from '../api/uploadApi';
 import { CustomerProfile } from '../components/profile/CustomerProfile.tsx';
 import { EmployeeProfile } from '../components/profile/EmployeeProfile';
 import { CustomerAddresses } from '../components/profile/CustomerAddresses';
+import { CustomerWishList } from '../components/profile/CustomerWishList';
 import { employeeApi } from '../api/employeeApi';
 import { userApi } from '../api/userApi';
 import { useAuth } from '../hooks/useAuth';
@@ -17,6 +21,7 @@ export const Profile = () => {
   const { requestChangePasswordMutation, confirmChangePasswordMutation } = useAuth();
   const queryClient = useQueryClient();
   const authUser = useAuthStore((state) => state.user);
+  const location = useLocation();
 
   const customerQuery = useQuery({
     queryKey: ['profile', 'customer', authUser?.accountId],
@@ -62,7 +67,13 @@ export const Profile = () => {
 
   const [isChangingPassword, setIsChangingPassword] = useState(false);
   const [otpRequested, setOtpRequested] = useState(false);
-  const [customerTab, setCustomerTab] = useState<'profile' | 'addresses'>('profile');
+  const [customerTab, setCustomerTab] = useState<'profile' | 'addresses' | 'wishlist'>((location.state as any)?.activeTab || 'profile');
+
+  useEffect(() => {
+    if ((location.state as any)?.activeTab) {
+      setCustomerTab((location.state as any).activeTab);
+    }
+  }, [location.state]);
   const [otp, setOtp] = useState('');
   const [oldPassword, setOldPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
@@ -302,14 +313,26 @@ export const Profile = () => {
               <button onClick={() => setCustomerTab('addresses')} className={`btn ${customerTab === 'addresses' ? 'btn--primary' : ''}`} style={{ textAlign: 'left', justifyContent: 'flex-start' }}>
                 Địa chỉ
               </button>
+              <button onClick={() => setCustomerTab('wishlist')} className={`btn ${customerTab === 'wishlist' ? 'btn--primary' : ''}`} style={{ textAlign: 'left', justifyContent: 'flex-start' }}>
+                Danh sách yêu thích
+              </button>
             </div>
           </aside>
 
           <div>
+
+            {customerTab === 'profile' && (
+              <CustomerProfile user={user} customer={customerQuery.data!} onSave={handleCustomerProfileSave} />
+            )}
+            {customerTab === 'addresses' && (
             {customerTab === 'profile' ? (
               <CustomerProfile user={user} customer={customerQuery.data!} onSave={handleCustomerProfileSave} onEditAvatar={handleOpenAvatarPicker} />
             ) : (
+
               <CustomerAddresses customerId={customerQuery.data?.id} />
+            )}
+            {customerTab === 'wishlist' && (
+              <CustomerWishList customerId={customerQuery.data?.id} />
             )}
 
             {shouldShowPasswordCard ? (
