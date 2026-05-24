@@ -17,9 +17,8 @@ export const BrandsList: React.FC = () => {
   const apiCall = useCallback(() => brandApi.getBrandSummaries(), []);
   const { data: brands, isUsingFallback } = useApi(apiCall, MOCK_BRANDS);
 
-  const handleBrandClick = useCallback((slug: string) => {
-    // Temporarily include a flag to instruct the detail page to skip product API calls
-    navigate(`/brands/${slug}?noProducts=true`);
+  const handleBrandClick = useCallback((brand: BrandSummaryResponse) => {
+    navigate(`/brands/${brand.slug}`);
   }, [navigate]);
 
   if (!brands || !Array.isArray(brands)) {
@@ -46,7 +45,7 @@ export const BrandsList: React.FC = () => {
             <div 
               key={brand.id} 
               className="brand-card"
-              onClick={() => handleBrandClick(brand.slug)}
+              onClick={() => handleBrandClick(brand)}
             >
               <div className="brand-card__inner">
                 <h3 className="brand-card__name">{brand.name}</h3>

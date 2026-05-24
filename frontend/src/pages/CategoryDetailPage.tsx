@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { useParams, useNavigate, useLocation } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import { categoryApi } from '../api/categoryApi';
 import { productApi } from '../api/productApi';
 import { useApi } from '../hooks/useApi';
@@ -19,15 +19,13 @@ const MOCK_CATEGORY: CategoryResponse = {
 export const CategoryDetailPage: React.FC = () => {
   const { slug } = useParams<{ slug: string }>();
   const navigate = useNavigate();
-  const location = useLocation();
-
-  const searchParams = new URLSearchParams(location.search);
-  const skipProducts = searchParams.get('noProducts') === 'true';
 
   if (!slug) return <div>Không tìm thấy phân loại</div>;
 
   const apiCall = useCallback(() => categoryApi.getCategoryBySlug(slug), [slug]);
   const { data: category, isUsingFallback, loading } = useApi(apiCall, MOCK_CATEGORY);
+
+  const resolvedCategoryId = !isUsingFallback ? category?.id ?? '' : '';
 
   const [subs, setSubs] = useState<CategoryResponse[]>([]);
   const [activeSubId, setActiveSubId] = useState<string | null>(null);
@@ -35,10 +33,14 @@ export const CategoryDetailPage: React.FC = () => {
   const [productsLoading, setProductsLoading] = useState(false);
 
   useEffect(() => {
-    if (!category?.id) return;
+    setActiveSubId(null);
+  }, [category?.id]);
+
+  useEffect(() => {
+    if (!resolvedCategoryId) return;
     let isMounted = true;
     categoryApi
-      .getChildCategories(category.id)
+      .getChildCategories(resolvedCategoryId)
       .then((list) => {
         if (isMounted) setSubs(Array.isArray(list) ? list : []);
       })
@@ -48,32 +50,26 @@ export const CategoryDetailPage: React.FC = () => {
     return () => {
       isMounted = false;
     };
-  }, [category?.id]);
+  }, [resolvedCategoryId]);
 
   useEffect(() => {
-    const targetId = activeSubId ?? category?.id;
-    if (!targetId) return;
+    if (!resolvedCategoryId) return;
     let isMounted = true;
-    if (skipProducts) {
-      // Skip fetching products when flagged (temporary)
-      setProducts([]);
-      setProductsLoading(false);
-      return () => {
-        isMounted = false;
-      };
-    }
 
     setProductsLoading(true);
-    productApi
-      .getProductsByCategoryRoot(targetId, { size: 24 })
-      .then((res) => {
+    const productRequest: Promise<PageResponse<Product> | Product[]> = activeSubId
+      ? productApi.getProductsByCategory(activeSubId, { size: 24 })
+      : productApi.getProductsByCategoryRoot(resolvedCategoryId, { size: 24 });
+
+    productRequest
+      .then((res: PageResponse<Product> | Product[]) => {
         if (!isMounted) return;
         const list = Array.isArray(res)
           ? (res as Product[])
           : ((res as PageResponse<Product>).content ?? []);
         setProducts(list);
       })
-      .catch((err) => {
+      .catch((err: unknown) => {
         console.warn('Failed to load products by category:', err);
         if (isMounted) setProducts([]);
       })
@@ -83,7 +79,7 @@ export const CategoryDetailPage: React.FC = () => {
     return () => {
       isMounted = false;
     };
-  }, [category?.id, activeSubId, skipProducts]);
+  }, [resolvedCategoryId, activeSubId]);
 
   const resultsLabel = useMemo(
     () => `${products.length} sản phẩm`,
