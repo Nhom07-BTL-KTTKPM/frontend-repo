@@ -56,7 +56,7 @@ export const AdminLayout = () => {
           <div style={{ display: 'flex', alignItems: 'center', gap: '1.5rem' }}>
             <div style={{ textAlign: 'right' }}>
               <p style={{ margin: 0, fontWeight: 700, color: 'var(--color-black)' }}>{user?.email || 'admin@gmail.com'}</p>
-              <p style={{ margin: 0, color: 'var(--color-gray-500)', fontSize: '0.85rem' }}>Khu vực nội bộ</p>
+              
             </div>
           </div>
         </header>

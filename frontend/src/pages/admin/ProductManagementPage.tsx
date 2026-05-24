@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState, type FormEvent, type ChangeEvent, type DragEvent } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import {
   BadgeCheck,
   ChevronDown,
@@ -230,6 +230,8 @@ const ProductsTab = ({
   error: string | null;
   onToggleStatus: (product: ProductCardRow) => void;
 }) => {
+  const navigate = useNavigate();
+
   return (
     <div className="grid gap-6">
       <div className="flex flex-wrap items-center justify-between gap-6">
@@ -372,7 +374,12 @@ const ProductsTab = ({
                   ) : null}
 
                   <div className="absolute inset-0 flex items-center justify-center gap-2 opacity-0 transition duration-200 group-hover:opacity-100">
-                    <button className="rounded-full bg-white p-2.5 shadow-lg transition hover:bg-slate-50" title="Xem chi tiết">
+                    <button
+                      type="button"
+                      className="rounded-full bg-white p-2.5 shadow-lg transition hover:bg-slate-50"
+                      title="Xem chi tiết"
+                      onClick={() => navigate(`/product/${product.slug}`, { state: { productId: product.id } })}
+                    >
                       <Eye size={16} className="text-slate-700" />
                     </button>
                     <button className="rounded-full bg-white p-2.5 shadow-lg transition hover:bg-slate-50" title="Chỉnh sửa">

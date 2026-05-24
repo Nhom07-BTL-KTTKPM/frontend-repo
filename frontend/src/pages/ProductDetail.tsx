@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Link, useParams } from 'react-router-dom';
+import { Link, useLocation, useParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { productApi } from '../api/productApi';
@@ -12,16 +12,42 @@ import { ReviewSection } from '../components/review/ReviewSection';
 
 export const ProductDetail: React.FC = () => {
   const { slug } = useParams<{ slug: string }>();
+  const location = useLocation();
   const [selectedVariant, setSelectedVariant] = useState<ProductVariant | null>(null);
   const [isAdding, setIsAdding] = useState(false);
 
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
   const { customerId } = useCustomerId();
   const addGuestItem = useGuestCartStore((s) => s.addItem);
+  const stateProductId = (location.state as { productId?: string } | null)?.productId;
 
   const { data, isLoading, error } = useQuery({
-    queryKey: ['product', slug],
-    queryFn: () => slug ? productApi.getProductBySlug(slug) : Promise.resolve(null),
+    queryKey: ['product', slug, stateProductId],
+    queryFn: async () => {
+      if (stateProductId) {
+        return productApi.getProduct(stateProductId);
+      }
+
+      if (!slug) {
+        return null;
+      }
+
+      const bySlug = await productApi.getProductBySlug(slug);
+      const hasDetailFields = Boolean(
+        bySlug?.description ||
+        bySlug?.images?.length ||
+        bySlug?.variants?.length ||
+        (bySlug as Product & { categoryId?: string; brandId?: string })?.categoryId ||
+        (bySlug as Product & { categoryId?: string; brandId?: string })?.brandId
+      );
+
+      if (hasDetailFields) {
+        return bySlug;
+      }
+
+      const resolvedId = bySlug?.id || bySlug?.productId;
+      return resolvedId ? productApi.getProduct(resolvedId) : bySlug;
+    },
     enabled: !!slug,
   });
 

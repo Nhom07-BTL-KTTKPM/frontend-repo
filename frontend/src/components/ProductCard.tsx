@@ -103,7 +103,11 @@ export const ProductCard: React.FC<Props> = ({ product }) => {
       display: 'flex',
       flexDirection: 'column'
     }}>
-      <Link to={`/product/${product.slug || product.productId}`} style={{ textDecoration: 'none', color: 'inherit', flex: 1, display: 'flex', flexDirection: 'column' }}>
+      <Link
+        to={`/product/${product.slug || product.productId}`}
+        state={{ productId: product.id || product.productId }}
+        style={{ textDecoration: 'none', color: 'inherit', flex: 1, display: 'flex', flexDirection: 'column' }}
+      >
         <div style={{ height: 160, display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', borderRadius: 4, marginBottom: 8, background: '#f7f3ea' }}>
           {image ? <img src={image} alt={product.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : <div style={{ color: '#999' }}>No image</div>}
         </div>
@@ -124,6 +128,7 @@ export const ProductCard: React.FC<Props> = ({ product }) => {
       </Link>
 
       <button
+        type="button"
         style={{
           position: 'absolute',
           bottom: 12,
@@ -149,12 +154,6 @@ export const ProductCard: React.FC<Props> = ({ product }) => {
           e.currentTarget.style.transform = 'scale(1)';
           e.currentTarget.style.boxShadow = '0 2px 8px rgba(0,0,0,0.1)';
         }}
-
-        onClick={(e) => {
-          e.preventDefault();
-          e.stopPropagation();
-        }}
-
         onClick={handleAddToCart}
         disabled={isAdding || !activeVariant || (activeVariant.stockQuantity ?? 0) <= 0}
         title="Thêm vào giỏ hàng"
