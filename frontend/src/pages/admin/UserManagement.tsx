@@ -1,6 +1,6 @@
-import { useEffect, useState, type FormEvent, type ReactNode } from 'react';
+import { useEffect, useMemo, useState, type FormEvent, type ReactNode } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { BadgeCheck, PencilLine, Plus, Power, Shield, UserRound } from 'lucide-react';
+import { BadgeCheck, PencilLine, Plus, Power, Search } from 'lucide-react';
 import { toast } from 'sonner';
 import { accountApi } from '../../api/accountApi';
 import { employeeApi } from '../../api/employeeApi';
@@ -40,6 +40,7 @@ export const UserManagement = () => {
     const canSeeEmployeeTab = currentRole === 'ADMIN';
 
     const [activeTab, setActiveTab] = useState<TabKey>('customers');
+    const [searchTerm, setSearchTerm] = useState('');
     const [employeeFormMode, setEmployeeFormMode] = useState<EmployeeFormMode>(null);
     const [editingEmployeeAccountId, setEditingEmployeeAccountId] = useState<string | null>(null);
     const [employeeForm, setEmployeeForm] = useState<EmployeeFormState>(emptyEmployeeForm());
@@ -209,9 +210,17 @@ export const UserManagement = () => {
     const customerRows = customersQuery.data ?? [];
     const employeeRows = employeesQuery.data ?? [];
 
+    const filteredCustomerRows = useMemo(() => {
+        return filterAccounts(customerRows, searchTerm);
+    }, [customerRows, searchTerm]);
+
+    const filteredEmployeeRows = useMemo(() => {
+        return filterAccounts(employeeRows, searchTerm);
+    }, [employeeRows, searchTerm]);
+
     const tabs: Array<{ key: TabKey; label: string }> = [
-        { key: 'customers', label: `Quản lý khách hàng (${customerRows.length})` },
-        ...(canSeeEmployeeTab ? [{ key: 'employees' as const, label: `Quản lý nhân viên (${employeeRows.length})` }] : []),
+        { key: 'customers', label: `Quản lý khách hàng (${filteredCustomerRows.length})` },
+        ...(canSeeEmployeeTab ? [{ key: 'employees' as const, label: `Quản lý nhân viên (${filteredEmployeeRows.length})` }] : []),
     ];
 
     const renderCustomerTable = () => {
@@ -226,8 +235,8 @@ export const UserManagement = () => {
         return (
             <AdminTable
                 title="Danh sách tài khoản khách hàng"
-                rows={customerRows}
-                emptyMessage="Chưa có tài khoản khách hàng nào"
+                rows={filteredCustomerRows}
+                emptyMessage={searchTerm.trim() ? 'Không tìm thấy khách hàng phù hợp' : 'Chưa có tài khoản khách hàng nào'}
                 columns={[
                     { header: 'Họ tên', render: (row: CustomerAccountInfo) => renderDisplayName(row.fullName) },
                     { header: 'Email', render: (row: CustomerAccountInfo) => row.email },
@@ -330,8 +339,8 @@ export const UserManagement = () => {
 
                 <AdminTable
                     title="Danh sách tài khoản nhân viên"
-                    rows={employeeRows}
-                    emptyMessage="Chưa có tài khoản nhân viên nào"
+                    rows={filteredEmployeeRows}
+                    emptyMessage={searchTerm.trim() ? 'Không tìm thấy nhân viên phù hợp' : 'Chưa có tài khoản nhân viên nào'}
                     columns={[
                         { header: 'Họ tên', render: (row: EmployeeAccountInfo) => renderDisplayName(row.fullName) },
                         { header: 'Email', render: (row: EmployeeAccountInfo) => row.email },
@@ -388,9 +397,30 @@ export const UserManagement = () => {
                 })}
             </div>
 
+            <label style={searchBarStyle}>
+                <Search size={18} color="#64748b" />
+                <input
+                    value={searchTerm}
+                    onChange={(event) => setSearchTerm(event.target.value)}
+                    type="text"
+                    placeholder="Tìm theo tên, email hoặc số điện thoại"
+                    style={searchInputStyle}
+                />
+            </label>
+
             {activeTab === 'customers' ? renderCustomerTable() : renderEmployeeTable()}
         </div>
     );
+
+    function filterAccounts<T extends { fullName?: string; email?: string; phoneNumber?: string }>(items: T[], searchValue: string) {
+        const normalizedSearchValue = searchValue.trim().toLowerCase();
+
+        if (!normalizedSearchValue) {
+            return items;
+        }
+
+        return items.filter((item) => [item.fullName, item.email, item.phoneNumber].some((value) => value?.toLowerCase().includes(normalizedSearchValue)));
+    }
 };
 
 function isActiveStatus(status: AccountStatus) {
@@ -530,84 +560,30 @@ const pageStyle: React.CSSProperties = {
     gap: '1.25rem',
 };
 
-const heroStyle: React.CSSProperties = {
-    display: 'grid',
-    gridTemplateColumns: 'minmax(0, 1fr) 260px',
-    gap: '1rem',
-    alignItems: 'stretch',
-    padding: '1.5rem',
-    borderRadius: '24px',
-    background: 'linear-gradient(135deg, #0f172a 0%, #1d4ed8 55%, #2563eb 100%)',
-    color: '#fff',
-    boxShadow: '0 18px 40px rgba(15, 23, 42, 0.18)',
-};
-
-const eyebrowStyle: React.CSSProperties = {
-    display: 'inline-flex',
-    alignItems: 'center',
-    gap: '0.5rem',
-    padding: '0.45rem 0.8rem',
-    borderRadius: '999px',
-    background: 'rgba(255,255,255,0.14)',
-    fontSize: '0.85rem',
-    fontWeight: 700,
-    letterSpacing: '0.02em',
-};
-
-const titleStyle: React.CSSProperties = {
-    margin: '0.8rem 0 0',
-    fontSize: '2rem',
-    lineHeight: 1.1,
-};
-
-const descriptionStyle: React.CSSProperties = {
-    margin: '0.8rem 0 0',
-    maxWidth: '720px',
-    color: 'rgba(255,255,255,0.88)',
-};
-
-const summaryCardStyle: React.CSSProperties = {
-    padding: '1rem',
-    borderRadius: '20px',
-    background: 'rgba(255,255,255,0.12)',
-    border: '1px solid rgba(255,255,255,0.15)',
-    display: 'grid',
-    alignContent: 'space-between',
-};
-
-const summaryLabelStyle: React.CSSProperties = {
-    color: 'rgba(255,255,255,0.7)',
-    fontSize: '0.85rem',
-};
-
-const summaryValueStyle: React.CSSProperties = {
-    fontSize: '1.25rem',
-    fontWeight: 800,
-    textTransform: 'uppercase',
-    letterSpacing: '0.06em',
-};
-
-const summaryHintStyle: React.CSSProperties = {
-    color: 'rgba(255,255,255,0.8)',
-    fontSize: '0.92rem',
-};
-
-const employeeNoticeStyle: React.CSSProperties = {
-    display: 'flex',
-    alignItems: 'center',
-    gap: '0.6rem',
-    padding: '0.9rem 1rem',
-    borderRadius: '16px',
-    background: '#eff6ff',
-    color: '#1d4ed8',
-    border: '1px solid #bfdbfe',
-    fontWeight: 600,
-};
-
 const tabBarStyle: React.CSSProperties = {
     display: 'flex',
     flexWrap: 'wrap',
     gap: '0.75rem',
+};
+
+const searchBarStyle: React.CSSProperties = {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '0.75rem',
+    padding: '0.9rem 1rem',
+    borderRadius: '16px',
+    background: '#fff',
+    border: '1px solid #dbe4f0',
+    boxShadow: '0 8px 24px rgba(15, 23, 42, 0.05)',
+};
+
+const searchInputStyle: React.CSSProperties = {
+    width: '100%',
+    border: 'none',
+    outline: 'none',
+    background: 'transparent',
+    color: '#0f172a',
+    fontSize: '0.95rem',
 };
 
 const tabButtonStyle: React.CSSProperties = {
@@ -637,25 +613,6 @@ const panelStyle: React.CSSProperties = {
     boxShadow: '0 12px 30px rgba(15, 23, 42, 0.06)',
 };
 
-const panelHeaderStyle: React.CSSProperties = {
-    display: 'flex',
-    justifyContent: 'space-between',
-    gap: '1rem',
-    alignItems: 'center',
-    flexWrap: 'wrap',
-};
-
-const panelTitleStyle: React.CSSProperties = {
-    margin: 0,
-    color: '#0f172a',
-    fontSize: '1.1rem',
-};
-
-const panelSubtitleStyle: React.CSSProperties = {
-    margin: '0.25rem 0 0',
-    color: '#64748b',
-};
-
 const formGridStyle: React.CSSProperties = {
     display: 'grid',
     gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
@@ -668,18 +625,6 @@ const formActionsStyle: React.CSSProperties = {
     flexWrap: 'wrap',
     alignItems: 'center',
     gridColumn: '1 / -1',
-};
-
-const emptyFormStyle: React.CSSProperties = {
-    display: 'flex',
-    alignItems: 'center',
-    gap: '0.65rem',
-    padding: '0.9rem 1rem',
-    borderRadius: '14px',
-    background: '#f8fafc',
-    color: '#475569',
-    border: '1px dashed #cbd5e1',
-    fontWeight: 600,
 };
 
 const supportCardStyle: React.CSSProperties = {

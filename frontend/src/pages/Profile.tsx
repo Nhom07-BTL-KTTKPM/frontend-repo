@@ -1,7 +1,9 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { Calendar, Key, Mail, Phone, ShieldCheck, User, XCircle } from 'lucide-react';
+import { Camera, Key, Mail, User, XCircle } from 'lucide-react';
 import { toast } from 'sonner';
+import { authApi } from '../api/authApi';
+import { uploadSingleMedia } from '../api/uploadApi';
 import { CustomerProfile } from '../components/profile/CustomerProfile.tsx';
 import { EmployeeProfile } from '../components/profile/EmployeeProfile';
 import { CustomerAddresses } from '../components/profile/CustomerAddresses';
@@ -66,6 +68,22 @@ export const Profile = () => {
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
+  const [avatarFile, setAvatarFile] = useState<File | null>(null);
+  const [avatarPreviewUrl, setAvatarPreviewUrl] = useState('');
+  const [isUpdatingAvatar, setIsUpdatingAvatar] = useState(false);
+  const avatarInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (!avatarFile) {
+      setAvatarPreviewUrl('');
+      return;
+    }
+
+    const previewUrl = URL.createObjectURL(avatarFile);
+    setAvatarPreviewUrl(previewUrl);
+
+    return () => URL.revokeObjectURL(previewUrl);
+  }, [avatarFile]);
 
   const handleCustomerProfileSave = async (data: CustomerUpdateRequest) => {
     if (!authUser || authUser.role !== 'CUSTOMER') {
@@ -187,6 +205,73 @@ export const Profile = () => {
     setConfirmPassword('');
   };
 
+  const handleAvatarSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0] ?? null;
+
+    if (!file) {
+      return;
+    }
+
+    if (!file.type.startsWith('image/')) {
+      toast.error('Vui lòng chọn một tệp ảnh hợp lệ.');
+      event.target.value = '';
+      return;
+    }
+
+    setAvatarFile(file);
+  };
+
+  const handleOpenAvatarPicker = () => {
+    avatarInputRef.current?.click();
+  };
+
+  const handleAvatarCancel = () => {
+    setAvatarFile(null);
+
+    if (avatarInputRef.current) {
+      avatarInputRef.current.value = '';
+    }
+  };
+
+  const handleAvatarSave = async () => {
+    if (!user) {
+      toast.error('Không thể cập nhật avatar lúc này.');
+      return;
+    }
+
+    if (!avatarFile) {
+      toast.error('Vui lòng chọn ảnh đại diện trước khi cập nhật.');
+      return;
+    }
+
+    try {
+      setIsUpdatingAvatar(true);
+      const uploaded = await uploadSingleMedia(avatarFile, 'AVATAR');
+      const response = await authApi.updateAvatar(uploaded.url);
+      const updatedAvatarUrl = response.data.avatarUrl;
+
+      const nextUser: UserProfileInfo = {
+        ...user,
+        accountId: user.accountId,
+        email: user.email,
+        role: user.role,
+        issuedAt: user.issuedAt,
+        expiresAt: user.expiresAt,
+        avatarUrl: updatedAvatarUrl,
+      };
+
+      queryClient.setQueryData(['auth', 'me'], nextUser);
+      useAuthStore.getState().setUser(nextUser);
+      handleAvatarCancel();
+
+      toast.success('Cập nhật avatar thành công.');
+    } catch (error) {
+      toast.error(getErrorMessage(error) ?? 'Không thể cập nhật avatar.');
+    } finally {
+      setIsUpdatingAvatar(false);
+    }
+  };
+
   if (isLoading) {
     return <ProfileLoading />;
   }
@@ -199,6 +284,14 @@ export const Profile = () => {
 
   return (
     <div className="container" style={{ padding: '4rem 0', minHeight: '80vh' }}>
+      <input
+        ref={avatarInputRef}
+        type="file"
+        accept="image/*"
+        onChange={handleAvatarSelect}
+        style={{ display: 'none' }}
+      />
+
       {user.role === 'CUSTOMER' ? (
         <div style={{ margin: '0 auto', display: 'grid', gridTemplateColumns: '240px minmax(0, 1fr)', gap: '1.25rem', alignItems: 'start' }}>
           <aside style={{ background: '#fff', borderRadius: '12px', padding: '1rem', boxShadow: '0 6px 18px rgba(0,0,0,0.04)', position: 'sticky', top: '88px' }}>
@@ -213,9 +306,8 @@ export const Profile = () => {
           </aside>
 
           <div>
-
             {customerTab === 'profile' ? (
-              <CustomerProfile user={user} customer={customerQuery.data!} onSave={handleCustomerProfileSave} />
+              <CustomerProfile user={user} customer={customerQuery.data!} onSave={handleCustomerProfileSave} onEditAvatar={handleOpenAvatarPicker} />
             ) : (
               <CustomerAddresses customerId={customerQuery.data?.id} />
             )}
@@ -369,11 +461,10 @@ export const Profile = () => {
         </div>
       ) : (
         <div style={{ margin: '-50px auto' }}>
-
           {user.role === 'EMPLOYEE' ? (
-            <EmployeeProfile user={user} employee={employeeQuery.data!} onSave={handleEmployeeProfileSave} />
+            <EmployeeProfile user={user} employee={employeeQuery.data!} onSave={handleEmployeeProfileSave} onEditAvatar={handleOpenAvatarPicker} />
           ) : (
-            <GenericProfile user={user} />
+            <GenericProfile user={user} onEditAvatar={handleOpenAvatarPicker} />
           )}
 
           <div style={{ background: '#fff', borderRadius: '12px', boxShadow: '0 10px 25px rgba(0,0,0,0.05)', padding: '2rem' }}>
@@ -521,6 +612,41 @@ export const Profile = () => {
           </div>
         </div>
       )}
+
+      {avatarFile ? (
+        <div style={{ position: 'fixed', inset: 0, zIndex: 60, background: 'rgba(15, 23, 42, 0.68)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem' }}>
+          <div style={{ width: 'min(560px, 100%)', background: '#fff', borderRadius: '20px', overflow: 'hidden', boxShadow: '0 24px 60px rgba(0,0,0,0.28)' }}>
+            <div style={{ padding: '1.25rem 1.5rem', borderBottom: '1px solid rgba(0,0,0,0.06)' }}>
+              <h3 style={{ margin: 0, fontSize: '1.15rem', color: '#111827' }}>Xem trước ảnh đại diện</h3>
+            </div>
+
+            <div style={{ padding: '1.5rem', display: 'flex', justifyContent: 'center', background: '#f8fafc' }}>
+              <div style={{ width: 'min(340px, 100%)', aspectRatio: '1 / 1', borderRadius: '24px', overflow: 'hidden', border: '2px solid rgba(212,175,55,0.25)', background: '#fff', boxShadow: '0 10px 30px rgba(15,23,42,0.08)' }}>
+                <img src={avatarPreviewUrl} alt="Avatar preview" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+              </div>
+            </div>
+
+            <div style={{ padding: '1rem 1.5rem 1.5rem', display: 'flex', justifyContent: 'flex-end', gap: '12px', flexWrap: 'wrap' }}>
+              <button
+                type="button"
+                onClick={handleAvatarCancel}
+                disabled={isUpdatingAvatar}
+                style={{ padding: '10px 18px', borderRadius: '12px', border: '1px solid #d1d5db', background: '#fff', color: '#374151', fontWeight: 700, cursor: 'pointer', minWidth: '110px' }}
+              >
+                Huỷ
+              </button>
+              <button
+                type="button"
+                onClick={handleAvatarSave}
+                disabled={isUpdatingAvatar}
+                style={{ padding: '10px 18px', borderRadius: '12px', border: 'none', background: 'linear-gradient(135deg, #D4AF37, #B8860B)', color: '#fff', fontWeight: 700, cursor: 'pointer', minWidth: '120px', boxShadow: '0 8px 18px rgba(184,134,11,0.28)' }}
+              >
+                {isUpdatingAvatar ? 'Đang cập nhật...' : 'Cập nhật'}
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 };
@@ -545,7 +671,7 @@ const ProfileError = ({ error }: { error: unknown }) => {
   );
 };
 
-const GenericProfile = ({ user }: { user: UserProfileInfo }) => (
+const GenericProfile = ({ user, onEditAvatar }: { user: UserProfileInfo; onEditAvatar?: () => void }) => (
   <div style={{
     background: '#fff',
     boxShadow: '0 12px 30px rgba(201,169,110,0.12)',
@@ -556,7 +682,17 @@ const GenericProfile = ({ user }: { user: UserProfileInfo }) => (
   }}>
 
     <div style={{ padding: '0 2.5rem', marginTop: '40px', display: 'flex', alignItems: 'flex-end', gap: '1.5rem', marginBottom: '2.5rem', position: 'relative', zIndex: 10 }}>
-      <div style={{ width: '120px', height: '120px', borderRadius: '50%', background: '#fff', padding: '5px', boxShadow: '0 8px 20px rgba(184, 134, 11, 0.2)', border: '3px solid #D4AF37', flexShrink: 0 }}>
+      <div style={{ width: '120px', height: '120px', borderRadius: '50%', background: '#fff', padding: '5px', boxShadow: '0 8px 20px rgba(184, 134, 11, 0.2)', border: '3px solid #D4AF37', flexShrink: 0, position: 'relative' }}>
+        {onEditAvatar ? (
+          <button
+            type="button"
+            onClick={onEditAvatar}
+            aria-label="Đổi ảnh đại diện"
+              style={{ position: 'absolute', top: 'auto', bottom: '-4px', right: '-4px', width: '32px', height: '32px', borderRadius: '50%', border: '2px solid #fff', background: 'linear-gradient(135deg, #D4AF37, #B8860B)', color: '#fff', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 6px 14px rgba(184, 134, 11, 0.28)', cursor: 'pointer' }}
+          >
+            <Camera size={16} />
+          </button>
+        ) : null}
         {user.avatarUrl ? (
           <img src={user.avatarUrl} alt="Avatar" style={{ width: '100%', height: '100%', borderRadius: '50%', objectFit: 'cover' }} />
         ) : (
@@ -624,19 +760,6 @@ const InputField = ({
     {error && <span style={{ color: 'var(--color-error)', fontSize: '0.75rem', marginTop: '4px', display: 'block' }}>{error}</span>}
   </div>
 );
-
-function formatDate(dateString?: string) {
-  if (!dateString) return 'Chưa có thông tin';
-  try {
-    return new Intl.DateTimeFormat('vi-VN', {
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit',
-    }).format(new Date(dateString));
-  } catch {
-    return dateString;
-  }
-}
 
 function getErrorMessage(error: unknown): string | undefined {
   if (!error) return undefined;

@@ -1,6 +1,14 @@
 import { axiosClient } from './axiosClient';
 import { resolveBaseUrl, serviceBase } from './serviceBase';
-import type { CreateOrderRequest, CreateGuestOrderRequest, UpdateOrderStatusRequest, OrderResponse } from '../types/order';
+import type {
+  CreateOrderRequest,
+  CreateGuestOrderRequest,
+  UpdateOrderStatusRequest,
+  OrderResponse,
+  VoucherResponse,
+  VoucherValidationRequest,
+  VoucherValidationResponse,
+} from '../types/order';
 
 export const orderApi = {
   createOrder: (payload: CreateOrderRequest) => {
@@ -43,6 +51,18 @@ export const orderApi = {
     return axiosClient.get<unknown, OrderResponse>('/orders/lookup', {
       baseURL: resolveBaseUrl(serviceBase.order),
       params: { orderCode, email },
+    });
+  },
+
+  getVouchers: () => {
+    return axiosClient.get<unknown, VoucherResponse[]>('/orders/vouchers', {
+      baseURL: resolveBaseUrl(serviceBase.order),
+    });
+  },
+
+  validateVoucher: (voucherId: string, payload: VoucherValidationRequest) => {
+    return axiosClient.post<unknown, VoucherValidationResponse>(`/orders/vouchers/${voucherId}/validate`, payload, {
+      baseURL: resolveBaseUrl(serviceBase.order),
     });
   },
 };
