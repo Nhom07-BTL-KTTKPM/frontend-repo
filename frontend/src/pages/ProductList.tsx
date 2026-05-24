@@ -25,30 +25,54 @@ export const ProductList: React.FC = () => {
   const [selectedPromotions, setSelectedPromotions] = useState<string[]>(['best-seller']);
   const [selectedBrands, setSelectedBrands] = useState<string[]>([]);
 
-  const [priceMin, setPriceMin] = useState(10);
-  const [priceMax, setPriceMax] = useState(100);
+  const [priceMin, setPriceMin] = useState(0);
+  const [priceMax, setPriceMax] = useState(0);
+  const [computedPriceMax, setComputedPriceMax] = useState(200);
   const [currentPage, setCurrentPage] = useState(1);
-  const pageSize = 10;
+  const pageSize = 12;
+
+  // Lazy load filter lists only when user interacts with filter area or opens drawer
+  const [shouldLoadFilters, setShouldLoadFilters] = useState(false);
+
+  // fetch summaries lazily via productApi
+  const {
+    data: categoriesSummary,
+    isLoading: isLoadingCategories,
+  } = useQuery({
+    queryKey: ['categories', 'summary'],
+    queryFn: () => productApi.getCategoriesSummary().then((res: any) => res ?? []),
+    enabled: shouldLoadFilters,
+  });
+
+  const {
+    data: brandsSummary,
+    isLoading: isLoadingBrands,
+  } = useQuery({
+    queryKey: ['brands', 'summary'],
+    queryFn: () => productApi.getBrandsSummary().then((res: any) => res ?? []),
+    enabled: shouldLoadFilters,
+  });
 
   const categoryOptions = useMemo(() => {
+    if (!shouldLoadFilters) return [];
+
+    if (Array.isArray(categoriesSummary) && categoriesSummary.length > 0) {
+      // Prefer summary endpoint response; try to map to name or title
+      return Array.from(new Set(categoriesSummary.map((c: any) => c.name ?? c.title ?? String(c))));
+    }
     return Array.from(
-      new Set(
-        products
-          .map((p) => p.category?.name)
-          .filter((name): name is string => Boolean(name && name.trim()))
-      )
+      new Set(products.map((p) => p.category?.name).filter((name): name is string => Boolean(name && name.trim())))
     );
-  }, [products]);
+  }, [categoriesSummary, products, shouldLoadFilters]);
 
   const brandOptions = useMemo(() => {
-    return Array.from(
-      new Set(
-        products
-          .map((p) => p.brand?.name)
-          .filter((name): name is string => Boolean(name && name.trim()))
-      )
-    );
-  }, [products]);
+    if (!shouldLoadFilters) return [];
+
+    if (Array.isArray(brandsSummary) && brandsSummary.length > 0) {
+      return Array.from(new Set(brandsSummary.map((b: any) => b.name ?? b.title ?? String(b))));
+    }
+    return Array.from(new Set(products.map((p) => p.brand?.name).filter((name): name is string => Boolean(name && name.trim()))));
+  }, [brandsSummary, products, shouldLoadFilters]);
 
   const skinTypeOptions = ['Normal', 'Oily', 'Dry', 'Combination', 'Sensitive'];
   const promotionOptions = ['Hàng mới', 'Bán chạy', 'Đang giảm giá'];
@@ -58,10 +82,62 @@ export const ProductList: React.FC = () => {
   ];
 
   const displayedProducts = useMemo(() => {
-    if (!searchKeyword.trim()) return products;
-    const keyword = searchKeyword.trim().toLowerCase();
-    return products.filter((p) => p.name.toLowerCase().includes(keyword));
-  }, [products, searchKeyword]);
+    let list = products;
+
+    // keyword
+    if (searchKeyword.trim()) {
+      const keyword = searchKeyword.trim().toLowerCase();
+      list = list.filter((p) => p.name.toLowerCase().includes(keyword));
+    }
+
+    // categories filter
+    if (selectedCategories.length > 0) {
+      list = list.filter((p) => selectedCategories.includes(p.category?.name ?? ''));
+    }
+
+    // brands filter
+    if (selectedBrands.length > 0) {
+      list = list.filter((p) => selectedBrands.includes(p.brand?.name ?? ''));
+    }
+
+    // skin types (if available on product)
+    if (selectedSkinTypes.length > 0) {
+      list = list.filter((p) => {
+        const types = p.suitableSkinTypes ?? [];
+        return selectedSkinTypes.some((t) => types.includes(t));
+      });
+    }
+
+    // price range (min/max may come from product fields minPrice/maxPrice)
+    list = list.filter((p) => {
+      const min = p.minPrice ?? 0;
+      const max = p.maxPrice ?? 0;
+      return max >= priceMin && min <= priceMax;
+    });
+
+    // ratings
+    if (selectedRatings.length > 0) {
+      list = list.filter((p) => selectedRatings.includes(Math.round(p.averageRating ?? 0)));
+    }
+
+    return list;
+  }, [products, searchKeyword, selectedCategories, selectedBrands, selectedSkinTypes, priceMin, priceMax, selectedRatings]);
+
+  // compute global price bounds from products so default slider doesn't filter everything
+  React.useEffect(() => {
+    if (!products || products.length === 0) return;
+    const mins = products.map((p) => Number(p.minPrice ?? p.price ?? 0)).filter((v) => !Number.isNaN(v));
+    const maxs = products.map((p) => Number(p.maxPrice ?? p.price ?? 0)).filter((v) => !Number.isNaN(v));
+    const globalMin = mins.length ? Math.min(...mins) : 0;
+    const globalMax = maxs.length ? Math.max(...maxs) : 200;
+    setComputedPriceMax(globalMax > 0 ? globalMax : 200);
+
+    // if user hasn't adjusted price (both 0), initialize to product bounds
+    if (priceMin === 0 && priceMax === 0) {
+      setPriceMin(globalMin > 0 ? globalMin : 0);
+      setPriceMax(globalMax > 0 ? globalMax : 200);
+    }
+  }, [products]);
 
   const totalPages = Math.max(1, Math.ceil(displayedProducts.length / pageSize));
   const safeCurrentPage = Math.min(currentPage, totalPages);
@@ -72,6 +148,26 @@ export const ProductList: React.FC = () => {
   React.useEffect(() => {
     setCurrentPage(1);
   }, [searchKeyword]);
+
+  React.useEffect(() => {
+    setCurrentPage(1);
+  }, [selectedCategories, selectedBrands, selectedSkinTypes, priceMin, priceMax, selectedRatings]);
+
+  // Scroll to top of product list when user navigates pages
+  React.useEffect(() => {
+    try {
+      const el = document.querySelector('.product-list-page');
+      if (el) {
+        const top = (window.scrollY || window.pageYOffset) + el.getBoundingClientRect().top - 20;
+        window.scrollTo({ top, behavior: 'smooth' });
+      } else {
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      }
+    } catch (err) {
+      // fallback
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  }, [currentPage]);
 
   const toggleTextFilter = (
     value: string,
@@ -94,7 +190,9 @@ export const ProductList: React.FC = () => {
       <div className="product-list__filter-group">
         <h3>Theo danh mục</h3>
         <div className="product-list__filter-items">
-          {categoryOptions.length > 0 ? (
+          {shouldLoadFilters && isLoadingCategories ? (
+            <p className="product-list__filter-loading">Đang tải danh mục...</p>
+          ) : categoryOptions.length > 0 ? (
             categoryOptions.map((categoryName) => (
               <label key={categoryName} className="product-list__check-row">
                 <input
@@ -114,7 +212,9 @@ export const ProductList: React.FC = () => {
         <div className="product-list__filter-group">
           <h3>Theo thương hiệu</h3>
           <div className="product-list__filter-items">
-            {brandOptions.length > 0 ? (
+              {shouldLoadFilters && isLoadingBrands ? (
+                <p className="product-list__filter-loading">Đang tải thương hiệu...</p>
+              ) : brandOptions.length > 0 ? (
               brandOptions.map((brandName) => (
                 <label key={brandName} className="product-list__check-row">
                   <input
@@ -151,20 +251,20 @@ export const ProductList: React.FC = () => {
         <h3>Giá</h3>
         <div className="product-list__price-range">
           <div className="product-list__price-labels">
-            <span>${priceMin.toFixed(2)}</span>
-            <span>${priceMax.toFixed(2)}</span>
+            <span>{priceMin.toLocaleString()}</span>
+            <span>{priceMax.toLocaleString()}</span>
           </div>
           <input
             type="range"
             min={0}
-            max={200}
+            max={computedPriceMax}
             value={priceMin}
             onChange={(e) => setPriceMin(Math.min(Number(e.target.value), priceMax))}
           />
           <input
             type="range"
             min={0}
-            max={200}
+            max={computedPriceMax}
             value={priceMax}
             onChange={(e) => setPriceMax(Math.max(Number(e.target.value), priceMin))}
           />
@@ -245,7 +345,10 @@ export const ProductList: React.FC = () => {
           <button
             type="button"
             className="product-list__mobile-filter-btn"
-            onClick={() => setIsFilterDrawerOpen(true)}
+            onClick={() => {
+              setShouldLoadFilters(true);
+              setIsFilterDrawerOpen(true);
+            }}
           >
             <SlidersHorizontal size={16} />
             <span>Filters</span>
@@ -278,7 +381,25 @@ export const ProductList: React.FC = () => {
         {error && <p className="product-list__status is-error">Không thể tải sản phẩm</p>}
 
         <div className="product-list__layout">
-          <aside className="product-list__sidebar">{renderFilterPanel()}</aside>
+          <aside
+            className="product-list__sidebar"
+            tabIndex={0}
+            onClick={() => {
+              if (!shouldLoadFilters) setShouldLoadFilters(true);
+            }}
+            onFocus={() => {
+              if (!shouldLoadFilters) setShouldLoadFilters(true);
+            }}
+            onMouseEnter={() => {
+              if (!shouldLoadFilters) setShouldLoadFilters(true);
+            }}
+          >
+            {shouldLoadFilters ? (
+              renderFilterPanel()
+            ) : (
+              <div className="product-list__filter-placeholder">Nhấn vào đây để tải bộ lọc</div>
+            )}
+          </aside>
 
           <div className="product-list__grid">
             {paginatedProducts.map((p) => (

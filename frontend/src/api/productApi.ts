@@ -44,4 +44,14 @@ export const productApi = {
       { params }
     );
   },
+
+  // GET /api/v1/catalog/categories/summary
+  getCategoriesSummary: () => {
+    return axiosClient.get<unknown, unknown[]>('/catalog/categories/summary');
+  },
+
+  // GET /api/v1/catalog/brands/summary
+  getBrandsSummary: () => {
+    return axiosClient.get<unknown, unknown[]>('/catalog/brands/summary');
+  },
 };
