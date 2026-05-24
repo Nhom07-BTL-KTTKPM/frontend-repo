@@ -22,7 +22,9 @@ export const ProductCard: React.FC<Props> = ({ product }) => {
 
   const image = product.thumbnail || (product.images && product.images.length > 0 ? product.images[0].url : '');
   const activeVariant = product.variants?.[0] || null;
-  const price = activeVariant?.price ?? product.minPrice ?? 0;
+  const minPrice = product.minPrice ?? activeVariant?.price ?? 0;
+  const maxPrice = product.maxPrice ?? activeVariant?.price ?? 0;
+  const showPriceRange = maxPrice > 0 && minPrice > 0 && maxPrice !== minPrice;
 
   const handleAddToCart = async (e: React.MouseEvent) => {
     e.preventDefault();
@@ -124,7 +126,11 @@ export const ProductCard: React.FC<Props> = ({ product }) => {
         }}>
           {product.name}
         </h3>
-        <div style={{ color: 'var(--color-gold)', fontWeight: 700, marginTop: 'auto' }}>{price.toLocaleString()} đ</div>
+        <div style={{ color: 'var(--color-gold)', fontWeight: 700, marginTop: 'auto' }}>
+          {showPriceRange
+            ? `${minPrice.toLocaleString('vi-VN')}đ - ${maxPrice.toLocaleString('vi-VN')}đ`
+            : `${(minPrice || maxPrice).toLocaleString('vi-VN')}đ`}
+        </div>
       </Link>
 
       <button

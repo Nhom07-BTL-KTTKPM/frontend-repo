@@ -5,7 +5,7 @@ import { useAuth } from '../../hooks/useAuth';
 import { cartApi } from '../../api/cartApi';
 import { useGuestCartStore } from '../../store/guestCartStore';
 import { useWishlistStore } from '../../store/wishlistStore';
-import { Search, ShoppingBag, UserCircle, ClipboardList, Heart } from 'lucide-react';
+import {  ShoppingBag, UserCircle, ClipboardList, Heart } from 'lucide-react';
 
 export const Header = () => {
   const navigate = useNavigate();
@@ -14,7 +14,7 @@ export const Header = () => {
   const { logoutMutation } = useAuth();
   const isCustomer = useIsCustomer();
   const guestCartCount = useGuestCartStore((s) => s.items.reduce((sum, i) => sum + i.quantity, 0));
-  const { items: wishItems, initialized, fetchWishlist } = useWishlistStore();
+  const { items: wishItems, initialized } = useWishlistStore();
   const [cartCount, setCartCount] = useState(0);
 
   useEffect(() => {
@@ -98,8 +98,12 @@ export const Header = () => {
 
         {/* Header Actions */}
         <div className="header__actions" style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-          <button className="header__action-btn" aria-label="Tìm kiếm" style={{ border: 'none', background: 'none', fontSize: '1.1rem', cursor: 'pointer', padding: '10px' }}>
-            <Search size={20} />
+          <button
+            className="header__action-btn"
+            aria-label="Tìm kiếm"
+            style={{ border: 'none', background: 'none', fontSize: '1.1rem', cursor: 'pointer', padding: '10px' }}
+            onClick={() => navigate('/products')}
+          >
           </button>
           {showCartIcon && (
             <Link to="/cart" className="header__action-btn" aria-label="Giỏ hàng" style={{ border: 'none', background: 'none', fontSize: '1.1rem', cursor: 'pointer', padding: '10px', position: 'relative' }}>

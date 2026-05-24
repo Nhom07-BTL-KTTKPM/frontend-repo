@@ -21,6 +21,13 @@ export const productApi = {
     return axiosClient.get<unknown, Product>(`${catalogProductsPath}/slug/${slug}`);
   },
 
+  // GET /api/v1/catalog/products/search?keyword=...
+  searchProducts: (keyword: string, params?: Record<string, unknown>) => {
+    return axiosClient.get<unknown, PageResponse<Product>>(`${catalogProductsPath}/search`, {
+      params: { keyword, ...params },
+    });
+  },
+
   // GET /api/v1/catalog/products/brand/:brandId
   getProductsByBrand: (brandId: string, params?: Record<string, unknown>) => {
     return axiosClient.get<unknown, PageResponse<Product> | Product[]>(
@@ -43,5 +50,15 @@ export const productApi = {
       `${catalogProductsPath}/category/${categoryId}`,
       { params }
     );
+  },
+
+  // GET /api/v1/catalog/categories/summary
+  getCategoriesSummary: () => {
+    return axiosClient.get<unknown, unknown[]>('/catalog/categories/summary');
+  },
+
+  // GET /api/v1/catalog/brands/summary
+  getBrandsSummary: () => {
+    return axiosClient.get<unknown, unknown[]>('/catalog/brands/summary');
   },
 };
