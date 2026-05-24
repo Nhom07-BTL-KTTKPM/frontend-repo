@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { Search, SlidersHorizontal, Star, X } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Search, SlidersHorizontal, Star, X } from 'lucide-react';
 import { productApi } from '../api/productApi';
 import ProductCard from '../components/ProductCard';
 import type { Product } from '../types/product';
@@ -23,9 +23,12 @@ export const ProductList: React.FC = () => {
   const [selectedRatings, setSelectedRatings] = useState<number[]>([]);
   const [selectedAvailability, setSelectedAvailability] = useState<string[]>(['in-stock']);
   const [selectedPromotions, setSelectedPromotions] = useState<string[]>(['best-seller']);
+  const [selectedBrands, setSelectedBrands] = useState<string[]>([]);
 
   const [priceMin, setPriceMin] = useState(10);
   const [priceMax, setPriceMax] = useState(100);
+  const [currentPage, setCurrentPage] = useState(1);
+  const pageSize = 10;
 
   const categoryOptions = useMemo(() => {
     return Array.from(
@@ -37,11 +40,21 @@ export const ProductList: React.FC = () => {
     );
   }, [products]);
 
+  const brandOptions = useMemo(() => {
+    return Array.from(
+      new Set(
+        products
+          .map((p) => p.brand?.name)
+          .filter((name): name is string => Boolean(name && name.trim()))
+      )
+    );
+  }, [products]);
+
   const skinTypeOptions = ['Normal', 'Oily', 'Dry', 'Combination', 'Sensitive'];
-  const promotionOptions = ['New Arrivals', 'Best Seller', 'On Sale'];
+  const promotionOptions = ['Hàng mới', 'Bán chạy', 'Đang giảm giá'];
   const availabilityOptions = [
-    { id: 'in-stock', label: 'In Stock' },
-    { id: 'out-of-stock', label: 'Out of Stock' },
+    { id: 'in-stock', label: 'Còn hàng' },
+    { id: 'out-of-stock', label: 'Hết hàng' },
   ];
 
   const displayedProducts = useMemo(() => {
@@ -49,6 +62,16 @@ export const ProductList: React.FC = () => {
     const keyword = searchKeyword.trim().toLowerCase();
     return products.filter((p) => p.name.toLowerCase().includes(keyword));
   }, [products, searchKeyword]);
+
+  const totalPages = Math.max(1, Math.ceil(displayedProducts.length / pageSize));
+  const safeCurrentPage = Math.min(currentPage, totalPages);
+  const paginatedProducts = displayedProducts.slice((safeCurrentPage - 1) * pageSize, safeCurrentPage * pageSize);
+  const pageStart = displayedProducts.length === 0 ? 0 : (safeCurrentPage - 1) * pageSize + 1;
+  const pageEnd = Math.min(safeCurrentPage * pageSize, displayedProducts.length);
+
+  React.useEffect(() => {
+    setCurrentPage(1);
+  }, [searchKeyword]);
 
   const toggleTextFilter = (
     value: string,
@@ -69,7 +92,7 @@ export const ProductList: React.FC = () => {
   const renderFilterPanel = () => (
     <>
       <div className="product-list__filter-group">
-        <h3>By Categories</h3>
+        <h3>Theo danh mục</h3>
         <div className="product-list__filter-items">
           {categoryOptions.length > 0 ? (
             categoryOptions.map((categoryName) => (
@@ -83,13 +106,33 @@ export const ProductList: React.FC = () => {
               </label>
             ))
           ) : (
-            <p className="product-list__filter-empty">Chưa có category để hiển thị</p>
+            <p className="product-list__filter-empty">Chưa có danh mục để hiển thị</p>
           )}
         </div>
       </div>
 
+        <div className="product-list__filter-group">
+          <h3>Theo thương hiệu</h3>
+          <div className="product-list__filter-items">
+            {brandOptions.length > 0 ? (
+              brandOptions.map((brandName) => (
+                <label key={brandName} className="product-list__check-row">
+                  <input
+                    type="checkbox"
+                    checked={selectedBrands.includes(brandName)}
+                    onChange={() => toggleTextFilter(brandName, setSelectedBrands)}
+                  />
+                  <span>{brandName}</span>
+                </label>
+              ))
+            ) : (
+              <p className="product-list__filter-empty">Chưa có thương hiệu để hiển thị</p>
+            )}
+          </div>
+        </div>
+
       <div className="product-list__filter-group">
-        <h3>By Skin Type</h3>
+        <h3>Theo loại da</h3>
         <div className="product-list__filter-items">
           {skinTypeOptions.map((skinType) => (
             <label key={skinType} className="product-list__check-row">
@@ -105,7 +148,7 @@ export const ProductList: React.FC = () => {
       </div>
 
       <div className="product-list__filter-group">
-        <h3>Price</h3>
+        <h3>Giá</h3>
         <div className="product-list__price-range">
           <div className="product-list__price-labels">
             <span>${priceMin.toFixed(2)}</span>
@@ -129,7 +172,7 @@ export const ProductList: React.FC = () => {
       </div>
 
       <div className="product-list__filter-group">
-        <h3>Review</h3>
+        <h3>Đánh giá</h3>
         <div className="product-list__filter-items">
           {[5, 4, 3, 2, 1].map((rating) => (
             <button
@@ -143,14 +186,14 @@ export const ProductList: React.FC = () => {
                   <Star key={`${rating}-${index}`} size={14} fill={index < rating ? 'currentColor' : 'none'} />
                 ))}
               </span>
-              <span>{rating} Star</span>
+              <span>{rating} sao</span>
             </button>
           ))}
         </div>
       </div>
 
       <div className="product-list__filter-group">
-        <h3>By Promotions</h3>
+        <h3>Theo khuyến mãi</h3>
         <div className="product-list__filter-items">
           {promotionOptions.map((promotion) => (
             <label key={promotion} className="product-list__check-row">
@@ -166,7 +209,7 @@ export const ProductList: React.FC = () => {
       </div>
 
       <div className="product-list__filter-group">
-        <h3>Availability</h3>
+        <h3>Tình trạng</h3>
         <div className="product-list__filter-items">
           {availabilityOptions.map((availability) => (
             <label key={availability.id} className="product-list__check-row">
@@ -187,17 +230,17 @@ export const ProductList: React.FC = () => {
     <section className="product-list-page">
       <div className="container">
         <header className="product-list__header">
-          <h1>Filter Options</h1>
+          <h1>Tùy chọn lọc</h1>
           <form className="product-list__search" onSubmit={onSubmitSearch}>
             <Search size={18} aria-hidden />
             <input
               type="text"
               value={searchInput}
               onChange={(event) => setSearchInput(event.target.value)}
-              placeholder="Search product name"
-              aria-label="Search products"
+              placeholder="Tìm theo tên sản phẩm"
+              aria-label="Tìm sản phẩm"
             />
-            <button type="submit">Search</button>
+            <button type="submit">Tìm kiếm</button>
           </form>
           <button
             type="button"
@@ -210,23 +253,23 @@ export const ProductList: React.FC = () => {
         </header>
 
         <div className="product-list__active-filters">
-          <span className="chip is-highlight">Active Filter</span>
-          <span className="chip">Price: ${priceMin.toFixed(2)} - ${priceMax.toFixed(2)}</span>
-          <span className="chip">In Stock</span>
+          <span className="chip is-highlight">Bộ lọc đang áp dụng</span>
+          <span className="chip">Giá: ${priceMin.toFixed(2)} - ${priceMax.toFixed(2)}</span>
+          <span className="chip">Còn hàng</span>
         </div>
 
         <div className="product-list__meta-row">
           <p>
-            Showing {displayedProducts.length} of {products.length} products
+            Đang hiển thị {pageStart}-{pageEnd} / {displayedProducts.length} sản phẩm
           </p>
           <label className="product-list__sort">
-            <span>Sort by</span>
+            <span>Sắp xếp</span>
             <select value={sortBy} onChange={(event) => setSortBy(event.target.value)}>
-              <option value="default">Default Sorting</option>
-              <option value="popular">Popular</option>
-              <option value="newest">Newest</option>
-              <option value="price-asc">Price: Low to High</option>
-              <option value="price-desc">Price: High to Low</option>
+              <option value="default">Mặc định</option>
+              <option value="popular">Phổ biến</option>
+              <option value="newest">Mới nhất</option>
+              <option value="price-asc">Giá: Thấp đến cao</option>
+              <option value="price-desc">Giá: Cao đến thấp</option>
             </select>
           </label>
         </div>
@@ -238,16 +281,52 @@ export const ProductList: React.FC = () => {
           <aside className="product-list__sidebar">{renderFilterPanel()}</aside>
 
           <div className="product-list__grid">
-            {displayedProducts.map((p) => (
+            {paginatedProducts.map((p) => (
               <div key={p.id || p.productId} className="product-list__grid-item">
                 <ProductCard product={p} />
               </div>
             ))}
             {!isLoading && displayedProducts.length === 0 && (
-              <div className="product-list__empty">Không có sản phẩm phù hợp với từ khóa tìm kiếm.</div>
+              <div className="product-list__empty">Không có sản phẩm phù hợp với từ khóa đã tìm.</div>
             )}
           </div>
         </div>
+
+        {displayedProducts.length > 0 && totalPages > 1 && (
+          <nav className="product-list__pagination" aria-label="Product pagination">
+            <button
+              type="button"
+              className="product-list__pagination-btn"
+              onClick={() => setCurrentPage((page) => Math.max(1, page - 1))}
+              disabled={safeCurrentPage === 1}
+              aria-label="Previous page"
+            >
+              <ChevronLeft size={16} />
+            </button>
+
+            {Array.from({ length: totalPages }, (_, index) => index + 1).map((page) => (
+              <button
+                key={page}
+                type="button"
+                className={`product-list__pagination-btn${page === safeCurrentPage ? ' is-active' : ''}`}
+                onClick={() => setCurrentPage(page)}
+                aria-current={page === safeCurrentPage ? 'page' : undefined}
+              >
+                {page}
+              </button>
+            ))}
+
+            <button
+              type="button"
+              className="product-list__pagination-btn"
+              onClick={() => setCurrentPage((page) => Math.min(totalPages, page + 1))}
+              disabled={safeCurrentPage === totalPages}
+              aria-label="Next page"
+            >
+              <ChevronRight size={16} />
+            </button>
+          </nav>
+        )}
 
         {isFilterDrawerOpen && (
           <div className="product-list__drawer-overlay" role="presentation" onClick={() => setIsFilterDrawerOpen(false)}>

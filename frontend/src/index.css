@@ -3622,7 +3622,7 @@
 
         .product-list__grid {
             display: grid;
-            grid-template-columns: repeat(3, minmax(0, 1fr));
+            grid-template-columns: repeat(4, minmax(0, 1fr));
             gap: var(--space-lg);
         }
 
@@ -3651,6 +3651,44 @@
             grid-column: 1 / -1;
             text-align: center;
             padding: var(--space-3xl) 0;
+        }
+
+        .product-list__pagination {
+            margin-top: var(--space-2xl);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        .product-list__pagination-btn {
+            min-width: 38px;
+            height: 38px;
+            border-radius: var(--radius-full);
+            border: 1px solid rgba(201, 169, 110, 0.28);
+            background: var(--color-white);
+            color: var(--color-gray-700);
+            font-size: 0.84rem;
+            font-weight: 600;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0 12px;
+            transition: var(--transition-fast);
+        }
+
+        .product-list__pagination-btn:hover:not(:disabled),
+        .product-list__pagination-btn.is-active {
+            background: linear-gradient(135deg, var(--color-gold), var(--color-gold-dark));
+            color: var(--color-white);
+            border-color: var(--color-gold-dark);
+            box-shadow: var(--shadow-gold);
+        }
+
+        .product-list__pagination-btn:disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
         }
 
         .product-list__drawer-overlay {
