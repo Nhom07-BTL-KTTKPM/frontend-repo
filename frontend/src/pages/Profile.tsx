@@ -1,5 +1,4 @@
 
-import { useMemo, useState, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
@@ -322,13 +321,9 @@ export const Profile = () => {
           <div>
 
             {customerTab === 'profile' && (
-              <CustomerProfile user={user} customer={customerQuery.data!} onSave={handleCustomerProfileSave} />
+              <CustomerProfile user={user} customer={customerQuery.data!} onSave={handleCustomerProfileSave} onEditAvatar={handleOpenAvatarPicker} />
             )}
             {customerTab === 'addresses' && (
-            {customerTab === 'profile' ? (
-              <CustomerProfile user={user} customer={customerQuery.data!} onSave={handleCustomerProfileSave} onEditAvatar={handleOpenAvatarPicker} />
-            ) : (
-
               <CustomerAddresses customerId={customerQuery.data?.id} />
             )}
             {customerTab === 'wishlist' && (

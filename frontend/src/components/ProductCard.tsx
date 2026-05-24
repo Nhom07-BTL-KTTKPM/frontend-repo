@@ -7,7 +7,6 @@ import { useCustomerId } from '../hooks/useCustomerId';
 import { useWishlistStore } from '../store/wishlistStore';
 import { cartApi } from '../api/cartApi';
 import { useAuthStore } from '../store/authStore';
-import { useCustomerId } from '../hooks/useCustomerId';
 import { useGuestCartStore } from '../store/guestCartStore';
 import { toast } from 'sonner';
 
@@ -63,7 +62,6 @@ export const ProductCard: React.FC<Props> = ({ product }) => {
     }
   };
 
-  const { customerId } = useCustomerId();
   const { isFavorite, toggleItem, fetchWishlist, initialized } = useWishlistStore();
   const [favLoading, setFavLoading] = React.useState(false);
 
