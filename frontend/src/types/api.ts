@@ -142,3 +142,9 @@ export interface AddressCreateRequest {
   city?: string;
   isDefault?: boolean;
 }
+
+export interface WishItem {
+  id: string;
+  customerId: string;
+  productId: string;
+}
