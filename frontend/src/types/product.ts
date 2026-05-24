@@ -34,6 +34,7 @@ export interface Product {
   description?: string;
   minPrice?: number;
   maxPrice?: number;
+  thumbnail?: string;
   images?: ProductImage[];
   variants?: ProductVariant[];
   brand?: Brand;

@@ -20,7 +20,7 @@ export const ProductCard: React.FC<Props> = ({ product }) => {
   const { customerId } = useCustomerId();
   const addGuestItem = useGuestCartStore((s) => s.addItem);
 
-  const image = product.images && product.images.length > 0 ? product.images[0].url : '';
+  const image = product.thumbnail || (product.images && product.images.length > 0 ? product.images[0].url : '');
   const activeVariant = product.variants?.[0] || null;
   const price = activeVariant?.price ?? product.minPrice ?? 0;
 
@@ -104,8 +104,8 @@ export const ProductCard: React.FC<Props> = ({ product }) => {
       flexDirection: 'column'
     }}>
       <Link to={`/product/${product.slug || product.productId}`} style={{ textDecoration: 'none', color: 'inherit', flex: 1, display: 'flex', flexDirection: 'column' }}>
-        <div style={{ height: 160, display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', borderRadius: 4, marginBottom: 8 }}>
-          {image ? <img src={image} alt={product.name} style={{ maxWidth: '100%', maxHeight: '100%' }} /> : <div style={{ color: '#999' }}>No image</div>}
+        <div style={{ height: 160, display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', borderRadius: 4, marginBottom: 8, background: '#f7f3ea' }}>
+          {image ? <img src={image} alt={product.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : <div style={{ color: '#999' }}>No image</div>}
         </div>
         <h3 style={{
           fontSize: 14,

@@ -351,9 +351,12 @@ const ProductsTab = ({
                 <div
                   className="relative aspect-video overflow-hidden bg-slate-100"
                   style={{
-                    background: imageUrl
-                      ? `linear-gradient(180deg, rgba(15, 23, 42, 0.05), rgba(15, 23, 42, 0.15)), url(${imageUrl}) center/cover`
+                    backgroundImage: imageUrl
+                      ? `linear-gradient(180deg, rgba(15, 23, 42, 0.05), rgba(15, 23, 42, 0.15)), url("${imageUrl}")`
                       : 'linear-gradient(135deg, #dbeafe, #e0f2fe)',
+                    backgroundPosition: 'center',
+                    backgroundSize: 'cover',
+                    backgroundRepeat: 'no-repeat',
                   }}
                 >
                   <div className="absolute inset-0 bg-black/0 transition duration-200 group-hover:bg-black/20" />
