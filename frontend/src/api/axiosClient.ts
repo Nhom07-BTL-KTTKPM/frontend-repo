@@ -60,10 +60,18 @@ axiosClient.interceptors.request.use(
       return config;
     }
 
+      const isAuthEndpoint =
+      config.url?.includes('/auth/login') ||
+      config.url?.includes('/auth/register') ||
+      config.url?.includes('/auth/refresh');
+
     const token =
       useAuthStore.getState().accessToken ||
-      (typeof window !== 'undefined' ? window.localStorage.getItem('auth-access-token') : null);
-    if (token && config.headers) {
+      (typeof window !== 'undefined'
+        ? window.localStorage.getItem('auth-access-token')
+        : null);
+
+    if (token && config.headers && !isAuthEndpoint) {
       config.headers.Authorization = `Bearer ${token}`;
     }
     return config;
@@ -132,8 +140,6 @@ axiosClient.interceptors.response.use(
         if (originalRequest.headers) {
           originalRequest.headers.Authorization = `Bearer ${newAccessToken}`;
         }
-
-        processQueue(null, newAccessToken);
         return axiosClient(originalRequest);
       } catch (err) {
         processQueue(err, null);
