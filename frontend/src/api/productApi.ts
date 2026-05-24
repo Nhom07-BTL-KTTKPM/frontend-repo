@@ -36,4 +36,12 @@ export const productApi = {
       { params }
     );
   },
+
+  // GET /api/v1/catalog/products/category/:categoryId
+  getProductsByCategory: (categoryId: string, params?: Record<string, unknown>) => {
+    return axiosClient.get<unknown, PageResponse<Product> | Product[]>(
+      `${catalogProductsPath}/category/${categoryId}`,
+      { params }
+    );
+  },
 };

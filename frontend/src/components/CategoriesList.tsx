@@ -20,8 +20,7 @@ export const CategoriesList: React.FC = () => {
   const { data: categories, isUsingFallback } = useApi(apiCall, MOCK_CATEGORIES);
 
   const handleCategoryClick = useCallback((category: CategorySummaryResponse) => {
-    // Temporarily include a flag to instruct the detail page to skip product API calls
-    navigate(`/categories/${category.slug}?noProducts=true`);
+    navigate(`/categories/${category.slug}`);
   }, [navigate]);
 
   if (!categories || !Array.isArray(categories)) {

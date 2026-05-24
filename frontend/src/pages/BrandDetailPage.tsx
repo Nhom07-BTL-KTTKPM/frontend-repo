@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { useParams, useNavigate, useLocation } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import { brandApi } from '../api/brandApi';
 import { productApi } from '../api/productApi';
 import { useApi } from '../hooks/useApi';
@@ -32,28 +32,18 @@ export const BrandDetailPage: React.FC = () => {
   const apiCall = useCallback(() => brandApi.getBrandBySlug(slug), [slug]);
   const { data: brand, isUsingFallback, loading } = useApi(apiCall, MOCK_BRAND);
 
+  const resolvedBrandId = !isUsingFallback ? brand?.id ?? '' : '';
+
   const [products, setProducts] = useState<Product[]>([]);
   const [productsLoading, setProductsLoading] = useState(false);
-  const location = useLocation();
-  const searchParams = new URLSearchParams(location.search);
-  const skipProducts = searchParams.get('noProducts') === 'true';
 
   useEffect(() => {
-    if (!brand?.id) return;
+    if (!resolvedBrandId) return;
     let isMounted = true;
-
-    if (skipProducts) {
-      // Skip fetching products when flagged (temporary)
-      setProducts([]);
-      setProductsLoading(false);
-      return () => {
-        isMounted = false;
-      };
-    }
 
     setProductsLoading(true);
     productApi
-      .getProductsByBrand(brand.id, { size: 12 })
+      .getProductsByBrand(resolvedBrandId, { size: 12 })
       .then((res) => {
         if (!isMounted) return;
         const list = Array.isArray(res)
@@ -71,7 +61,7 @@ export const BrandDetailPage: React.FC = () => {
     return () => {
       isMounted = false;
     };
-  }, [brand?.id, skipProducts]);
+  }, [resolvedBrandId]);
 
   if (loading) {
     return <div className="loading">Đang tải...</div>;

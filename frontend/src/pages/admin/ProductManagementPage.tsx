@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState, type FormEvent, type ChangeEvent, type DragEvent } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import {
   BadgeCheck,
   ChevronDown,
@@ -25,40 +25,18 @@ import { brandApi } from '../../api/brandApi';
 import { categoryApi } from '../../api/categoryApi';
 import type { BrandRequest, BrandResponse, BrandStatusRequest, CategoryResponse, CategoryStatusRequest } from '../../types/catalog';
 
-type ProductVariantRow = {
-  id: string;
-  variantName?: string;
-  sku?: string;
-  price: number;
-  originalPrice?: number;
-  stockQuantity?: number;
-  sold?: number;
-  isActive?: boolean;
-};
-
-type ProductImageRow = {
-  url: string;
-  altText?: string;
-  isPrimary?: boolean;
-};
-
 type ProductCardRow = {
   id: string;
   name: string;
   slug: string;
-  description?: string;
   minPrice?: number | null;
   maxPrice?: number | null;
   averageRating?: number;
-  totalReviews?: number;
   totalSold?: number;
+  totalStock?: number;
   isActive?: boolean;
   isFeatured?: boolean;
-  categoryName?: string;
-  brandName?: string;
-  brandLogoUrl?: string;
-  images?: ProductImageRow[];
-  variants?: ProductVariantRow[];
+  thumbnail?: string;
 };
 
 type AdminTab = 'products' | 'categories' | 'brands';
@@ -129,7 +107,7 @@ const trimOrUndefined = (value: string) => {
 };
 
 const getProductImage = (product: ProductCardRow) => {
-  return product.images?.find((image) => image.isPrimary)?.url || product.images?.[0]?.url || '';
+  return product.thumbnail || '';
 };
 
 const getPriceLabel = (product: ProductCardRow) => {
@@ -141,15 +119,7 @@ const getPriceLabel = (product: ProductCardRow) => {
     return formatCurrency(product.minPrice);
   }
 
-  const variantPrices = product.variants?.map((variant) => variant.price).filter((price): price is number => typeof price === 'number') || [];
-  if (variantPrices.length === 0) {
-    return 'Liên hệ';
-  }
-
-  const minPrice = Math.min(...variantPrices);
-  const maxPrice = Math.max(...variantPrices);
-
-  return minPrice === maxPrice ? formatCurrency(minPrice) : `${formatCurrency(minPrice)} - ${formatCurrency(maxPrice)}`;
+  return 'Liên hệ';
 };
 
 const statusTone = (isActive?: boolean) => {
@@ -174,10 +144,6 @@ const getStockStatus = (stockQuantity?: number) => {
     return { className: 'text-amber-600 font-semibold', label: 'Low stock' };
   }
   return { className: 'text-emerald-600 font-semibold', label: 'In stock' };
-};
-
-const getTotalStock = (variants?: ProductVariantRow[]) => {
-  return (variants || []).reduce((sum, variant) => sum + (variant.stockQuantity || 0), 0);
 };
 
 const formatDateTime = (value?: string) => {
@@ -240,7 +206,7 @@ const ProductStats = ({ products }: { products: ProductCardRow[] }) => {
     total: products.length,
     active: products.filter((product) => product.isActive).length,
     featured: products.filter((product) => product.isFeatured).length,
-    outOfStock: products.filter((product) => getTotalStock(product.variants) === 0).length,
+    outOfStock: products.filter((product) => (product.totalStock ?? 0) === 0).length,
   };
 
   return (
@@ -264,7 +230,7 @@ const ProductsTab = ({
   error: string | null;
   onToggleStatus: (product: ProductCardRow) => void;
 }) => {
-  const totalVariants = products.reduce((sum, product) => sum + (product.variants?.length || 0), 0);
+  const navigate = useNavigate();
 
   return (
     <div className="grid gap-6">
@@ -272,9 +238,7 @@ const ProductsTab = ({
         <div>
           <p className="m-0 text-sm text-slate-500">Quản trị sản phẩm</p>
           <h2 className="m-0 mt-1 text-2xl font-bold text-slate-900">Product management</h2>
-          <p className="m-0 mt-2 text-sm text-slate-500">
-            {products.length} sản phẩm, {totalVariants} variants
-          </p>
+          <p className="m-0 mt-2 text-sm text-slate-500">{products.length} sản phẩm trong danh sách</p>
         </div>
 
         <Link
@@ -376,10 +340,9 @@ const ProductsTab = ({
         <section className="grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-4 2xl:grid-cols-5">
           {products.map((product) => {
             const imageUrl = getProductImage(product);
-            const variants = product.variants || [];
             const tone = statusTone(product.isActive);
             const displayPrice = getPriceLabel(product);
-            const totalStock = getTotalStock(variants);
+            const totalStock = product.totalStock ?? 0;
             const stockStatus = getStockStatus(totalStock);
 
             return (
@@ -390,9 +353,12 @@ const ProductsTab = ({
                 <div
                   className="relative aspect-video overflow-hidden bg-slate-100"
                   style={{
-                    background: imageUrl
-                      ? `linear-gradient(180deg, rgba(15, 23, 42, 0.05), rgba(15, 23, 42, 0.15)), url(${imageUrl}) center/cover`
+                    backgroundImage: imageUrl
+                      ? `linear-gradient(180deg, rgba(15, 23, 42, 0.05), rgba(15, 23, 42, 0.15)), url("${imageUrl}")`
                       : 'linear-gradient(135deg, #dbeafe, #e0f2fe)',
+                    backgroundPosition: 'center',
+                    backgroundSize: 'cover',
+                    backgroundRepeat: 'no-repeat',
                   }}
                 >
                   <div className="absolute inset-0 bg-black/0 transition duration-200 group-hover:bg-black/20" />
@@ -408,7 +374,12 @@ const ProductsTab = ({
                   ) : null}
 
                   <div className="absolute inset-0 flex items-center justify-center gap-2 opacity-0 transition duration-200 group-hover:opacity-100">
-                    <button className="rounded-full bg-white p-2.5 shadow-lg transition hover:bg-slate-50" title="Xem chi tiết">
+                    <button
+                      type="button"
+                      className="rounded-full bg-white p-2.5 shadow-lg transition hover:bg-slate-50"
+                      title="Xem chi tiết"
+                      onClick={() => navigate(`/product/${product.slug}`, { state: { productId: product.id } })}
+                    >
                       <Eye size={16} className="text-slate-700" />
                     </button>
                     <button className="rounded-full bg-white p-2.5 shadow-lg transition hover:bg-slate-50" title="Chỉnh sửa">
@@ -416,18 +387,19 @@ const ProductsTab = ({
                     </button>
                     <button
                       type="button"
-                      className="rounded-full bg-rose-50 p-2.5 text-rose-600 shadow-lg transition hover:bg-rose-100"
-                      title={product.isActive ? 'Vô hiệu' : 'Kích hoạt'}
+                      className={`rounded-full p-2.5 shadow-lg transition hover:bg-rose-100 ${
+                        product.isActive ? 'bg-rose-50 text-rose-600' : 'bg-emerald-50 text-emerald-600'
+                      }`}
+                      title={product.isActive ? 'Ẩn sản phẩm' : 'Hiển thị sản phẩm'}
                       onClick={() => onToggleStatus(product)}
                     >
-                      <EyeOff size={16} className="text-rose-600" />
+                      {product.isActive ? <EyeOff size={16} /> : <Eye size={16} />}
                     </button>
                   </div>
                 </div>
 
                 <div className="grid gap-2 p-3">
                   <div className="min-w-0">
-                    <p className="m-0 text-xs font-semibold text-slate-500">{product.categoryName || 'Chưa có danh mục'}</p>
                     <h3 className="m-0 mt-1 line-clamp-2 text-sm font-bold text-slate-900">{product.name}</h3>
                   </div>
 
@@ -442,11 +414,6 @@ const ProductsTab = ({
                     </div>
                   </div>
 
-                  <div className="flex gap-1 pt-1">
-                    <span className="inline-flex items-center rounded-full bg-amber-50 px-2 py-1 text-xs font-semibold text-amber-700">
-                      {product.brandName || 'No brand'}
-                    </span>
-                  </div>
                 </div>
               </article>
             );
