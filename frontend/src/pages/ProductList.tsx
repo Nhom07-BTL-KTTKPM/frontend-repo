@@ -233,6 +233,31 @@ export const ProductList: React.FC = () => {
   const removeAvailability = (value: string) => setSelectedAvailability((prev) => prev.filter((v) => v !== value));
   const removePromotion = (value: string) => setSelectedPromotions((prev) => prev.filter((v) => v !== value));
 
+  const hasActiveFilters = React.useMemo(() => {
+    return (
+      isSearching ||
+      priceMin !== 0 ||
+      priceMax !== computedPriceMax ||
+      selectedAvailability.length > 0 ||
+      selectedPromotions.length > 0 ||
+      selectedCategories.length > 0 ||
+      selectedBrands.length > 0 ||
+      selectedSkinTypes.length > 0 ||
+      selectedRatings.length > 0
+    );
+  }, [
+    isSearching,
+    priceMin,
+    priceMax,
+    computedPriceMax,
+    selectedAvailability,
+    selectedPromotions,
+    selectedCategories,
+    selectedBrands,
+    selectedSkinTypes,
+    selectedRatings,
+  ]);
+
 
   const showFilterSkeleton = shouldLoadFilters && (isLoadingCategories || isLoadingBrands);
 
@@ -420,10 +445,10 @@ export const ProductList: React.FC = () => {
                 aria-label="Xóa tìm kiếm"
                 title="Xóa tìm kiếm"
               >
-                <X size={16} />
+                <X size={16} color="#ffffff"/>
               </button>
             )}
-            <button type="submit">Tìm kiếm</button>
+            
           </form>
           <button
             type="button"
@@ -439,8 +464,10 @@ export const ProductList: React.FC = () => {
         </header>
 
         <div className="product-list__active-filters">
-          <span className="chip is-highlight">Bộ lọc đang áp dụng</span>
-
+          <div className="flex items-center gap-1.5 text-xs font-semibold text-gray-500 uppercase tracking-wider">
+            <span className="w-1.5 h-1.5 rounded-full bg-[#2B6377] animate-pulse" />
+            Bộ lọc đang chọn
+          </div>
           {isSearching && (
             <span className="chip">
               Từ khóa: {searchKeyword}
@@ -524,11 +551,18 @@ export const ProductList: React.FC = () => {
             </span>
           ))}
 
-          <div className="product-list__active-filters-actions">
-            <button type="button" className="btn btn-link" onClick={clearAllFilters}>
-              Xóa tất cả bộ lọc
-            </button>
-          </div>
+          {hasActiveFilters && (
+            <div className="product-list__active-filters-actions">
+              <button
+                type="button"
+                onClick={clearAllFilters}
+                className="inline-flex items-center gap-1.5 px-3 py-1 text-xs font-medium text-gray-500 bg-gray-100 hover:bg-red-50 hover:text-red-600 rounded-full border border-gray-200 hover:border-red-200 transition-all shadow-sm"
+              >
+                <span>Xóa tất cả</span>
+                <X size={12} className="opacity-70" />
+              </button>
+            </div>
+          )}
         </div>
 
         <div className="product-list__meta-row">
