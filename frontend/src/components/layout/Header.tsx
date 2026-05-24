@@ -98,8 +98,12 @@ export const Header = () => {
 
         {/* Header Actions */}
         <div className="header__actions" style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-          <button className="header__action-btn" aria-label="Tìm kiếm" style={{ border: 'none', background: 'none', fontSize: '1.1rem', cursor: 'pointer', padding: '10px' }}>
-            <Search size={20} />
+          <button
+            className="header__action-btn"
+            aria-label="Tìm kiếm"
+            style={{ border: 'none', background: 'none', fontSize: '1.1rem', cursor: 'pointer', padding: '10px' }}
+            onClick={() => navigate('/products')}
+          >
           </button>
           {showCartIcon && (
             <Link to="/cart" className="header__action-btn" aria-label="Giỏ hàng" style={{ border: 'none', background: 'none', fontSize: '1.1rem', cursor: 'pointer', padding: '10px', position: 'relative' }}>
