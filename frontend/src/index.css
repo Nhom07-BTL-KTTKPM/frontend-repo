@@ -1049,39 +1049,67 @@
         .categories__grid,
         .categories-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+            grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
             gap: var(--space-xl);
         }
 
         .category-card {
             position: relative;
-            border-radius: var(--radius-lg);
-            overflow: hidden;
+            appearance: none;
+            border: 0;
+            padding: 0;
+            border-radius: 0;
+            overflow: visible;
             cursor: pointer;
-            margin: 0 auto;
             width: 100%;
-            background: var(--color-cream);
-            border: 1px solid rgba(201, 169, 110, 0.15);
-            padding: var(--space-xl) var(--space-md);
+            background: transparent;
+            border: none;
             display: flex;
             flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            gap: var(--space-sm);
             transition: var(--transition-base);
-            min-height: 160px;
+            text-align: center;
+            box-shadow: none;
+            gap: var(--space-md);
         }
 
         .category-card:hover {
-            transform: translateY(-4px);
-            box-shadow: var(--shadow-md);
-            border-color: rgba(201, 169, 110, 0.4);
-            background: var(--color-white);
+            transform: translateY(-2px);
         }
 
-        .category-card__icon {
-            font-size: 2.4rem;
+        .category-card__media {
+            position: relative;
+            width: 100%;
+            aspect-ratio: 1;
+            max-width: 120px;
+            margin: 0 auto;
+            border-radius: 50%;
+            overflow: hidden;
+            background: linear-gradient(135deg, rgba(201, 169, 110, 0.16), rgba(244, 208, 145, 0.22));
+            box-shadow: 0 10px 24px rgba(15, 23, 42, 0.08);
+        }
+
+        .category-card__fallback,
+        .brand-card__fallback {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background:
+                radial-gradient(circle at 30% 20%, rgba(255, 255, 255, 0.55), transparent 32%),
+                linear-gradient(135deg, rgba(201, 169, 110, 0.22), rgba(234, 181, 123, 0.42));
+        }
+
+        .brand-card__fallback {
+            border-radius: 999px;
+        }
+
+        .category-card__icon,
+        .brand-card__initials {
+            font-size: 2.2rem;
             line-height: 1;
+            font-weight: 700;
+            color: rgba(30, 41, 59, 0.88);
             transition: var(--transition-base);
         }
 
@@ -1089,54 +1117,29 @@
             transform: scale(1.1);
         }
 
-        .category-card__name {
-            font-family: var(--font-display);
-            font-size: 1.05rem;
-            font-weight: 600;
-            color: var(--color-gray-900);
-            text-align: center;
-            margin: 0;
-        }
-
         .category-card__image {
             width: 100%;
             height: 100%;
             object-fit: cover;
-            transition: var(--transition-slow);
+            transition: transform 0.5s ease;
         }
 
-        .category-card__overlay {
-            position: absolute;
-            inset: 0;
-            background: linear-gradient(180deg, transparent 40%, rgba(0,0,0,0.6) 100%);
-            display: flex;
-            flex-direction: column;
-            justify-content: flex-end;
-            padding: var(--space-xl);
-            transition: var(--transition-base);
+        .category-card:hover .category-card__image {
+            transform: scale(1.03);
         }
 
-        .category-card__count {
-            font-size: 0.8rem;
-            color: rgba(255,255,255,0.7);
-            letter-spacing: 1px;
+        .category-card__content {
+            position: relative;
+            z-index: 1;
+            padding: 0 0.25rem;
         }
 
-        .category-card__arrow {
-            position: absolute;
-            top: var(--space-lg);
-            right: var(--space-lg);
-            width: 40px;
-            height: 40px;
-            background: rgba(255,255,255,0.15);
-            backdrop-filter: blur(10px);
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: var(--color-white);
-            font-size: 0.8rem;
-            transition: var(--transition-base);
+        .category-card__name {
+            font-family: var(--font-body);
+            font-size: 0.98rem;
+            font-weight: 700;
+            color: var(--color-black);
+            margin: 0;
         }
 
         /* ===== BRANDS LIST SECTION ===== */
@@ -1152,41 +1155,39 @@
         }
 
         .brand-card {
+            appearance: none;
+            border: 1px solid rgba(201, 169, 110, 0.16);
             background: var(--color-white);
-            border: 1px solid rgba(201, 169, 110, 0.15);
-            border-radius: var(--radius-md);
+            border-radius: var(--radius-lg);
             cursor: pointer;
             transition: var(--transition-base);
-            min-height: 110px;
+            min-height: 88px;
             display: flex;
             align-items: center;
             justify-content: center;
+            overflow: hidden;
+            padding: var(--space-lg);
+            text-align: center;
+            box-shadow: 0 8px 30px rgba(15, 23, 42, 0.05);
         }
 
         .brand-card:hover {
-            transform: translateY(-3px);
+            transform: translateY(-4px);
             box-shadow: var(--shadow-md);
-            border-color: var(--color-gold);
-        }
-
-        .brand-card__inner {
-            padding: var(--space-lg) var(--space-md);
-            text-align: center;
-            width: 100%;
+            border-color: rgba(201, 169, 110, 0.35);
         }
 
         .brand-card__name {
-            font-family: var(--font-display);
-            font-size: 1.1rem;
-            font-weight: 600;
+            font-family: var(--font-body);
+            font-size: 0.98rem;
+            font-weight: 700;
             color: var(--color-gray-900);
             margin: 0;
-            letter-spacing: 0.5px;
-            transition: var(--transition-base);
+            letter-spacing: 0.2px;
         }
 
-        .brand-card:hover .brand-card__name {
-            color: var(--color-gold-dark);
+        .brand-card--text:hover {
+            transform: translateY(-2px);
         }
 
         /* ===== GENERIC FALLBACK NOTICE ===== */

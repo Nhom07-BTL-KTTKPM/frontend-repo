@@ -41,16 +41,15 @@ export const BrandsList: React.FC = () => {
         )}
 
         <div className="brands-grid">
-          {brands && Array.isArray(brands) && brands.map((brand) => (
-            <div 
-              key={brand.id} 
-              className="brand-card"
+          {brands.map((brand) => (
+            <button
+              key={brand.id}
+              type="button"
+              className="brand-card brand-card--text"
               onClick={() => handleBrandClick(brand)}
             >
-              <div className="brand-card__inner">
-                <h3 className="brand-card__name">{brand.name}</h3>
-              </div>
-            </div>
+              <h3 className="brand-card__name">{brand.name}</h3>
+            </button>
           ))}
         </div>
       </div>
