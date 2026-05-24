@@ -59,10 +59,4 @@ export const productManagementApi = {
       baseURL: resolveBaseUrl(serviceBase.catalog),
     });
   },
-
-  deleteProduct: (productId: string) => {
-    return axiosClient.delete<unknown, void>(`${catalogProductsPath}/${productId}`, {
-      baseURL: resolveBaseUrl(serviceBase.catalog),
-    });
-  },
 };

@@ -416,11 +416,13 @@ const ProductsTab = ({
                     </button>
                     <button
                       type="button"
-                      className="rounded-full bg-rose-50 p-2.5 text-rose-600 shadow-lg transition hover:bg-rose-100"
-                      title={product.isActive ? 'Vô hiệu' : 'Kích hoạt'}
+                      className={`rounded-full p-2.5 shadow-lg transition hover:bg-rose-100 ${
+                        product.isActive ? 'bg-rose-50 text-rose-600' : 'bg-emerald-50 text-emerald-600'
+                      }`}
+                      title={product.isActive ? 'Ẩn sản phẩm' : 'Hiển thị sản phẩm'}
                       onClick={() => onToggleStatus(product)}
                     >
-                      <EyeOff size={16} className="text-rose-600" />
+                      {product.isActive ? <EyeOff size={16} /> : <Eye size={16} />}
                     </button>
                   </div>
                 </div>
