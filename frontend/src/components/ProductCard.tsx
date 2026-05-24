@@ -1,17 +1,67 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { ShoppingCart, Heart, Loader2 } from 'lucide-react';
 import type { Product } from '../types/product';
+
 import { useCustomerId } from '../hooks/useCustomerId';
 import { useWishlistStore } from '../store/wishlistStore';
+import { cartApi } from '../api/cartApi';
+import { useAuthStore } from '../store/authStore';
+import { useCustomerId } from '../hooks/useCustomerId';
+import { useGuestCartStore } from '../store/guestCartStore';
+import { toast } from 'sonner';
 
 interface Props {
   product: Product;
 }
 
 export const ProductCard: React.FC<Props> = ({ product }) => {
+  const [isAdding, setIsAdding] = useState(false);
+  const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
+  const { customerId } = useCustomerId();
+  const addGuestItem = useGuestCartStore((s) => s.addItem);
+
   const image = product.images && product.images.length > 0 ? product.images[0].url : '';
-  const price = product.minPrice ?? product.variants?.[0]?.price ?? 0;
+  const activeVariant = product.variants?.[0] || null;
+  const price = activeVariant?.price ?? product.minPrice ?? 0;
+
+  const handleAddToCart = async (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+
+    if (!activeVariant) {
+        toast.error('Sản phẩm hiện không có sẵn');
+        return;
+    }
+
+    if (isAuthenticated && customerId) {
+      setIsAdding(true);
+      try {
+        await cartApi.addItem(customerId, {
+          productVariantId: activeVariant.id,
+          quantity: 1,
+          unitPrice: activeVariant.price
+        });
+        toast.success('Đã thêm sản phẩm vào giỏ hàng');
+        window.dispatchEvent(new CustomEvent('cart:updated'));
+      } catch (err) {
+        const message = err instanceof Error ? err.message : 'Thêm vào giỏ hàng thất bại';
+        toast.error(message);
+      } finally {
+        setIsAdding(false);
+      }
+    } else {
+      addGuestItem({
+        productVariantId: activeVariant.id,
+        quantity: 1,
+        unitPrice: activeVariant.price,
+        variantName: activeVariant.variantName || '',
+        productName: product.name,
+        imageUrl: image,
+      });
+      toast.success('Đã thêm sản phẩm vào giỏ hàng');
+    }
+  };
 
   const { customerId } = useCustomerId();
   const { isFavorite, toggleItem, fetchWishlist, initialized } = useWishlistStore();
@@ -101,13 +151,17 @@ export const ProductCard: React.FC<Props> = ({ product }) => {
           e.currentTarget.style.transform = 'scale(1)';
           e.currentTarget.style.boxShadow = '0 2px 8px rgba(0,0,0,0.1)';
         }}
+
         onClick={(e) => {
           e.preventDefault();
           e.stopPropagation();
         }}
+
+        onClick={handleAddToCart}
+        disabled={isAdding || !activeVariant || (activeVariant.stockQuantity ?? 0) <= 0}
         title="Thêm vào giỏ hàng"
       >
-        <ShoppingCart size={18} />
+        {isAdding ? <span style={{fontSize: '12px', fontWeight: 600}}>...</span> : <ShoppingCart size={18} />}
       </button>
 
       <button
