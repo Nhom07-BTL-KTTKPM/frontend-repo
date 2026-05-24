@@ -11,7 +11,11 @@ import { useGuestCartStore } from '../store/guestCartStore';
 import type { Product, ProductImage, ProductVariant } from '../types/product';
 import { ReviewSection } from '../components/review/ReviewSection';
 
-type DetailTab = 'description' | 'info' | 'reviews';
+type DetailTab = 'description' | 'reviews';
+
+type RichVariant = ProductVariant & {
+  imageUrl?: string;
+};
 
 type RichProduct = Product & {
   averageRating?: number;
@@ -30,7 +34,7 @@ type RichProduct = Product & {
 export const ProductDetail: React.FC = () => {
   const { slug } = useParams<{ slug: string }>();
   const location = useLocation();
-  const [selectedVariant, setSelectedVariant] = useState<ProductVariant | null>(null);
+  const [selectedVariant, setSelectedVariant] = useState<RichVariant | null>(null);
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
   const [activeTab, setActiveTab] = useState<DetailTab>('description');
   const [isAdding, setIsAdding] = useState(false);
@@ -75,18 +79,17 @@ export const ProductDetail: React.FC = () => {
   const actualProductId = product?.productId || product?.id;
 
   const galleryImages = useMemo<ProductImage[]>(() => {
-    const source = Array.isArray(product?.images) ? product!.images : [];
-    const normalized = source
+    const productImages = (Array.isArray(product?.images) ? product.images : [])
       .filter((image) => Boolean(image?.url))
       .map((image, index) => ({
-        id: image.id || `${product?.id || product?.productId || 'product'}-${index}`,
+        id: image.id || `${product?.id || product?.productId || 'product'}-image-${index}`,
         url: image.url,
         altText: image.altText || product?.name,
         isPrimary: image.isPrimary,
       }));
 
-    if (!normalized.length && product?.thumbnail) {
-      normalized.push({
+    if (!productImages.length && product?.thumbnail) {
+      productImages.push({
         id: `${product.id || product.productId || 'product'}-thumbnail`,
         url: product.thumbnail,
         altText: product.name,
@@ -94,10 +97,28 @@ export const ProductDetail: React.FC = () => {
       });
     }
 
-    return normalized;
+    const existingUrls = new Set(productImages.map((image) => image.url));
+    const variantImages = (product?.variants || [])
+      .map((variant, index) => ({
+        variant: variant as RichVariant,
+        index,
+      }))
+      .filter(({ variant }) => Boolean(variant?.imageUrl?.trim()))
+      .filter(({ variant }) => {
+        const imageUrl = variant.imageUrl?.trim();
+        return imageUrl ? !existingUrls.has(imageUrl) : false;
+      })
+      .map(({ variant, index }) => ({
+        id: `${variant.id || 'variant'}-${index}`,
+        url: variant.imageUrl!.trim(),
+        altText: `${product?.name || 'Sản phẩm'} - ${variant.variantName || 'Biến thể'}`,
+        isPrimary: false,
+      }));
+
+    return [...productImages, ...variantImages];
   }, [product]);
 
-  const activeVariant = selectedVariant ?? (product?.variants?.[0] || null);
+  const activeVariant = selectedVariant ?? ((product?.variants?.[0] as RichVariant | undefined) || null);
   const displayPrice = activeVariant?.price ?? product?.minPrice ?? 0;
   const originalPrice = activeVariant?.originalPrice ?? product?.maxPrice;
   const categoryName = product?.categoryName || product?.category?.name || 'Chưa phân loại';
@@ -106,6 +127,7 @@ export const ProductDetail: React.FC = () => {
   const totalReviews = product?.totalReviews ?? 0;
   const totalSold = product?.totalSold ?? 0;
   const mainImage = galleryImages[selectedImageIndex] || galleryImages[0] || null;
+  const displayImageUrl = mainImage?.url || product?.thumbnail || '';
   const shareUrl = typeof window !== 'undefined' ? window.location.href : '';
 
   useEffect(() => {
@@ -160,7 +182,7 @@ export const ProductDetail: React.FC = () => {
         unitPrice: activeVariant.price,
         variantName: activeVariant.variantName || '',
         productName: product.name,
-        imageUrl: mainImage?.url || '',
+        imageUrl: displayImageUrl,
       });
       toast.success('Đã thêm sản phẩm vào giỏ hàng');
     }
@@ -187,19 +209,6 @@ export const ProductDetail: React.FC = () => {
     activeVariant?.variantName || null,
     activeVariant?.stockQuantity && activeVariant.stockQuantity > 0 ? 'Còn hàng' : 'Hết hàng',
   ].filter((value): value is string => Boolean(value));
-
-  const additionalInfo = [
-    { label: 'SKU', value: activeVariant?.sku || 'Chưa có SKU' },
-    { label: 'Thương hiệu', value: brandName },
-    { label: 'Danh mục', value: categoryName },
-    { label: 'Phân loại', value: activeVariant?.variantName || 'Chưa chọn' },
-    { label: 'Giá hiện tại', value: `${displayPrice.toLocaleString('vi-VN')} đ` },
-    { label: 'Giá gốc', value: originalPrice ? `${originalPrice.toLocaleString('vi-VN')} đ` : 'Chưa có' },
-    { label: 'Tồn kho', value: activeVariant?.stockQuantity != null ? `${activeVariant.stockQuantity}` : 'Chưa cập nhật' },
-    { label: 'Đã bán', value: `${totalSold}` },
-    { label: 'Đánh giá', value: `${averageRating.toFixed(1)} / 5` },
-    { label: 'Số review', value: `${totalReviews}` },
-  ];
 
   const renderStars = (rating: number) =>
     Array.from({ length: 5 }).map((_, index) => (
@@ -241,6 +250,25 @@ export const ProductDetail: React.FC = () => {
     cursor: 'pointer',
   });
 
+  const handleVariantSelect = (variant: RichVariant) => {
+    setSelectedVariant(variant);
+    const variantImageUrl = variant.imageUrl?.trim();
+
+    if (!variantImageUrl) return;
+
+    const matchedIndex = galleryImages.findIndex((image) => image.url === variantImageUrl);
+    if (matchedIndex >= 0) {
+      setSelectedImageIndex(matchedIndex);
+      return;
+    }
+
+    setSelectedImageIndex(galleryImages.length);
+  };
+
+  const handleThumbnailSelect = (index: number) => {
+    setSelectedImageIndex(index);
+  };
+
   return (
     <div style={{ minHeight: '100vh', padding: '2rem', background: 'linear-gradient(180deg, #f9f7f4 0%, #fffaf0 100%)' }}>
       <div style={{ maxWidth: 1280, margin: '0 auto' }}>
@@ -266,10 +294,10 @@ export const ProductDetail: React.FC = () => {
         >
           <div style={{ flex: '0 1 380px', maxWidth: 380, minWidth: 0 }}>
             <div style={{ position: 'relative', overflow: 'hidden', borderRadius: '22px', background: '#f8f4eb' }}>
-              {mainImage?.url ? (
+              {displayImageUrl ? (
                 <img
-                  src={mainImage.url}
-                  alt={mainImage.altText || product.name}
+                  src={displayImageUrl}
+                  alt={activeVariant?.variantName ? `${product.name} - ${activeVariant.variantName}` : mainImage?.altText || product.name}
                   style={{ width: '100%', aspectRatio: '1 / 1', objectFit: 'cover', display: 'block', maxHeight: 380 }}
                 />
               ) : (
@@ -346,7 +374,7 @@ export const ProductDetail: React.FC = () => {
                   <button
                     key={image.id || image.url || index}
                     type="button"
-                    onClick={() => setSelectedImageIndex(index)}
+                    onClick={() => handleThumbnailSelect(index)}
                     style={{
                       padding: 0,
                       borderRadius: '14px',
@@ -387,7 +415,7 @@ export const ProductDetail: React.FC = () => {
                 {renderStars(averageRating || 0)}
               </div>
               <span style={{ fontWeight: 700, color: '#1f2937' }}>{averageRating ? averageRating.toFixed(1) : '0.0'}</span>
-              <span style={{ color: '#7a7a7a' }}>({totalReviews} review)</span>
+              <span style={{ color: '#7a7a7a' }}>({totalReviews} đánh giá)</span>
               <span style={{ color: '#7a7a7a' }}>• {totalSold} đã bán</span>
             </div>
 
@@ -436,12 +464,13 @@ export const ProductDetail: React.FC = () => {
                 </h3>
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.7rem' }}>
                   {product.variants.map((variant) => {
-                    const isActive = activeVariant?.id === variant.id;
+                    const typedVariant = variant as RichVariant;
+                    const isActive = activeVariant?.id === typedVariant.id;
                     return (
                       <button
-                        key={variant.id}
+                        key={typedVariant.id}
                         type="button"
-                        onClick={() => setSelectedVariant(variant)}
+                        onClick={() => handleVariantSelect(typedVariant)}
                         style={{
                           padding: '0.75rem 1rem',
                           borderRadius: '14px',
@@ -453,7 +482,7 @@ export const ProductDetail: React.FC = () => {
                           transition: 'all 0.2s ease',
                         }}
                       >
-                        {variant.variantName}
+                        {typedVariant.variantName}
                       </button>
                     );
                   })}
@@ -501,7 +530,7 @@ export const ProductDetail: React.FC = () => {
                 }}
               >
                 {isLinkCopied ? <Check size={16} /> : <Copy size={16} />}
-                {isLinkCopied ? 'Đã sao chép' : 'Sao chép link'}
+                {isLinkCopied ? 'Đã sao chép' : 'Sao chép liên kết'}
               </button>
             </div>
 
@@ -513,7 +542,6 @@ export const ProductDetail: React.FC = () => {
                 ) : (
                   <span style={{ color: '#dc2626' }}>Hết hàng</span>
                 )}
-                {activeVariant.sku ? <span>• SKU: {activeVariant.sku}</span> : null}
               </div>
             )}
           </div>
@@ -521,7 +549,7 @@ export const ProductDetail: React.FC = () => {
 
         <section style={{ marginTop: '1.5rem', ...detailSectionStyle }}>
           <div style={{ display: 'flex', justifyContent: 'center', borderBottom: '1px solid rgba(0,0,0,0.06)', marginBottom: '1.5rem' }}>
-            {(['description', 'info', 'reviews'] as const).map((tab) => (
+            {(['description', 'reviews'] as const).map((tab) => (
               <button
                 key={tab}
                 type="button"
@@ -530,9 +558,8 @@ export const ProductDetail: React.FC = () => {
                 onClick={() => setActiveTab(tab)}
                 style={tabButtonStyle(activeTab === tab)}
               >
-                {tab === 'description' && 'Description'}
-                {tab === 'info' && 'Additional Information'}
-                {tab === 'reviews' && 'Review'}
+                {tab === 'description' && 'Mô tả'}
+                {tab === 'reviews' && 'Đánh giá'}
               </button>
             ))}
           </div>
@@ -543,7 +570,7 @@ export const ProductDetail: React.FC = () => {
                 {product.description || 'Chưa có mô tả cho sản phẩm này.'}
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '1rem' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '1rem' }}>
                 {product.ingredients ? (
                   <div style={{ padding: '1rem', borderRadius: '16px', background: '#faf7ef', border: '1px solid rgba(212,175,55,0.14)' }}>
                     <strong style={{ display: 'block', marginBottom: 8 }}>Thành phần</strong>
@@ -583,25 +610,6 @@ export const ProductDetail: React.FC = () => {
                   </div>
                 </div>
               ) : null}
-            </div>
-          )}
-
-          {activeTab === 'info' && (
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '0.9rem' }}>
-              {additionalInfo.map((item) => (
-                <div
-                  key={item.label}
-                  style={{
-                    padding: '1rem 1.1rem',
-                    borderRadius: '16px',
-                    background: '#faf7ef',
-                    border: '1px solid rgba(212,175,55,0.14)',
-                  }}
-                >
-                  <div style={{ fontSize: '0.85rem', color: '#8b8b8b', marginBottom: 6 }}>{item.label}</div>
-                  <div style={{ fontWeight: 700, color: '#1f2937' }}>{item.value}</div>
-                </div>
-              ))}
             </div>
           )}
 

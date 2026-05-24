@@ -16,10 +16,67 @@ export const ReviewSection: React.FC<ReviewSectionProps> = ({ productId, embedde
     queryFn: () => reviewApi.getReviewsByProductId(productId, page, size),
     enabled: !!productId,
   });
+if (isLoading) {
+    return (
+        <div style={{ padding: '2rem 0', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+            <div style={{ fontSize: '1.1rem', fontWeight: 500, color: '#D4AF37' }}>Đang tải đánh giá...</div>
+            {/* Tạo hiệu ứng khung xương (Skeleton) giả lập 2 comment */}
+            {[1, 2].map((i) => (
+                <div key={i} style={{ padding: '1rem', border: '1px solid #ccdfe3', borderRadius: '8px', background: '#faf6f1', opacity: 0.6 }}>
+                    <div style={{ display: 'flex', gap: '1rem', marginBottom: '0.5rem' }}>
+                        <div style={{ width: '40px', height: '40px', borderRadius: '50%', background: '#ccdfe3' }} />
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem', width: '30%' }}>
+                            <div style={{ height: '14px', background: '#ccdfe3', borderRadius: '4px' }} />
+                            <div style={{ height: '10px', background: '#ccdfe3', borderRadius: '4px', width: '60%' }} />
+                        </div>
+                    </div>
+                    <div style={{ height: '12px', background: '#ccdfe3', borderRadius: '4px', marginBottom: '0.25rem', width: '90%' }} />
+                    <div style={{ height: '12px', background: '#ccdfe3', borderRadius: '4px', width: '40%' }} />
+                </div>
+            ))}
+        </div>
+    );
+}
 
-  if (isLoading) return <div style={{ padding: '2rem 0' }}>Đang tải đánh giá...</div>;
-  if (error) return <div style={{ padding: '2rem 0', color: 'var(--color-error)' }}>Lỗi tải đánh giá</div>;
-
+if (error) {
+    return (
+        <div style={{ 
+            padding: '3rem 1rem', 
+            textAlign: 'center', 
+            background: '#faf6f1', 
+            border: '1px solid #ccdfe3', 
+            borderRadius: '12px',
+            margin: '1.5rem 0',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            gap: '1rem'
+        }}>
+            <div style={{ fontSize: '2.5rem', color: 'var(--color-error)' }}>⚠️</div>
+            <div>
+                <h4 style={{ margin: '0 0 0.25rem 0', color: '#D4AF37', fontWeight: 600, fontSize: '1.2rem' }}>Không thể tải đánh giá</h4>
+                <p style={{ margin: 0, color: '#666', fontSize: '0.9rem' }}>Đã có lỗi xảy ra từ hệ thống. Bạn có muốn thử lại không?</p>
+            </div>
+            <button 
+                onClick={() => window.location.reload()} // Hoặc truyền hàm fetchReviews() của bạn vào đây
+                style={{
+                    padding: '0.5rem 1.5rem',
+                    background: '#D4AF37',
+                    color: '#fff',
+                    border: 'none',
+                    borderRadius: '6px',
+                    fontWeight: 500,
+                    cursor: 'pointer',
+                    transition: 'opacity 0.2s'
+                }}
+                onMouseOver={(e) => e.currentTarget.style.opacity = '0.9'}
+                onMouseOut={(e) => e.currentTarget.style.opacity = '1'}
+            >
+                Thử tải lại
+            </button>
+        </div>
+    );
+}
   const reviews = pageData?.content || [];
   const totalElements = pageData?.totalElements || 0;
   const totalPages = pageData?.totalPages || 0;
