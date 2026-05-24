@@ -214,6 +214,26 @@ export const ProductList: React.FC = () => {
     setCurrentPage(1);
   };
 
+  const clearAllFilters = () => {
+    setSelectedCategories([]);
+    setSelectedBrands([]);
+    setSelectedSkinTypes([]);
+    setSelectedRatings([]);
+    setSelectedAvailability([]);
+    setSelectedPromotions([]);
+    setPriceMin(0);
+    setPriceMax(computedPriceMax);
+    setCurrentPage(1);
+  };
+
+  const removeCategory = (value: string) => setSelectedCategories((prev) => prev.filter((v) => v !== value));
+  const removeBrand = (value: string) => setSelectedBrands((prev) => prev.filter((v) => v !== value));
+  const removeSkinType = (value: string) => setSelectedSkinTypes((prev) => prev.filter((v) => v !== value));
+  const removeRating = (value: number) => setSelectedRatings((prev) => prev.filter((v) => v !== value));
+  const removeAvailability = (value: string) => setSelectedAvailability((prev) => prev.filter((v) => v !== value));
+  const removePromotion = (value: string) => setSelectedPromotions((prev) => prev.filter((v) => v !== value));
+
+
   const showFilterSkeleton = shouldLoadFilters && (isLoadingCategories || isLoadingBrands);
 
   const renderFilterSkeleton = () => (
@@ -420,11 +440,95 @@ export const ProductList: React.FC = () => {
 
         <div className="product-list__active-filters">
           <span className="chip is-highlight">Bộ lọc đang áp dụng</span>
-          {isSearching ? <span className="chip">Từ khóa: {searchKeyword}</span> : null}
-          <span className="chip">
-            Giá: {priceMin.toLocaleString('vi-VN')}đ - {priceMax.toLocaleString('vi-VN')}đ
-          </span>
-          <span className="chip">Còn hàng</span>
+
+          {isSearching && (
+            <span className="chip">
+              Từ khóa: {searchKeyword}
+              <button type="button" className="chip__close" onClick={clearSearch} aria-label="Xóa từ khóa">
+                <X size={12} />
+              </button>
+            </span>
+          )}
+
+          {priceMin !== 0 || priceMax !== computedPriceMax ? (
+            <span className="chip">
+              Giá: {priceMin.toLocaleString('vi-VN')}đ - {priceMax.toLocaleString('vi-VN')}đ
+              <button
+                type="button"
+                className="chip__close"
+                onClick={() => {
+                  setPriceMin(0);
+                  setPriceMax(computedPriceMax);
+                }}
+                aria-label="Xóa bộ lọc giá"
+              >
+                <X size={12} />
+              </button>
+            </span>
+          ) : null}
+
+          {selectedAvailability.map((id) => {
+            const label = availabilityOptions.find((a) => a.id === id)?.label ?? id;
+            return (
+              <span key={`avail-${id}`} className="chip">
+                {label}
+                <button type="button" className="chip__close" onClick={() => removeAvailability(id)} aria-label={`Xóa ${label}`}>
+                  <X size={12} />
+                </button>
+              </span>
+            );
+          })}
+
+          {selectedPromotions.map((p) => (
+            <span key={`promo-${p}`} className="chip">
+              {p}
+              <button type="button" className="chip__close" onClick={() => removePromotion(p)} aria-label={`Xóa ${p}`}>
+                <X size={12} />
+              </button>
+            </span>
+          ))}
+
+          {selectedCategories.map((c) => (
+            <span key={`cat-${c}`} className="chip">
+              {c}
+              <button type="button" className="chip__close" onClick={() => removeCategory(c)} aria-label={`Xóa ${c}`}>
+                <X size={12} />
+              </button>
+            </span>
+          ))}
+
+          {selectedBrands.map((b) => (
+            <span key={`brand-${b}`} className="chip">
+              {b}
+              <button type="button" className="chip__close" onClick={() => removeBrand(b)} aria-label={`Xóa ${b}`}>
+                <X size={12} />
+              </button>
+            </span>
+          ))}
+
+          {selectedSkinTypes.map((s) => (
+            <span key={`skin-${s}`} className="chip">
+              {s}
+              <button type="button" className="chip__close" onClick={() => removeSkinType(s)} aria-label={`Xóa ${s}`}>
+                <X size={12} />
+              </button>
+            </span>
+          ))}
+
+          {selectedRatings.map((r) => (
+            <span key={`rating-${r}`} className="chip">
+              {r} sao
+              <button type="button" className="chip__close" onClick={() => removeRating(r)} aria-label={`Xóa ${r} sao`}>
+                <X size={12} />
+              </button>
+            </span>
+          ))}
+
+          <div className="product-list__active-filters-actions">
+            <button type="button" className="btn btn-link" onClick={clearAllFilters}>
+              Xóa tất cả bộ lọc
+            </button>
+          </div>
         </div>
 
         <div className="product-list__meta-row">
