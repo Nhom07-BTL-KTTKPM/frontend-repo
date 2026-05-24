@@ -78,6 +78,7 @@ export interface UserProfileInfo {
   avatarUrl?: string;
   status?: string;
   provider?: string;
+  hasPassword?: boolean;
   emailVerified?: boolean;
   lastLoginAt?: string;
   createdAt?: string;
