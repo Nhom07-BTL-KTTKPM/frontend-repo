@@ -4,9 +4,10 @@ import { reviewApi } from '../../api/reviewApi';
 
 interface ReviewSectionProps {
   productId: string;
+  embedded?: boolean;
 }
 
-export const ReviewSection: React.FC<ReviewSectionProps> = ({ productId }) => {
+export const ReviewSection: React.FC<ReviewSectionProps> = ({ productId, embedded = false }) => {
   const [page, setPage] = useState(0);
   const size = 5;
 
@@ -28,7 +29,7 @@ export const ReviewSection: React.FC<ReviewSectionProps> = ({ productId }) => {
   // We'll just show the total count for now.
 
   return (
-    <div style={{ marginTop: '4rem', borderTop: '1px solid var(--color-gray-300)', paddingTop: '2rem' }}>
+    <div style={{ marginTop: embedded ? 0 : '4rem', borderTop: embedded ? 'none' : '1px solid var(--color-gray-300)', paddingTop: embedded ? 0 : '2rem' }}>
       <h2 style={{ fontFamily: 'var(--font-display)', marginBottom: '1.5rem' }}>Đánh Giá Sản Phẩm ({totalElements})</h2>
       
       {reviews.length === 0 ? (
