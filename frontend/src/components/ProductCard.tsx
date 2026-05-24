@@ -1,10 +1,12 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { ShoppingCart } from 'lucide-react';
+import { ShoppingCart, Heart, Loader2 } from 'lucide-react';
 import type { Product } from '../types/product';
+
+import { useCustomerId } from '../hooks/useCustomerId';
+import { useWishlistStore } from '../store/wishlistStore';
 import { cartApi } from '../api/cartApi';
 import { useAuthStore } from '../store/authStore';
-import { useCustomerId } from '../hooks/useCustomerId';
 import { useGuestCartStore } from '../store/guestCartStore';
 import { toast } from 'sonner';
 
@@ -60,24 +62,53 @@ export const ProductCard: React.FC<Props> = ({ product }) => {
     }
   };
 
+  const { isFavorite, toggleItem, fetchWishlist, initialized } = useWishlistStore();
+  const [favLoading, setFavLoading] = React.useState(false);
+
+  const pid = product.id || product.productId;
+  const favorite = pid ? isFavorite(pid) : false;
+
+  React.useEffect(() => {
+    if (customerId && !initialized) {
+      fetchWishlist(customerId);
+    }
+  }, [customerId, initialized, fetchWishlist]);
+
+  const handleToggleWishlist = async (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (!customerId || !pid) {
+      // Có thể thêm thông báo yêu cầu đăng nhập ở đây
+      return;
+    }
+
+    setFavLoading(true);
+    try {
+      await toggleItem(customerId, pid);
+    } catch (err) {
+      console.error('toggleWishlist error', err);
+    } finally {
+      setFavLoading(false);
+    }
+  };
+
   return (
-    <div style={{ 
-      border: '1px solid #eee', 
-      borderRadius: 8, 
-      padding: 12, 
-      width: 220, 
+    <div style={{
+      border: '1px solid #eee',
+      borderRadius: 8,
+      padding: 12,
+      width: 220,
       background: 'white',
       position: 'relative',
       display: 'flex',
       flexDirection: 'column'
     }}>
-      {/* Fallback sử dụng slug, nếu không có sẽ tự lùi về productId */}
       <Link to={`/product/${product.slug || product.productId}`} style={{ textDecoration: 'none', color: 'inherit', flex: 1, display: 'flex', flexDirection: 'column' }}>
         <div style={{ height: 160, display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', borderRadius: 4, marginBottom: 8 }}>
           {image ? <img src={image} alt={product.name} style={{ maxWidth: '100%', maxHeight: '100%' }} /> : <div style={{ color: '#999' }}>No image</div>}
         </div>
-        <h3 style={{ 
-          fontSize: 14, 
+        <h3 style={{
+          fontSize: 14,
           margin: '0 0 8px 0',
           display: '-webkit-box',
           WebkitLineClamp: 2,
@@ -91,7 +122,7 @@ export const ProductCard: React.FC<Props> = ({ product }) => {
         </h3>
         <div style={{ color: 'var(--color-gold)', fontWeight: 700, marginTop: 'auto' }}>{price.toLocaleString()} đ</div>
       </Link>
-      
+
       <button
         style={{
           position: 'absolute',
@@ -118,11 +149,36 @@ export const ProductCard: React.FC<Props> = ({ product }) => {
           e.currentTarget.style.transform = 'scale(1)';
           e.currentTarget.style.boxShadow = '0 2px 8px rgba(0,0,0,0.1)';
         }}
+
+        onClick={(e) => {
+          e.preventDefault();
+          e.stopPropagation();
+        }}
+
         onClick={handleAddToCart}
         disabled={isAdding || !activeVariant || (activeVariant.stockQuantity ?? 0) <= 0}
         title="Thêm vào giỏ hàng"
       >
         {isAdding ? <span style={{fontSize: '12px', fontWeight: 600}}>...</span> : <ShoppingCart size={18} />}
+      </button>
+
+      <button
+        onClick={handleToggleWishlist}
+        disabled={favLoading}
+        title={favorite ? 'Bỏ yêu thích' : 'Thêm yêu thích'}
+        className={`absolute top-2 right-2 w-9 h-9 rounded-full flex items-center justify-center transition-all duration-200 shadow-sm ${
+          favorite ? 'bg-red-500 text-white' : 'bg-white/80 text-gray-700 hover:bg-white'
+        }`}
+      >
+        {favLoading ? (
+          <Loader2 size={16} className="animate-spin" />
+        ) : (
+          <Heart
+            size={16}
+            fill={favorite ? 'currentColor' : 'transparent'}
+            stroke="currentColor"
+          />
+        )}
       </button>
     </div>
   );
