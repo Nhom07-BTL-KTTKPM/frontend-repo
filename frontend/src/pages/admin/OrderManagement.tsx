@@ -28,7 +28,7 @@ const isPendingRefund = (order: OrderResponse): boolean => {
 const statusOptions: Array<{ value: OrderStatus; label: string }> = [
     { value: 'PENDING', label: 'Chờ xác nhận' },
     { value: 'CONFIRMED', label: 'Đã xác nhận' },
-    { value: 'PROCESSING', label: 'Đang xử lý' },
+    { value: 'PROCESSING', label: 'Đang chuẩn bị hàng' },
     { value: 'SHIPPING', label: 'Đang giao hàng' },
     { value: 'DELIVERED', label: 'Đã giao' },
     { value: 'CANCELLED', label: 'Đã hủy' },
@@ -45,7 +45,7 @@ const filterOptions: Array<{ value: OrderStatusFilter; label: string }> = [
 const statusConfig: Record<OrderStatus, { label: string; className: string; icon: ReactNode }> = {
     PENDING: { label: 'Chờ xác nhận', className: 'bg-amber-100 text-amber-800 border-amber-200', icon: <Clock3 size={14} /> },
     CONFIRMED: { label: 'Đã xác nhận', className: 'bg-sky-100 text-sky-800 border-sky-200', icon: <CheckCircle2 size={14} /> },
-    PROCESSING: { label: 'Đang xử lý', className: 'bg-violet-100 text-violet-800 border-violet-200', icon: <Package size={14} /> },
+    PROCESSING: { label: 'Đang chuẩn bị hàng', className: 'bg-violet-100 text-violet-800 border-violet-200', icon: <Package size={14} /> },
     SHIPPING: { label: 'Đang giao hàng', className: 'bg-cyan-100 text-cyan-800 border-cyan-200', icon: <Truck size={14} /> },
     DELIVERED: { label: 'Đã giao', className: 'bg-emerald-100 text-emerald-800 border-emerald-200', icon: <CheckCircle2 size={14} /> },
     CANCELLED: { label: 'Đã hủy', className: 'bg-rose-100 text-rose-800 border-rose-200', icon: <XCircle size={14} /> },
@@ -246,7 +246,7 @@ export const OrderManagement = () => {
                 {[
                     { label: 'Chờ xác nhận', value: filteredStats.pending, tone: 'from-amber-500 to-amber-600' },
                     { label: 'Đã xác nhận', value: filteredStats.confirmed, tone: 'from-sky-500 to-sky-600' },
-                    { label: 'Đang xử lý', value: filteredStats.processing, tone: 'from-violet-500 to-violet-600' },
+                    { label: 'Đang chuẩn bị hàng', value: filteredStats.processing, tone: 'from-violet-500 to-violet-600' },
                     { label: 'Đang giao', value: filteredStats.shipping, tone: 'from-cyan-500 to-cyan-600' },
                     { label: 'Chờ hoàn tiền', value: filteredStats.pendingRefund, tone: 'from-purple-500 to-purple-600' },
                 ].map((card) => (
