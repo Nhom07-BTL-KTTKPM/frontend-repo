@@ -1,9 +1,10 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, Link } from 'react-router-dom';
 import { categoryApi } from '../api/categoryApi';
 import { productApi } from '../api/productApi';
 import { useApi } from '../hooks/useApi';
 import ProductCard from '../components/ProductCard';
+import {Home, ChevronRight, SlidersHorizontal, ChevronDown, PackageOpen } from 'lucide-react';
 import type { CategoryResponse } from '../types/catalog';
 import type { Product } from '../types/product';
 import type { PageResponse } from '../types/api';
@@ -20,7 +21,18 @@ export const CategoryDetailPage: React.FC = () => {
   const { slug } = useParams<{ slug: string }>();
   const navigate = useNavigate();
 
-  if (!slug) return <div>Không tìm thấy phân loại</div>;
+  type SortOption = 'default' | 'priceAsc' | 'priceDesc';
+
+  const getProductPrice = (product: Product): number => {
+    if (typeof product.minPrice === 'number') return product.minPrice;
+    if (typeof product.maxPrice === 'number') return product.maxPrice;
+    if (product.variants && product.variants.length > 0) {
+      return product.variants[0].price;
+    }
+    return 0;
+  };
+
+  if (!slug) return <div className="text-center py-12 text-gray-500 font-medium">Không tìm thấy phân loại</div>;
 
   const apiCall = useCallback(() => categoryApi.getCategoryBySlug(slug), [slug]);
   const { data: category, isUsingFallback, loading } = useApi(apiCall, MOCK_CATEGORY);
@@ -31,6 +43,7 @@ export const CategoryDetailPage: React.FC = () => {
   const [activeSubId, setActiveSubId] = useState<string | null>(null);
   const [products, setProducts] = useState<Product[]>([]);
   const [productsLoading, setProductsLoading] = useState(false);
+  const [sortOption, setSortOption] = useState<SortOption>('default');
 
   useEffect(() => {
     setActiveSubId(null);
@@ -81,75 +94,169 @@ export const CategoryDetailPage: React.FC = () => {
     };
   }, [resolvedCategoryId, activeSubId]);
 
-  const resultsLabel = useMemo(
-    () => `${products.length} sản phẩm`,
-    [products.length]
-  );
+  const displayedProducts = useMemo(() => {
+    if (sortOption === 'default') return products;
+
+    const sorted = [...products];
+    sorted.sort((a, b) => {
+      const left = getProductPrice(a);
+      const right = getProductPrice(b);
+      return sortOption === 'priceAsc' ? left - right : right - left;
+    });
+    return sorted;
+  }, [products, sortOption]);
+
+  const sortLabelMap = {
+    default: 'Phổ biến',
+    priceAsc: 'Giá tăng dần',
+    priceDesc: 'Giá giảm dần'
+  };
 
   if (loading) {
-    return <div className="loading">Đang tải...</div>;
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="w-8 h-8 border-4 border-solid border-gray-200 border-t-gray-900 rounded-full animate-spin" />
+      </div>
+    );
   }
 
   if (!category) {
-    return <div className="error">Không tìm thấy phân loại</div>;
+    return (
+      <div className="text-center py-16 text-gray-500 font-medium">
+        Không tìm thấy phân loại sản phẩm
+      </div>
+    );
   }
 
   return (
-    <div className="category-detail-page">
-      <div className="container">
-        <button className="back-button" onClick={() => navigate(-1)}>
-          ← Quay lại
-        </button>
+    <div className="min-h-screen bg-[#FAF6F1] py-8 px-4 sm:px-6 lg:px-8 font-sans antialiased text-gray-900">
+      <div className="max-w-7xl mx-auto">
+        
+        {/* Thanh điều hướng Breadcrumbs cao cấp */}
+        <nav className="flex items-center space-x-2 text-sm font-medium text-gray-500 mb-6 overflow-x-auto whitespace-nowrap py-1 scrollbar-none">
+          {/* Cấp 1: Trang chủ */}
+          <Link 
+            to="/" 
+            className="flex items-center gap-1.5 hover:text-gray-900 transition-colors duration-150"
+          >
+            <Home size={15} />
+            <span>Trang chủ</span>
+          </Link>
+
+          <ChevronRight size={14} className="text-gray-400 shrink-0" />
+
+          {/* Cấp 2: Danh mục (Trang tổng hợp hoặc quay lại vị trí trước đó) */}
+          <Link 
+            to="/" 
+            className="hover:text-gray-900 transition-colors duration-150"
+          >
+            Danh mục
+          </Link>
+
+          <ChevronRight size={14} className="text-gray-400 shrink-0" />
+
+          {/* Cấp 3: Tên danh mục hiện tại (Trang hiện tại nên để chữ đậm và không bấm lại được) */}
+          <span className="text-gray-900 font-semibold truncate">
+            {category.name}
+          </span>
+        </nav>
 
         {isUsingFallback && (
-          <div className="fallback-notice">
+          <div className="mb-6 p-3.5 bg-amber-50 border border-solid border-amber-200 rounded-xl text-sm text-amber-800 font-medium shadow-sm">
             Máy chủ phản hồi chậm hơn bình thường. Đang dùng dữ liệu tạm thời
           </div>
         )}
 
-        <header className="category-detail__header">
-          <h1 className="category-detail__title">{category.name}</h1>
+        {/* Tiêu đề trang được căn chỉnh chỉn chu */}
+        <header className="mb-8 border-b border-solid border-gray-200/60 pb-6">
+          <h1 className="text-3xl font-bold tracking-tight text-gray-900 sm:text-4xl">{category.name}</h1>
           {category.description && (
-            <p className="category-detail__description">{category.description}</p>
+            <p className="mt-3 text-base text-gray-600 max-w-3xl leading-relaxed">{category.description}</p>
           )}
         </header>
 
-        <div className="category-detail__toolbar">
-          <span>{resultsLabel}</span>
-          <span>Bộ lọc</span>
-          <span>Sắp xếp / phổ biến</span>
-        </div>
-
+        {/* Danh mục con dạng Chip cuộn ngang thông minh */}
         {subs.length > 0 && (
-          <div className="category-detail__subs">
-            <button
-              className={`category-detail__sub-chip${activeSubId === null ? ' active' : ''}`}
-              onClick={() => setActiveSubId(null)}
-            >
-              Tất cả
-            </button>
-            {subs.map((sub) => (
+          <div className="mb-8">
+            <div className="flex gap-2 overflow-x-auto pb-3 pr-4 scrollbar-none snap-x mask-image-linear">
               <button
-                key={sub.id}
-                className={`category-detail__sub-chip${activeSubId === sub.id ? ' active' : ''}`}
-                onClick={() => setActiveSubId(sub.id)}
+                onClick={() => setActiveSubId(null)}
+                className={`px-5 py-2 text-sm font-semibold rounded-full border border-solid transition-all cursor-pointer snap-start shrink-0
+                  ${activeSubId === null 
+                    ? 'bg-gray-900 border-gray-900 text-white shadow-sm' 
+                    : 'bg-white border-gray-200 text-gray-700 hover:border-gray-900 hover:text-gray-900'
+                  }`}
               >
-                {sub.name}
+                Tất cả
               </button>
-            ))}
+              {subs.map((sub) => (
+                <button
+                  key={sub.id}
+                  onClick={() => setActiveSubId(sub.id)}
+                  className={`px-5 py-2 text-sm font-semibold rounded-full border border-solid transition-all cursor-pointer snap-start shrink-0
+                    ${activeSubId === sub.id 
+                      ? 'bg-gray-900 border-gray-900 text-white shadow-sm' 
+                      : 'bg-white border-gray-200 text-gray-700 hover:border-gray-900 hover:text-gray-900'
+                    }`}
+                >
+                  {sub.name}
+                </button>
+              ))}
+            </div>
           </div>
         )}
 
+        {/* Thanh công cụ bố cục hiện đại */}
+        <div className="flex items-center justify-between gap-4 border-b border-solid border-gray-200/60 pb-4 mb-6">
+          <span className="text-sm font-medium text-gray-500">
+            Hiển thị <span className="font-semibold text-gray-900">{displayedProducts.length}</span> sản phẩm
+          </span>
+          
+          <div className="flex items-center gap-3">
+
+            {/* Khung sắp xếp tùy chỉnh cao cấp */}
+            <div className="relative group">
+              <select
+                id="category-sort-select"
+                value={sortOption}
+                onChange={(e) => setSortOption(e.target.value as SortOption)}
+                className="appearance-none pl-4 pr-10 py-2 bg-white border border-solid border-gray-200 group-hover:border-gray-400 text-sm font-semibold rounded-xl text-gray-700 cursor-pointer transition-colors focus:outline-none focus:border-gray-900"
+              >
+                <option value="default">Sắp xếp: Phổ biến</option>
+                <option value="priceAsc">Giá: Thấp đến Cao</option>
+                <option value="priceDesc">Giá: Cao đến Thấp</option>
+              </select>
+              <ChevronDown size={14} className="absolute right-3.5 top-1/2 -translate-y-1/2 text-gray-500 pointer-events-none group-hover:text-gray-800 transition-colors" />
+            </div>
+          </div>
+        </div>
+
+        {/* Khu vực danh sách sản phẩm */}
         {productsLoading ? (
-          <div className="category-detail__loading">Đang tải sản phẩm...</div>
-        ) : products.length === 0 ? (
-          <div className="category-detail__empty">
-            Hiện chưa có sản phẩm nào trong phân loại này.
+          /* Trạng thái Loading giả lập khung xương (Skeleton) cao cấp */
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-6">
+            {Array.from({ length: 8 }).map((_, i) => (
+              <div key={i} className="bg-white rounded-2xl p-4 border border-solid border-gray-100 space-y-4 animate-pulse">
+                <div className="bg-gray-100 aspect-square rounded-xl w-full" />
+                <div className="h-4 bg-gray-100 rounded w-2/3" />
+                <div className="h-4 bg-gray-100 rounded w-1/2" />
+              </div>
+            ))}
+          </div>
+        ) : displayedProducts.length === 0 ? (
+          /* Trạng thái trống được bổ sung hình ảnh minh họa tinh tế */
+          <div className="flex flex-col items-center justify-center py-20 text-center bg-white border border-dashed border-gray-300/80 rounded-2xl p-6">
+            <div className="w-12 h-12 bg-gray-50 flex items-center justify-center rounded-xl text-gray-400 mb-4">
+              <PackageOpen size={24} />
+            </div>
+            <h3 className="text-base font-bold text-gray-900">Không có sản phẩm nào</h3>
+            <p className="text-sm text-gray-500 mt-1 max-w-xs">Hiện tại phân loại sản phẩm này chưa được cập nhật mặt hàng nào mới.</p>
           </div>
         ) : (
-          <div className="category-detail__grid">
-            {products.map((p) => (
-              <div key={p.id} className="category-detail__grid-item">
+          /* Lưới hiển thị sản phẩm tối ưu mật độ */
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-6">
+            {displayedProducts.map((p) => (
+              <div key={p.id} className="transition-transform duration-200 hover:-translate-y-1">
                 <ProductCard product={p} />
               </div>
             ))}
