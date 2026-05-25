@@ -11,6 +11,12 @@ import type { CatalogProduct, CatalogProductVariant } from '../types/catalog';
 import type { CartResponse } from '../types/cart';
 import { ShoppingBag } from 'lucide-react';
 
+type PendingRemoval = {
+    mode: 'guest' | 'customer';
+    itemId: string;
+    productName: string;
+} | null;
+
 const formatCurrency = (value?: number) => {
     if (value === null || value === undefined) {
         return '--';
@@ -35,6 +41,7 @@ export const Cart = () => {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [selectedItemIds, setSelectedItemIds] = useState<Set<string>>(new Set());
+    const [pendingRemoval, setPendingRemoval] = useState<PendingRemoval>(null);
 
     // Guest cart
     const guestItems = useGuestCartStore((s) => s.items);
@@ -176,6 +183,41 @@ export const Cart = () => {
             .reduce((sum, item) => sum + Number(item.unitPrice) * item.quantity, 0);
     }, [cart, selectedItemIds, isGuest, guestItems]);
 
+    const unselectItem = (itemId: string) => {
+        setSelectedItemIds(prev => {
+            if (!prev.has(itemId)) {
+                return prev;
+            }
+
+            const next = new Set(prev);
+            next.delete(itemId);
+            return next;
+        });
+    };
+
+    const handleGuestRemove = (itemId: string) => {
+        removeGuestItem(itemId);
+        unselectItem(itemId);
+    };
+
+    const handleGuestDecrease = (itemId: string, quantity: number, productName: string) => {
+        if (quantity <= 1) {
+            setPendingRemoval({ mode: 'guest', itemId, productName });
+            return;
+        }
+
+        updateGuestQuantity(itemId, quantity - 1);
+    };
+
+    const handleCustomerDecrease = (itemId: string, quantity: number, productName: string) => {
+        if (quantity <= 1) {
+            setPendingRemoval({ mode: 'customer', itemId, productName });
+            return;
+        }
+
+        void handleUpdateQty(itemId, quantity - 1);
+    };
+
     const handleUpdateQty = async (itemId: string, quantity: number) => {
         if (!customerId) {
             return;
@@ -197,11 +239,27 @@ export const Cart = () => {
         try {
             const res = await cartApi.removeItem(customerId, itemId);
             setCart(res);
+            unselectItem(itemId);
             window.dispatchEvent(new CustomEvent('cart:updated'));
         } catch (err) {
             const message = err instanceof Error ? err.message : 'Xoa san pham that bai';
             toast.error(message);
         }
+    };
+
+    const confirmPendingRemoval = async () => {
+        if (!pendingRemoval) {
+            return;
+        }
+
+        if (pendingRemoval.mode === 'guest') {
+            handleGuestRemove(pendingRemoval.itemId);
+            setPendingRemoval(null);
+            return;
+        }
+
+        await handleRemove(pendingRemoval.itemId);
+        setPendingRemoval(null);
     };
 
     const handleCheckout = () => {
@@ -257,7 +315,7 @@ export const Cart = () => {
                         <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', flexShrink: 0 }}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
                                 <button
-                                    onClick={() => updateGuestQuantity(item.productVariantId, item.quantity - 1)}
+                                    onClick={() => handleGuestDecrease(item.productVariantId, item.quantity, item.productName)}
                                     style={{ width: '28px', height: '28px', borderRadius: '50%', border: '1px solid var(--color-gray-300)', cursor: 'pointer', background: 'none' }}
                                 >
                                     -
@@ -271,7 +329,7 @@ export const Cart = () => {
                                 </button>
                             </div>
                             <button
-                                onClick={() => removeGuestItem(item.productVariantId)}
+                                onClick={() => handleGuestRemove(item.productVariantId)}
                                 style={{ border: 'none', background: 'none', color: 'var(--color-error)', cursor: 'pointer', padding: '0 0.5rem', minWidth: '40px', textAlign: 'center' }}
                             >
                                 Xóa
@@ -413,7 +471,7 @@ export const Cart = () => {
                                     <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', flexShrink: 0 }}>
                                         <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
                                             <button
-                                                onClick={() => handleUpdateQty(item.id, item.quantity - 1)}
+                                                onClick={() => handleCustomerDecrease(item.id, item.quantity, productName ?? 'San pham')}
                                                 style={{ width: '28px', height: '28px', borderRadius: '50%', border: '1px solid var(--color-gray-300)', cursor: 'pointer', background: 'none' }}
                                             >
                                                 -
@@ -455,6 +513,75 @@ export const Cart = () => {
                     </div>
                 </div>
             ) : null}
+            {pendingRemoval && (
+                <div
+                    role="dialog"
+                    aria-modal="true"
+                    aria-labelledby="remove-cart-item-title"
+                    style={{
+                        position: 'fixed',
+                        inset: 0,
+                        zIndex: 1000,
+                        background: 'rgba(17, 24, 39, 0.42)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        padding: '1rem',
+                    }}
+                    onClick={() => setPendingRemoval(null)}
+                >
+                    <div
+                        style={{
+                            width: '100%',
+                            maxWidth: '420px',
+                            background: '#fff',
+                            borderRadius: '12px',
+                            padding: '1.5rem',
+                            boxShadow: '0 24px 70px rgba(17,24,39,0.22)',
+                        }}
+                        onClick={(event) => event.stopPropagation()}
+                    >
+                        <h2 id="remove-cart-item-title" style={{ margin: 0, fontSize: '1.2rem', color: 'var(--color-black)' }}>
+                            Xác nhận xóa
+                        </h2>
+                        <p style={{ margin: '0.75rem 0 1.5rem', color: 'var(--color-gray-600)', lineHeight: 1.6 }}>
+                            Bạn có muốn xóa <strong>{pendingRemoval.productName}</strong> khỏi giỏ hàng không?
+                        </p>
+                        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem', flexWrap: 'wrap' }}>
+                            <button
+                                type="button"
+                                onClick={() => setPendingRemoval(null)}
+                                style={{
+                                    padding: '10px 16px',
+                                    borderRadius: '8px',
+                                    border: '1px solid var(--color-gray-300)',
+                                    background: '#fff',
+                                    color: 'var(--color-black)',
+                                    cursor: 'pointer',
+                                    fontWeight: 600,
+                                }}
+                            >
+                                Hủy
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => void confirmPendingRemoval()}
+                                style={{
+                                    padding: '10px 16px',
+                                    borderRadius: '8px',
+                                    border: 'none',
+                                    background: 'var(--color-error)',
+                                    color: '#fff',
+                                    cursor: 'pointer',
+                                    fontWeight: 600,
+                                }}
+                            >
+                                Vẫn xóa
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };
