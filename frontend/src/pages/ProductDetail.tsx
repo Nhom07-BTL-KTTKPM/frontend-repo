@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Link, useLocation, useParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { Check, ChevronLeft, ChevronRight, Copy, Package, Star, Tag } from 'lucide-react';
+import { Check, ChevronLeft, ChevronRight, Copy, Package, Star, Tag, ShoppingCart  } from 'lucide-react';
 import { toast } from 'sonner';
 import { productApi } from '../api/productApi';
 import { cartApi } from '../api/cartApi';
@@ -210,15 +210,43 @@ export const ProductDetail: React.FC = () => {
     activeVariant?.stockQuantity && activeVariant.stockQuantity > 0 ? 'Còn hàng' : 'Hết hàng',
   ].filter((value): value is string => Boolean(value));
 
-  const renderStars = (rating: number) =>
-    Array.from({ length: 5 }).map((_, index) => (
-      <Star
-        key={`${product.id}-star-${index}`}
-        size={16}
-        fill={index < Math.round(rating) ? 'currentColor' : 'none'}
-        strokeWidth={2}
-      />
-    ));
+  const renderStars = (rating: number) => {
+    return (
+      <>
+        {/* Định nghĩa Gradient để cắt đôi ngôi sao, chỉ cần khai báo 1 lần */}
+        <svg width="0" height="0" style={{ position: 'absolute' }}>
+          <defs>
+            <linearGradient id="half-star-gradient" x1="0%" y1="0%" x2="100%" y2="0%">
+              <stop offset="50%" stopColor="currentColor" />
+              <stop offset="50%" stopColor="transparent" stroke="currentColor" />
+            </linearGradient>
+          </defs>
+        </svg>
+
+        {Array.from({ length: 5 }).map((_, index) => {
+          const starValue = index + 1;
+          let fillValue = 'none';
+
+          if (rating >= starValue) {
+            // Trường hợp sao đầy (Ví dụ: rating = 4.5, các sao 1, 2, 3, 4 sẽ đầy)
+            fillValue = 'currentColor';
+          } else if (rating > starValue - 1 && rating < starValue) {
+            // Trường hợp nửa sao (Ví dụ: rating = 4.5, sao thứ 5 sẽ rơi vào đây)
+            fillValue = 'url(#half-star-gradient)';
+          }
+
+          return (
+            <Star
+              key={`${product.id}-star-${index}`}
+              size={16}
+              fill={fillValue}
+              strokeWidth={2}
+            />
+          );
+        })}
+      </>
+    );
+  };
 
   const goToImage = (direction: 'prev' | 'next') => {
     if (galleryImages.length <= 1) return;
@@ -393,15 +421,15 @@ export const ProductDetail: React.FC = () => {
 
           <div style={{ flex: '1 1 460px', minWidth: 0 }}>
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', marginBottom: '1rem' }}>
-              <span style={{ padding: '0.35rem 0.75rem', borderRadius: 999, background: 'rgba(212,175,55,0.12)', color: '#9b7a1d', fontSize: 12, fontWeight: 700 }}>
-                {categoryName}
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', padding: '0.35rem 0.75rem', borderRadius: 999, background: 'rgba(212,175,55,0.12)', color: '#9b7a1d', fontSize: 12, fontWeight: 700 }}>
+                <Tag/>{categoryName}
               </span>
               {product.isFeatured ? (
                 <span style={{ padding: '0.35rem 0.75rem', borderRadius: 999, background: 'rgba(34,197,94,0.12)', color: '#15803d', fontSize: 12, fontWeight: 700 }}>
                   Nổi bật
                 </span>
               ) : null}
-              <span style={{ padding: '0.35rem 0.75rem', borderRadius: 999, background: 'rgba(17,24,39,0.05)', color: '#374151', fontSize: 12, fontWeight: 700 }}>
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', padding: '0.35rem 0.75rem', borderRadius: 999, background: 'rgba(17,24,39,0.05)', color: '#374151', fontSize: 12, fontWeight: 700 }}>
                 {brandName}
               </span>
             </div>
@@ -414,7 +442,7 @@ export const ProductDetail: React.FC = () => {
               <div style={{ display: 'flex', alignItems: 'center', gap: 4, color: '#D4AF37' }}>
                 {renderStars(averageRating || 0)}
               </div>
-              <span style={{ fontWeight: 700, color: '#1f2937' }}>{averageRating ? averageRating.toFixed(1) : '0.0'}</span>
+              <span style={{ fontWeight: 700, color: '#1f2937' }}>{averageRating ? averageRating.toFixed(2) : '0.0'}</span>
               <span style={{ color: '#7a7a7a' }}>({totalReviews} đánh giá)</span>
               <span style={{ color: '#7a7a7a' }}>• {totalSold} đã bán</span>
             </div>
@@ -434,28 +462,7 @@ export const ProductDetail: React.FC = () => {
               {product.description || 'Chưa có mô tả cho sản phẩm này.'}
             </p>
 
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', marginBottom: '1.25rem' }}>
-              {detailTags.map((tag) => (
-                <span
-                  key={tag}
-                  style={{
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: 6,
-                    padding: '0.45rem 0.8rem',
-                    borderRadius: 999,
-                    background: '#faf7ef',
-                    border: '1px solid rgba(212,175,55,0.16)',
-                    color: '#5f4a11',
-                    fontSize: '0.9rem',
-                    fontWeight: 600,
-                  }}
-                >
-                  <Tag size={14} />
-                  {tag}
-                </span>
-              ))}
-            </div>
+           
 
             {product.variants && product.variants.length > 0 && (
               <div style={{ marginBottom: '1.5rem' }}>
@@ -489,61 +496,62 @@ export const ProductDetail: React.FC = () => {
                 </div>
               </div>
             )}
-
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.75rem', alignItems: 'center', marginBottom: '1rem' }}>
+              {activeVariant && (
+                <div className="flex items-center gap-2 text-gray-500 text-[0.95rem] my-2">
+                  <Package size={16} />
+                  {activeVariant.stockQuantity && activeVariant.stockQuantity > 0 ? (
+                    <span>Còn {activeVariant.stockQuantity} sản phẩm</span>
+                  ) : (
+                    <span className="text-red-600">Hết hàng</span>
+                  )}
+                </div>
+              )}
+            <div className="flex flex-wrap items-center gap-3 mb-4">
+              {/* Nút 1: Thêm vào giỏ hàng */}
               <button
                 type="button"
                 onClick={handleAddToCart}
                 disabled={!activeVariant || (activeVariant.stockQuantity ?? 0) <= 0 || isAdding}
-                style={{
-                  padding: '0.95rem 1.4rem',
-                  minWidth: 200,
-                  background: '#D4AF37',
-                  color: 'white',
-                  border: 'none',
-                  borderRadius: '14px',
-                  fontSize: '1rem',
-                  fontWeight: 700,
-                  cursor: (activeVariant?.stockQuantity ?? 0) > 0 && !isAdding ? 'pointer' : 'not-allowed',
-                  opacity: (activeVariant?.stockQuantity ?? 0) > 0 && !isAdding ? 1 : 0.65,
-                  boxShadow: '0 12px 24px rgba(212,175,55,0.24)',
-                }}
+                className="flex items-center justify-center gap-2 px-5 py-[0.95rem] min-w-[200px]
+                          bg-[#D4AF37] text-white text-base font-bold rounded-[14px] 
+                          shadow-[0_12px_24px_rgba(212,175,55,0.24)] transition-all duration-200
+                          cursor-pointer hover:bg-[#bfa032]
+                          disabled:cursor-not-allowed disabled:opacity-65 disabled:bg-[#D4AF37] disabled:shadow-none"
               >
-                {isAdding ? 'Đang thêm...' : 'Thêm vào giỏ hàng'}
+                {isAdding ? (
+                  <span>Đang thêm...</span>
+                ) : (
+                  <>
+                    <ShoppingCart size={18} />
+                    <span>Thêm vào giỏ hàng</span>
+                  </>
+                )}
               </button>
 
-
+              {/* Nút 2: Sao chép liên kết */}
               <button
                 type="button"
                 onClick={handleCopyLink}
-                style={{
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: 8,
-                  padding: '0.95rem 1.2rem',
-                  borderRadius: '14px',
-                  border: '1px solid rgba(0,0,0,0.08)',
-                  background: 'white',
-                  color: '#374151',
-                  fontWeight: 700,
-                  cursor: 'pointer',
-                }}
+                className="flex items-center justify-center gap-2 px-5 py-[0.95rem]
+                          bg-white text-gray-700 text-base font-bold rounded-[14px] 
+                          border border-solid border-gray-900 transition-all duration-200
+                          cursor-pointer hover:border-gray-900 active:scale-[0.98]"
               >
-                {isLinkCopied ? <Check size={16} /> : <Copy size={16} />}
-                {isLinkCopied ? 'Đã sao chép' : 'Sao chép liên kết'}
+                {isLinkCopied ? (
+                  <>
+                    <Check size={18} className="text-green-600" />
+                    <span className="text-green-600">Đã sao chép</span>
+                  </>
+                ) : (
+                  <>
+                    <Copy size={18} />
+                    <span>Sao chép liên kết</span>
+                  </>
+                )}
               </button>
             </div>
 
-            {activeVariant && (
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8, color: '#6b7280', fontSize: '0.95rem' }}>
-                <Package size={16} />
-                {activeVariant.stockQuantity && activeVariant.stockQuantity > 0 ? (
-                  <span>Còn {activeVariant.stockQuantity} sản phẩm</span>
-                ) : (
-                  <span style={{ color: '#dc2626' }}>Hết hàng</span>
-                )}
-              </div>
-            )}
+            
           </div>
         </section>
 
@@ -587,10 +595,16 @@ export const ProductDetail: React.FC = () => {
 
               {Array.isArray(product.suitableSkinTypes) && product.suitableSkinTypes.length > 0 ? (
                 <div>
-                  <strong style={{ display: 'block', marginBottom: 10 }}>Loại da phù hợp</strong>
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                  <strong className="text-base block mb-2.5 text-gray-900 font-semibold">
+                    Loại da phù hợp
+                  </strong >
+                  <div className="flex flex-wrap gap-2">
                     {product.suitableSkinTypes.map((item) => (
-                      <span key={item} style={{ padding: '0.5rem 0.8rem', borderRadius: 999, background: 'white', border: '1px solid rgba(0,0,0,0.08)' }}>
+                      <span 
+                        key={item} 
+                        className="px-3 py-1.5 text-base font-medium text-gray-700 bg-white 
+                                  border border-solid border-gray-300 rounded-full shadow-sm"
+                      >
                         {item}
                       </span>
                     ))}
@@ -599,11 +613,17 @@ export const ProductDetail: React.FC = () => {
               ) : null}
 
               {Array.isArray(product.skinConcerns) && product.skinConcerns.length > 0 ? (
-                <div>
-                  <strong style={{ display: 'block', marginBottom: 10 }}>Vấn đề da</strong>
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+              <div className="mt-4">
+                  <strong className="text-base block mb-2.5 text-gray-900 font-semibold">
+                    Dành cho da đang gặp vấn đề
+                  </strong>
+                  <div className="flex flex-wrap gap-2">
                     {product.skinConcerns.map((item) => (
-                      <span key={item} style={{ padding: '0.5rem 0.8rem', borderRadius: 999, background: 'white', border: '1px solid rgba(0,0,0,0.08)' }}>
+                      <span 
+                        key={item} 
+                        className="px-3 py-1.5 text-basư font-medium text-gray-700 bg-white 
+                                  border border-solid border-gray-300 rounded-full shadow-sm"
+                      >
                         {item}
                       </span>
                     ))}
