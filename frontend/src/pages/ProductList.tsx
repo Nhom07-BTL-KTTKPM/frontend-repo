@@ -102,11 +102,6 @@ export const ProductList: React.FC = () => {
 
   const skinTypeOptions = ['Normal', 'Oily', 'Dry', 'Combination', 'Sensitive'];
   const promotionOptions = ['Hàng mới', 'Bán chạy', 'Đang giảm giá'];
-  const availabilityOptions = [
-    { id: 'in-stock', label: 'Còn hàng' },
-    { id: 'out-of-stock', label: 'Hết hàng' },
-  ];
-
   const displayedProducts = useMemo(() => {
     let list = products;
 
@@ -284,145 +279,185 @@ export const ProductList: React.FC = () => {
   const formatCurrency = (value: number) => `${value.toLocaleString('vi-VN')}đ`;
 
   const renderFilterPanel = () => (
-    <>
-      <div className="product-list__filter-group">
-        <h3>Theo danh mục</h3>
-        <div className="product-list__filter-items">
-          {shouldLoadFilters && isLoadingCategories ? (
-            <p className="product-list__filter-loading">Đang tải danh mục...</p>
-          ) : categoryOptions.length > 0 ? (
-            categoryOptions.map((categoryName) => (
-              <label key={categoryName} className="product-list__check-row">
-                <input
-                  type="checkbox"
-                  checked={selectedCategories.includes(categoryName)}
-                  onChange={() => toggleTextFilter(categoryName, setSelectedCategories)}
-                />
-                <span>{categoryName}</span>
-              </label>
-            ))
-          ) : (
-            <p className="product-list__filter-empty">Chưa có danh mục để hiển thị</p>
-          )}
-        </div>
-      </div>
-
-        <div className="product-list__filter-group">
-          <h3>Theo thương hiệu</h3>
-          <div className="product-list__filter-items">
-              {shouldLoadFilters && isLoadingBrands ? (
-                <p className="product-list__filter-loading">Đang tải thương hiệu...</p>
-              ) : brandOptions.length > 0 ? (
-              brandOptions.map((brandName) => (
-                <label key={brandName} className="product-list__check-row">
-                  <input
-                    type="checkbox"
-                    checked={selectedBrands.includes(brandName)}
-                    onChange={() => toggleTextFilter(brandName, setSelectedBrands)}
-                  />
-                  <span>{brandName}</span>
-                </label>
-              ))
-            ) : (
-              <p className="product-list__filter-empty">Chưa có thương hiệu để hiển thị</p>
-            )}
-          </div>
-        </div>
-
-      <div className="product-list__filter-group">
-        <h3>Theo loại da</h3>
-        <div className="product-list__filter-items">
-          {skinTypeOptions.map((skinType) => (
-            <label key={skinType} className="product-list__check-row">
+  <div className="flex flex-col gap-6 p-4 bg-white rounded-xl">
+    {/* 1. Theo danh mục */}
+    <div className="flex flex-col gap-3">
+      <h3 className="text-sm font-bold text-gray-900 uppercase tracking-wider">Theo danh mục</h3>
+      <div className="flex flex-col gap-2.5 max-h-48 overflow-y-auto pr-1">
+        {shouldLoadFilters && isLoadingCategories ? (
+          <p className="text-xs text-gray-500 animate-pulse">Đang tải danh mục...</p>
+        ) : categoryOptions.length > 0 ? (
+          categoryOptions.map((categoryName) => (
+            <label key={categoryName} className="flex items-center gap-2.5 text-sm text-gray-700 cursor-pointer select-none hover:text-gray-900 transition-colors">
               <input
                 type="checkbox"
-                checked={selectedSkinTypes.includes(skinType)}
-                  onChange={() => toggleTextFilter(skinType, setSelectedSkinTypes)}
+                checked={selectedCategories.includes(categoryName)}
+                onChange={() => toggleTextFilter(categoryName, setSelectedCategories)}
+                className="w-4 h-4 rounded border-gray-300 text-[#D4AF37] focus:ring-[#D4AF37]/50 cursor-pointer"
               />
-              <span>{skinType}</span>
+              <span>{categoryName}</span>
             </label>
-          ))}
-        </div>
+          ))
+        ) : (
+          <p className="text-xs text-gray-400 italic">Chưa có danh mục để hiển thị</p>
+        )}
       </div>
+    </div>
 
-      <div className="product-list__filter-group">
-        <h3>Giá</h3>
-        <div className="product-list__price-range">
-          <div className="product-list__price-labels">
-            <span>{formatCurrency(priceMin)}</span>
-            <span>{formatCurrency(priceMax)}</span>
-          </div>
+    <hr className="border-gray-100" />
+
+    {/* 2. Theo thương hiệu */}
+    <div className="flex flex-col gap-3">
+      <h3 className="text-sm font-bold text-gray-900 uppercase tracking-wider">Theo thương hiệu</h3>
+      <div className="flex flex-col gap-2.5 max-h-48 overflow-y-auto pr-1">
+        {shouldLoadFilters && isLoadingBrands ? (
+          <p className="text-xs text-gray-500 animate-pulse">Đang tải thương hiệu...</p>
+        ) : brandOptions.length > 0 ? (
+          brandOptions.map((brandName) => (
+            <label key={brandName} className="flex items-center gap-2.5 text-sm text-gray-700 cursor-pointer select-none hover:text-gray-900 transition-colors">
+              <input
+                type="checkbox"
+                checked={selectedBrands.includes(brandName)}
+                onChange={() => toggleTextFilter(brandName, setSelectedBrands)}
+                className="w-4 h-4 rounded border-gray-300 text-[#D4AF37] focus:ring-[#D4AF37]/50 cursor-pointer"
+              />
+              <span>{brandName}</span>
+            </label>
+          ))
+        ) : (
+          <p className="text-xs text-gray-400 italic">Chưa có thương hiệu để hiển thị</p>
+        )}
+      </div>
+    </div>
+
+    <hr className="border-gray-100" />
+
+    {/* 3. Theo loại da */}
+    <div className="flex flex-col gap-3">
+      <h3 className="text-sm font-bold text-gray-900 uppercase tracking-wider">Theo loại da</h3>
+      <div className="flex flex-col gap-2.5">
+        {skinTypeOptions.map((skinType) => (
+          <label key={skinType} className="flex items-center gap-2.5 text-sm text-gray-700 cursor-pointer select-none hover:text-gray-900 transition-colors">
+            <input
+              type="checkbox"
+              checked={selectedSkinTypes.includes(skinType)}
+              onChange={() => toggleTextFilter(skinType, setSelectedSkinTypes)}
+              className="w-4 h-4 rounded border-gray-300 text-[#D4AF37] focus:ring-[#D4AF37]/50 cursor-pointer"
+            />
+            <span>{skinType}</span>
+          </label>
+        ))}
+      </div>
+    </div>
+
+    <hr className="border-gray-100" />
+
+    {/* 4. Khoảng giá (Dual Range Slider) */}
+    <div className="flex flex-col gap-3">
+      <h3 className="text-sm font-bold text-gray-900 uppercase tracking-wider">Giá</h3>
+      <div className="flex flex-col gap-4">
+        <div className="flex items-center justify-between text-xs font-semibold text-gray-700 bg-gray-50 px-2.5 py-1.5 rounded-lg border border-gray-100">
+          <span>{formatCurrency(priceMin)}</span>
+          <span className="text-gray-300">|</span>
+          <span>{formatCurrency(priceMax)}</span>
+        </div>
+        
+        {/* Khung chứa thanh trượt kép sử dụng Pointer Events */}
+        <div className="relative w-full h-2 bg-gray-100 rounded-full">
+          {/* ĐƯỜNG NỐI MÀU VÀNG GIỮA MIN VÀ MAX */}
+          <div 
+            className="absolute h-2 bg-[#D4AF37] rounded-full z-10"
+            style={{
+              left: `${(priceMin / (computedPriceMax || 1)) * 100}%`,
+              width: `${((priceMax - priceMin) / (computedPriceMax || 1)) * 100}%`
+            }}
+          />
+          {/* Thanh trượt MIN */}
           <input
             type="range"
             min={0}
             max={computedPriceMax}
             value={priceMin}
             onChange={(e) => setPriceMin(Math.min(Number(e.target.value), priceMax))}
+            className="absolute w-full h-2 bg-transparent appearance-none left-0 top-0 z-20
+                      pointer-events-none accent-[#D4AF37]
+                      [&::-webkit-slider-thumb]:pointer-events-auto [&::-webkit-slider-thumb]:relative [&::-webkit-slider-thumb]:z-30
+                      [&::-moz-range-thumb]:pointer-events-auto [&::-moz-range-thumb]:relative [&::-moz-range-thumb]:z-30"
           />
+          
+          {/* Thanh trượt MAX */}
           <input
             type="range"
             min={0}
             max={computedPriceMax}
             value={priceMax}
             onChange={(e) => setPriceMax(Math.max(Number(e.target.value), priceMin))}
+            className="absolute w-full h-2 bg-transparent appearance-none left-0 top-0 z-20
+                      pointer-events-none accent-[#D4AF37]
+                      [&::-webkit-slider-thumb]:pointer-events-auto [&::-webkit-slider-thumb]:relative [&::-webkit-slider-thumb]:z-30
+                      [&::-moz-range-thumb]:pointer-events-auto [&::-moz-range-thumb]:relative [&::-moz-range-thumb]:z-30"
           />
         </div>
       </div>
+    </div>
 
-      <div className="product-list__filter-group">
-        <h3>Đánh giá</h3>
-        <div className="product-list__filter-items">
-          {[5, 4, 3, 2, 1].map((rating) => (
+    <hr className="border-gray-100" />
+
+    {/* 5. Đánh giá */}
+    <div className="flex flex-col gap-3">
+      <h3 className="text-sm font-bold text-gray-900 uppercase tracking-wider">Đánh giá</h3>
+      <div className="flex flex-col gap-1.5">
+        {[5, 4, 3, 2, 1].map((rating) => {
+          const isActive = selectedRatings.includes(rating);
+          return (
             <button
               key={rating}
               type="button"
-              className={`product-list__rating-row${selectedRatings.includes(rating) ? ' is-active' : ''}`}
               onClick={() => toggleRatingFilter(rating)}
+              className={`flex items-center gap-2.5 px-2.5 py-2 w-full rounded-lg text-sm font-medium transition-all text-left cursor-pointer
+                ${isActive 
+                  ? 'bg-[#D4AF37]/10 text-[#D4AF37] border border-solid border-[#D4AF37]/30' 
+                  : 'bg-transparent text-gray-600 hover:bg-gray-50 border border-solid border-transparent'
+                }`}
             >
-              <span className="product-list__stars" aria-hidden>
+              <span className={`flex items-center gap-0.5 ${isActive ? 'text-[#D4AF37]' : 'text-amber-400'}`} aria-hidden>
                 {Array.from({ length: 5 }).map((_, index) => (
-                  <Star key={`${rating}-${index}`} size={14} fill={index < rating ? 'currentColor' : 'none'} />
+                  <Star 
+                    key={`${rating}-${index}`} 
+                    size={14} 
+                    fill={index < rating ? 'currentColor' : 'none'} 
+                    strokeWidth={2}
+                  />
                 ))}
               </span>
               <span>{rating} sao</span>
             </button>
-          ))}
-        </div>
+          );
+        })}
       </div>
+    </div>
 
-      <div className="product-list__filter-group">
-        <h3>Theo khuyến mãi</h3>
-        <div className="product-list__filter-items">
-          {promotionOptions.map((promotion) => (
-            <label key={promotion} className="product-list__check-row">
-              <input
-                type="checkbox"
-                checked={selectedPromotions.includes(promotion)}
-                  onChange={() => toggleTextFilter(promotion, setSelectedPromotions)}
-              />
-              <span>{promotion}</span>
-            </label>
-          ))}
-        </div>
-      </div>
+    <hr className="border-gray-100" />
 
-      <div className="product-list__filter-group">
-        <h3>Tình trạng</h3>
-        <div className="product-list__filter-items">
-          {availabilityOptions.map((availability) => (
-            <label key={availability.id} className="product-list__check-row">
-              <input
-                type="checkbox"
-                checked={selectedAvailability.includes(availability.id)}
-                  onChange={() => toggleTextFilter(availability.id, setSelectedAvailability)}
-              />
-              <span>{availability.label}</span>
-            </label>
-          ))}
-        </div>
+    {/* 6. Theo khuyến mãi */}
+    <div className="flex flex-col gap-3">
+      <h3 className="text-sm font-bold text-gray-900 uppercase tracking-wider">Theo khuyến mãi</h3>
+      <div className="flex flex-col gap-2.5">
+        {promotionOptions.map((promotion) => (
+          <label key={promotion} className="flex items-center gap-2.5 text-sm text-gray-700 cursor-pointer select-none hover:text-gray-900 transition-colors">
+            <input
+              type="checkbox"
+              checked={selectedPromotions.includes(promotion)}
+              onChange={() => toggleTextFilter(promotion, setSelectedPromotions)}
+              className="w-4 h-4 rounded border-gray-300 text-[#D4AF37] focus:ring-[#D4AF37]/50 cursor-pointer"
+            />
+            <span>{promotion}</span>
+          </label>
+        ))}
       </div>
-    </>
-  );
+    </div>
+  </div>
+);
 
   return (
     <section className="product-list-page">
@@ -494,17 +529,6 @@ export const ProductList: React.FC = () => {
             </span>
           ) : null}
 
-          {selectedAvailability.map((id) => {
-            const label = availabilityOptions.find((a) => a.id === id)?.label ?? id;
-            return (
-              <span key={`avail-${id}`} className="chip">
-                {label}
-                <button type="button" className="chip__close" onClick={() => removeAvailability(id)} aria-label={`Xóa ${label}`}>
-                  <X size={12} />
-                </button>
-              </span>
-            );
-          })}
 
           {selectedPromotions.map((p) => (
             <span key={`promo-${p}`} className="chip">
