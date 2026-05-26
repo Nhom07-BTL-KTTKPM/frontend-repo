@@ -256,6 +256,7 @@ const ProductsTab = ({
   selectedBrandId,
   selectedCategoryId,
   selectedSort,
+  statusUpdatingProductId,
   onBrandChange,
   onCategoryChange,
   onSortChange,
@@ -278,6 +279,7 @@ const ProductsTab = ({
   selectedBrandId: string;
   selectedCategoryId: string;
   selectedSort: string;
+  statusUpdatingProductId: string | null;
   onBrandChange: (value: string) => void;
   onCategoryChange: (value: string) => void;
   onSortChange: (value: string) => void;
@@ -289,9 +291,19 @@ const ProductsTab = ({
 }) => {
   const navigate = useNavigate();
   const visiblePages = buildVisiblePages(totalPages, currentPage);
+  const isUpdatingStatus = Boolean(statusUpdatingProductId);
 
   return (
     <div className="grid gap-6">
+      {isUpdatingStatus ? (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/35 backdrop-blur-[1px]">
+          <div className="flex flex-col items-center gap-3 rounded-2xl border border-slate-200 bg-white px-6 py-5 shadow-2xl">
+            <div className="h-10 w-10 animate-spin rounded-full border-4 border-slate-200 border-t-amber-600" />
+            <p className="m-0 text-sm font-semibold text-slate-700">Đang cập nhật trạng thái sản phẩm...</p>
+          </div>
+        </div>
+      ) : null}
+
       <div className="flex flex-wrap items-center justify-between gap-6">
         <div>
           <h2 className="m-0 mt-1 text-2xl font-bold text-slate-900">Quản lý sản phẩm</h2>
@@ -433,7 +445,9 @@ const ProductsTab = ({
             return (
               <article
                 key={product.id}
-                className="group grid cursor-pointer overflow-hidden rounded-lg border border-slate-200 bg-white shadow-md transition-all duration-200 hover:border-slate-300 hover:shadow-lg"
+                className={`group grid cursor-pointer overflow-hidden rounded-lg border border-slate-200 bg-white shadow-md transition-all duration-200 hover:border-slate-300 hover:shadow-lg ${
+                  product.isActive ? '' : 'opacity-60 grayscale'
+                }`}
               >
                 <div
                   className="relative aspect-video overflow-hidden bg-slate-100"
@@ -446,7 +460,11 @@ const ProductsTab = ({
                     backgroundRepeat: 'no-repeat',
                   }}
                 >
-                  <div className="absolute inset-0 bg-black/0 transition duration-200 group-hover:bg-black/20" />
+                  <div
+                    className={`absolute inset-0 transition duration-200 group-hover:bg-black/20 ${
+                      product.isActive ? 'bg-black/0' : 'bg-white/35'
+                    }`}
+                  />
 
                   <div className="absolute left-2 top-2 flex flex-wrap gap-2">
                     <span className={`rounded-full px-2 py-1 text-xs font-bold ${tone.className}`}>{tone.label}</span>
@@ -472,13 +490,22 @@ const ProductsTab = ({
                     </button>
                     <button
                       type="button"
-                      className={`rounded-full p-2.5 shadow-lg transition hover:bg-rose-100 ${
-                        product.isActive ? 'bg-rose-50 text-rose-600' : 'bg-emerald-50 text-emerald-600'
-                      }`}
                       title={product.isActive ? 'Ẩn sản phẩm' : 'Hiển thị sản phẩm'}
+                      disabled={isUpdatingStatus}
                       onClick={() => onToggleStatus(product)}
+                      className="flex items-center rounded-full bg-white p-1 shadow-lg transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
                     >
-                      {product.isActive ? <EyeOff size={16} /> : <Eye size={16} />}
+                      <div
+                        className={`w-9 h-5 flex items-center rounded-full p-0.5 transition-colors duration-200 ${
+                          product.isActive ? 'bg-emerald-500' : 'bg-slate-300'
+                        }`}
+                      >
+                        <div
+                          className={`bg-white w-4 h-4 rounded-full shadow-md transform transition-transform duration-200 ${
+                            product.isActive ? 'translate-x-4' : 'translate-x-0'
+                          }`}
+                        />
+                      </div>
                     </button>
                   </div>
                 </div>
@@ -1008,6 +1035,7 @@ export const ProductManagement = () => {
   const [productTotalElements, setProductTotalElements] = useState(0);
   const [productOverview, setProductOverview] = useState<ProductOverviewResponse | null>(null);
   const [productSearch, setProductSearch] = useState('');
+  const [statusUpdatingProductId, setStatusUpdatingProductId] = useState<string | null>(null);
   const [selectedBrandId, setSelectedBrandId] = useState('');
   const [selectedCategoryId, setSelectedCategoryId] = useState('');
   const [selectedSort, setSelectedSort] = useState('createdAt,desc');
@@ -1374,6 +1402,7 @@ export const ProductManagement = () => {
     const payload = { isActive: !product.isActive };
 
     try {
+      setStatusUpdatingProductId(product.id);
       const updated = await productManagementApi.changeProductStatus(product.id, payload);
       setProducts((current) => current.map((item) => (item.id === updated.id ? { ...item, isActive: updated.isActive } : item)));
       void loadProductOverview();
@@ -1381,6 +1410,8 @@ export const ProductManagement = () => {
     } catch (requestError) {
       const message = requestError instanceof Error ? requestError.message : 'Không thể thay đổi trạng thái product.';
       toast.error(message);
+    } finally {
+      setStatusUpdatingProductId(null);
     }
   };
 
@@ -1563,6 +1594,7 @@ export const ProductManagement = () => {
           selectedBrandId={selectedBrandId}
           selectedCategoryId={selectedCategoryId}
           selectedSort={selectedSort}
+          statusUpdatingProductId={statusUpdatingProductId}
           onBrandChange={handleBrandFilterChange}
           onCategoryChange={handleCategoryFilterChange}
           onSortChange={handleSortChange}
