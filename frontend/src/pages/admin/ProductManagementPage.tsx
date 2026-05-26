@@ -10,7 +10,6 @@ import {
   Package2,
   Plus,
   Search,
-  SlidersHorizontal,
   Users,
 } from 'lucide-react';
 import { uploadSingleMedia } from '../../api/uploadApi';
@@ -244,6 +243,7 @@ const ProductsTab = ({
   currentPage,
   totalPages,
   totalElements,
+  searchValue,
   brandOptions,
   categoryOptions,
   selectedBrandId,
@@ -252,6 +252,9 @@ const ProductsTab = ({
   onBrandChange,
   onCategoryChange,
   onSortChange,
+  onSearchChange,
+  onApplyFilters,
+  onClearFilters,
   onPageChange,
   onToggleStatus,
 }: {
@@ -261,6 +264,7 @@ const ProductsTab = ({
   currentPage: number;
   totalPages: number;
   totalElements: number;
+  searchValue: string;
   brandOptions: BrandSummaryResponse[];
   categoryOptions: CategorySummaryResponse[];
   selectedBrandId: string;
@@ -269,6 +273,9 @@ const ProductsTab = ({
   onBrandChange: (value: string) => void;
   onCategoryChange: (value: string) => void;
   onSortChange: (value: string) => void;
+  onSearchChange: (value: string) => void;
+  onApplyFilters: () => void;
+  onClearFilters: () => void;
   onPageChange: (page: number) => void;
   onToggleStatus: (product: ProductCardRow) => void;
 }) => {
@@ -279,9 +286,7 @@ const ProductsTab = ({
     <div className="grid gap-6">
       <div className="flex flex-wrap items-center justify-between gap-6">
         <div>
-          <p className="m-0 text-sm text-slate-500">Quản trị sản phẩm</p>
-          <h2 className="m-0 mt-1 text-2xl font-bold text-slate-900">Product management</h2>
-          <p className="m-0 mt-2 text-sm text-slate-500">{products.length} sản phẩm trong danh sách</p>
+          <h2 className="m-0 mt-1 text-2xl font-bold text-slate-900">Quản lý sản phẩm</h2>
         </div>
 
         <Link
@@ -296,13 +301,17 @@ const ProductsTab = ({
       <ProductStats products={products} />
 
       <section className="grid gap-4 rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
-        <div className="grid gap-3 xl:grid-cols-[1.8fr_1fr_1fr_1fr]">
+        <form className="grid gap-3 xl:grid-cols-[1.8fr_1fr_1fr_1fr_auto_auto]" onSubmit={(event) => {
+          event.preventDefault();
+          onApplyFilters();
+        }}>
           <label className="flex items-center gap-3 rounded-lg border border-slate-300 bg-white px-4 py-3 text-slate-600 transition hover:bg-slate-50">
             <Search size={18} />
             <input
               type="text"
-              placeholder="Tìm theo tên sản phẩm, SKU, brand..."
-              readOnly
+              value={searchValue}
+              onChange={(event) => onSearchChange(event.target.value)}
+              placeholder="Tìm theo tên, slug, sku..."
               className="w-full border-none bg-transparent text-sm text-slate-900 outline-none placeholder:text-slate-400"
             />
           </label>
@@ -312,7 +321,7 @@ const ProductsTab = ({
             <select
               value={selectedCategoryId}
               onChange={(event) => onCategoryChange(event.target.value)}
-                className="flex-1 bg-transparent text-sm font-semibold text-slate-900 outline-none cursor-pointer"
+              className="flex-1 cursor-pointer bg-transparent text-sm font-semibold text-slate-900 outline-none"
             >
               <option value="">Tất cả</option>
               {categoryOptions.map((category) => (
@@ -328,7 +337,7 @@ const ProductsTab = ({
             <select
               value={selectedBrandId}
               onChange={(event) => onBrandChange(event.target.value)}
-                className="flex-1 bg-transparent text-sm font-semibold text-slate-900 outline-none cursor-pointer"
+              className="flex-1 cursor-pointer bg-transparent text-sm font-semibold text-slate-900 outline-none"
             >
               <option value="">Tất cả</option>
               {brandOptions.map((brand) => (
@@ -344,7 +353,7 @@ const ProductsTab = ({
             <select
               value={selectedSort}
               onChange={(event) => onSortChange(event.target.value)}
-                className="flex-1 bg-transparent text-sm font-semibold text-slate-900 outline-none cursor-pointer"
+              className="flex-1 cursor-pointer bg-transparent text-sm font-semibold text-slate-900 outline-none"
             >
               <option value="createdAt,desc">Mới nhất</option>
               <option value="createdAt,asc">Cũ nhất</option>
@@ -352,27 +361,24 @@ const ProductsTab = ({
               <option value="name,desc">Tên Z-A</option>
             </select>
           </label>
-        </div>
 
-        <div className="flex flex-wrap items-center justify-between gap-3">
-        
+          <button
+            type="submit"
+            className="inline-flex items-center justify-center rounded-lg bg-slate-900 px-5 py-3 text-sm font-bold text-white transition hover:bg-slate-800"
+          >
+            Lọc
+          </button>
 
-          <div className="flex flex-wrap items-center gap-2">
-            
-            {(selectedBrandId || selectedCategoryId) ? (
-              <button
-                type="button"
-                onClick={() => {
-                  onBrandChange('');
-                  onCategoryChange('');
-                }}
-                className="rounded-full border border-slate-300 bg-white px-3 py-2 text-xs font-bold text-slate-700 transition hover:bg-slate-50"
-              >
-                Xóa bộ lọc
-              </button>
-            ) : null}
-          </div>
-        </div>
+          {(selectedBrandId || selectedCategoryId || searchValue.trim()) ? (
+            <button
+              type="button"
+              onClick={onClearFilters}
+              className="inline-flex items-center justify-center rounded-lg border border-red-200 bg-red-50 px-5 py-3 text-sm font-bold text-red-700 transition hover:bg-red-100"
+            >
+              Xóa bộ lọc
+            </button>
+          ) : null}
+        </form>
       </section>
 
       <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-slate-200 bg-white px-4 py-3 text-sm text-slate-600 shadow-sm">
@@ -992,9 +998,14 @@ export const ProductManagement = () => {
   const [productPage, setProductPage] = useState(0);
   const [productTotalPages, setProductTotalPages] = useState(0);
   const [productTotalElements, setProductTotalElements] = useState(0);
+  const [productSearch, setProductSearch] = useState('');
   const [selectedBrandId, setSelectedBrandId] = useState('');
   const [selectedCategoryId, setSelectedCategoryId] = useState('');
   const [selectedSort, setSelectedSort] = useState('createdAt,desc');
+  const [appliedBrandId, setAppliedBrandId] = useState('');
+  const [appliedCategoryId, setAppliedCategoryId] = useState('');
+  const [appliedSort, setAppliedSort] = useState('createdAt,desc');
+  const [appliedSearch, setAppliedSearch] = useState('');
   const [brandSummaries, setBrandSummaries] = useState<BrandSummaryResponse[]>([]);
   const [categorySummaries, setCategorySummaries] = useState<CategorySummaryResponse[]>([]);
 
@@ -1022,7 +1033,13 @@ export const ProductManagement = () => {
   const categoryFileInputRef = useRef<HTMLInputElement | null>(null);
   const [categoryUploading, setCategoryUploading] = useState(false);
 
-  const loadProducts = async (page = productPage, brandId = selectedBrandId, categoryId = selectedCategoryId, sort = selectedSort) => {
+  const loadProducts = async (
+    page = productPage,
+    brandId = appliedBrandId,
+    categoryId = appliedCategoryId,
+    sort = appliedSort,
+    keyword = appliedSearch,
+  ) => {
     try {
       setProductLoading(true);
       setProductError(null);
@@ -1039,6 +1056,11 @@ export const ProductManagement = () => {
 
       if (categoryId) {
         params.categoryId = categoryId;
+      }
+
+      const trimmedKeyword = keyword.trim();
+      if (trimmedKeyword) {
+        params.keyword = trimmedKeyword;
       }
 
       const response = await productManagementApi.getAllProducts(params);
@@ -1116,8 +1138,8 @@ export const ProductManagement = () => {
   }, [activeTab, categories.length, brands.length, categoryLoading, brandLoading]);
 
   useEffect(() => {
-    void loadProducts(productPage, selectedBrandId, selectedCategoryId, selectedSort);
-  }, [productPage, selectedBrandId, selectedCategoryId, selectedSort]);
+    void loadProducts(productPage, appliedBrandId, appliedCategoryId, appliedSort, appliedSearch);
+  }, [productPage, appliedBrandId, appliedCategoryId, appliedSort, appliedSearch]);
 
   const openCreateCategory = () => {
     setCategoryPanelMode('create');
@@ -1387,16 +1409,37 @@ export const ProductManagement = () => {
 
   const handleBrandFilterChange = (value: string) => {
     setSelectedBrandId(value);
-    setProductPage(0);
   };
 
   const handleCategoryFilterChange = (value: string) => {
     setSelectedCategoryId(value);
-    setProductPage(0);
   };
 
   const handleSortChange = (value: string) => {
     setSelectedSort(value);
+  };
+
+  const handleSearchChange = (value: string) => {
+    setProductSearch(value);
+  };
+
+  const handleApplyFilters = () => {
+    setAppliedBrandId(selectedBrandId);
+    setAppliedCategoryId(selectedCategoryId);
+    setAppliedSort(selectedSort);
+    setAppliedSearch(productSearch.trim());
+    setProductPage(0);
+  };
+
+  const handleClearFilters = () => {
+    setSelectedBrandId('');
+    setSelectedCategoryId('');
+    setSelectedSort('createdAt,desc');
+    setProductSearch('');
+    setAppliedBrandId('');
+    setAppliedCategoryId('');
+    setAppliedSort('createdAt,desc');
+    setAppliedSearch('');
     setProductPage(0);
   };
 
@@ -1493,6 +1536,7 @@ export const ProductManagement = () => {
           currentPage={productPage}
           totalPages={productTotalPages}
           totalElements={productTotalElements}
+          searchValue={productSearch}
           brandOptions={brandSummaries}
           categoryOptions={categorySummaries}
           selectedBrandId={selectedBrandId}
@@ -1501,6 +1545,9 @@ export const ProductManagement = () => {
           onBrandChange={handleBrandFilterChange}
           onCategoryChange={handleCategoryFilterChange}
           onSortChange={handleSortChange}
+          onSearchChange={handleSearchChange}
+          onApplyFilters={handleApplyFilters}
+          onClearFilters={handleClearFilters}
           onPageChange={handlePageChange}
           onToggleStatus={toggleProductStatus}
         />
