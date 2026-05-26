@@ -20,7 +20,7 @@ import { categoryApi } from '../../../api/categoryApi';
 import type { BrandSummaryResponse, CategorySummaryResponse } from '../../../types/catalog';
 
 const inputClassName =
-  'w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 outline-none transition focus:border-amber-400 focus:ring-4 focus:ring-amber-100';
+  'w-full h-11 box-border rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 outline-none transition focus:border-amber-400 focus:ring-4 focus:ring-amber-100';
 
 const initialValues: ProductCreateFormValues = {
   name: '',
@@ -263,76 +263,78 @@ export const ProductCreatePage = () => {
           <div className="grid gap-6">
             <SectionCard title="Thông tin cốt lõi">
               <div className="grid gap-5 md:grid-cols-2">
-                <FieldShell label="Tên sản phẩm" error={form.formState.errors.name?.message}>
-                  <input {...form.register('name')} className={inputClassName} placeholder="Nhập tên sản phẩm mới" />
-                </FieldShell>
+                <div className="grid gap-5">
+                  <FieldShell label="Tên sản phẩm" error={form.formState.errors.name?.message}>
+                    <input style={{ border: '1px solid #8691a2' }} {...form.register('name')} className={inputClassName} placeholder="Nhập tên sản phẩm mới" />
+                  </FieldShell>
 
-                <FieldShell
-                  label="Slug"
-                  error={form.formState.errors.slug?.message}
-                  action={
-                    isSlugManuallyEdited ? (
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setIsSlugManuallyEdited(false);
-                          form.setValue('slug', slugify(form.getValues('name')), { shouldDirty: true, shouldValidate: true });
-                        }}
-                        className="rounded-full bg-slate-900 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-slate-800"
-                      >
-                        Dùng slug tự động
-                      </button>
-                    ) : null
-                  }
-                >
-                  <input
-                    {...form.register('slug', {
-                      onChange: () => {
-                        setIsSlugManuallyEdited(true);
-                      },
-                    })}
-                    className={inputClassName}
-                    placeholder="ten-san-pham-cua-ban"
-                  />
-                </FieldShell>
+                  <FieldShell
+                    label="Slug"
+                    error={form.formState.errors.slug?.message}
+                    action={
+                      isSlugManuallyEdited ? (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setIsSlugManuallyEdited(false);
+                            form.setValue('slug', slugify(form.getValues('name')), { shouldDirty: true, shouldValidate: true });
+                          }}
+                          className="rounded-full bg-slate-900 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-slate-800"
+                        >
+                          Dùng slug tự động
+                        </button>
+                      ) : null
+                    }
+                  >
+                    <input
+                      {...form.register('slug', {
+                        onChange: () => {
+                          setIsSlugManuallyEdited(true);
+                        },
+                      })}
+                      className={inputClassName}
+                      placeholder="ten-san-pham-cua-ban"
+                    />
+                  </FieldShell>
+                </div>
 
-                <FieldShell label="Danh mục" error={form.formState.errors.categoryId?.message}>
-                  <select {...form.register('categoryId')} className={inputClassName} disabled={isCatalogOptionsLoading}>
-                    <option value="">{isCatalogOptionsLoading ? 'Đang tải danh mục...' : 'Chọn danh mục từ hệ thống'}</option>
-                    {categoryOptions.map((option) => (
-                      <option key={option.id} value={option.id}>
-                        {option.name}
-                      </option>
-                    ))}
-                  </select>
-                </FieldShell>
+                <div className="grid gap-5">
+                  <FieldShell label="Danh mục" error={form.formState.errors.categoryId?.message}>
+                    <select style={{ border: '1px solid #8691a2' }} {...form.register('categoryId')} className={inputClassName} disabled={isCatalogOptionsLoading}>
+                      <option value="">{isCatalogOptionsLoading ? 'Đang tải danh mục...' : 'Chọn danh mục từ hệ thống'}</option>
+                      {categoryOptions.map((option) => (
+                        <option key={option.id} value={option.id}>
+                          {option.name}
+                        </option>
+                      ))}
+                    </select>
+                  </FieldShell>
 
-                <FieldShell label="Thương hiệu" error={form.formState.errors.brandId?.message}>
-                  <select {...form.register('brandId')} className={inputClassName} disabled={isCatalogOptionsLoading}>
-                    <option value="">{isCatalogOptionsLoading ? 'Đang tải thương hiệu...' : 'Chọn thương hiệu từ hệ thống'}</option>
-                    {brandOptions.map((option) => (
-                      <option key={option.id} value={option.id}>
-                        {option.name}
-                      </option>
-                    ))}
-                  </select>
-                </FieldShell>
+                  <FieldShell label="Thương hiệu" error={form.formState.errors.brandId?.message}>
+                    <select style={{ border: '1px solid #8691a2' }} {...form.register('brandId')} className={inputClassName} disabled={isCatalogOptionsLoading}>
+                      <option value="">{isCatalogOptionsLoading ? 'Đang tải thương hiệu...' : 'Chọn thương hiệu từ hệ thống'}</option>
+                      {brandOptions.map((option) => (
+                        <option key={option.id} value={option.id}>
+                          {option.name}
+                        </option>
+                      ))}
+                    </select>
+                  </FieldShell>
+                </div>
               </div>
 
               <div className="mt-5 grid gap-4 sm:grid-cols-2">
                 <label className="inline-flex items-start gap-3 rounded-2xl border border-slate-200 bg-slate-50 p-4">
-                  <input {...form.register('isActive')} type="checkbox" className="mt-1 h-4 w-4 rounded border-slate-300 text-emerald-600 focus:ring-emerald-500" />
+                  <input  {...form.register('isActive')} type="checkbox" className="mt-1 h-4 w-4 rounded border-slate-300 text-emerald-600 focus:ring-emerald-500" />
                   <span>
                     <span className="block text-sm font-semibold text-slate-900">Đang kinh doanh</span>
-                    <span className="block text-xs text-slate-500">Hiển thị sản phẩm trên storefront.</span>
                   </span>
                 </label>
 
                 <label className="inline-flex items-start gap-3 rounded-2xl border border-slate-200 bg-slate-50 p-4">
                   <input {...form.register('isFeatured')} type="checkbox" className="mt-1 h-4 w-4 rounded border-slate-300 text-amber-600 focus:ring-amber-500" />
                   <span>
-                    <span className="block text-sm font-semibold text-slate-900">Đánh dấu nổi bật</span>
-                    <span className="block text-xs text-slate-500">Ưu tiên hiển thị tại khu vực hero hoặc landing.</span>
+                    <span className="block text-sm font-semibold text-slate-900">Sản phẩm nổi bật</span>
                   </span>
                 </label>
               </div>
@@ -345,7 +347,7 @@ export const ProductCreatePage = () => {
                     control={form.control}
                     name="description"
                     render={({ field }) => (
-                      <AutoGrowTextarea
+                      <AutoGrowTextarea  style={{ border: '1px solid #8691a2' }}
                         {...field}
                         minHeight={140}
                         maxHeight={300}
@@ -361,7 +363,7 @@ export const ProductCreatePage = () => {
                     control={form.control}
                     name="ingredients"
                     render={({ field }) => (
-                      <AutoGrowTextarea
+                      <AutoGrowTextarea  style={{ border: '1px solid #8691a2' }}
                         {...field}
                         minHeight={120}
                         maxHeight={280}
@@ -374,10 +376,11 @@ export const ProductCreatePage = () => {
 
                 <FieldShell label="Hướng dẫn sử dụng" error={form.formState.errors.usageInstructions?.message}>
                   <Controller
+                  style={{ border: '1px solid #8691a2' }}
                     control={form.control}
-                    name="usageInstructions"
+                    name="usageInstructions" 
                     render={({ field }) => (
-                      <AutoGrowTextarea
+                      <AutoGrowTextarea  style={{ border: '1px solid black' }}
                         {...field}
                         minHeight={120}
                         maxHeight={280}
@@ -391,8 +394,8 @@ export const ProductCreatePage = () => {
             </SectionCard>
 
             <SectionCard title="Phân loại AI">
-              <div className="grid gap-5">
-                <TagInput
+              <div className="grid gap-5" >
+                <TagInput 
                   name="suitableSkinTypes"
                   label="Loại da phù hợp"
                   hint="Tối đa 8 mục, click chip để xoá"
@@ -433,15 +436,7 @@ export const ProductCreatePage = () => {
                 </div>
               </div>
 
-              <div className="mt-4 grid gap-3 rounded-2xl border border-amber-100 bg-amber-50 p-4 text-sm text-amber-950">
-                <div className="flex items-center gap-2 font-semibold text-amber-900">
-                  <Flame size={16} />
-                  Lưu ý validate FE
-                </div>
-                <p className="m-0 text-amber-900/90">
-                  Biểu mẫu sẽ chặn tên trống, slug sai định dạng, danh mục hoặc thương hiệu chưa chọn, biến thể thiếu giá hoặc SKU, và ảnh chưa có URL hợp lệ.
-                </p>
-              </div>
+              
             </SectionCard>
 
             <SectionCard title="Danh sách kiểm tra">

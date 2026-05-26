@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, CheckCircle2, Leaf } from 'lucide-react';
 import { Controller, FormProvider, useForm, useWatch, type SubmitHandler } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Link, useNavigate, useParams } from 'react-router-dom';
@@ -21,7 +21,7 @@ import type { BrandSummaryResponse, CategorySummaryResponse } from '../../../typ
 import { productApi } from '../../../api/productApi';
 
 const inputClassName =
-  'w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 outline-none transition focus:border-amber-400 focus:ring-4 focus:ring-amber-100';
+  'w-full h-11 box-border rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 outline-none transition focus:border-amber-400 focus:ring-4 focus:ring-amber-100';
 
 const initialValues: ProductCreateFormValues = {
   name: '',
@@ -47,6 +47,20 @@ const initialValues: ProductCreateFormValues = {
     },
   ],
   images: [],
+};
+
+const formatCurrency = (value: string) => {
+  const parsed = Number(value);
+
+  if (!Number.isFinite(parsed)) {
+    return 'Liên hệ';
+  }
+
+  return new Intl.NumberFormat('vi-VN', {
+    style: 'currency',
+    currency: 'VND',
+    maximumFractionDigits: 0,
+  }).format(parsed);
 };
 
 const slugify = (value: string) =>
@@ -97,7 +111,9 @@ export const ProductEditPage = () => {
           brandApi.getBrandSummaries(),
         ]);
 
-        if (!active) return;
+        if (!active) {
+          return;
+        }
 
         setCategoryOptions(categorySummaries);
         setBrandOptions(brandSummaries);
@@ -106,11 +122,14 @@ export const ProductEditPage = () => {
           toast.error('Không thể tải danh mục hoặc thương hiệu thật từ hệ thống.');
         }
       } finally {
-        if (active) setIsCatalogOptionsLoading(false);
+        if (active) {
+          setIsCatalogOptionsLoading(false);
+        }
       }
     };
 
     void loadCatalogOptions();
+
     return () => {
       active = false;
     };
@@ -119,19 +138,28 @@ export const ProductEditPage = () => {
   const watchedValues = useWatch({ control: form.control });
 
   useEffect(() => {
-    if (isSlugManuallyEdited) return;
+    if (isSlugManuallyEdited) {
+      return;
+    }
 
     const autoSlug = slugify(watchedValues.name || '');
     form.setValue('slug', autoSlug, { shouldDirty: false, shouldValidate: true });
   }, [form, isSlugManuallyEdited, watchedValues.name]);
 
   useEffect(() => {
-    if (!productId) return;
+    if (!productId) {
+      return;
+    }
+
     let active = true;
+
     const loadProduct = async () => {
       try {
         const product = await productApi.getProduct(productId);
-        if (!active) return;
+
+        if (!active) {
+          return;
+        }
 
         const mapped = {
           name: product.name || '',
@@ -157,7 +185,7 @@ export const ProductEditPage = () => {
           images: (product.images || []).map((img: any, idx: number) => ({
             url: img.url || '',
             altText: img.altText || '',
-            displayOrder: typeof img.displayOrder === 'number' ? img.displayOrder : idx,
+            displayOrder: String(typeof img.displayOrder === 'number' ? img.displayOrder : idx),
             isPrimary: !!img.isPrimary,
           })),
         } as ProductCreateFormValues;
@@ -185,6 +213,14 @@ export const ProductEditPage = () => {
     [brandOptions, watchedValues.brandId],
   );
 
+  const variantPrices = (watchedValues.variants || [])
+    .map((variant) => Number(variant.price))
+    .filter((price) => Number.isFinite(price) && price > 0);
+
+  const minPrice = variantPrices.length > 0 ? Math.min(...variantPrices) : null;
+  const maxPrice = variantPrices.length > 0 ? Math.max(...variantPrices) : null;
+  const primaryImage = watchedValues.images?.find((item) => item.isPrimary) || watchedValues.images?.[0];
+
   const onSubmit: SubmitHandler<ProductCreateFormValues> = async (values) => {
     if (!productId) {
       toast.error('Product id missing');
@@ -202,7 +238,7 @@ export const ProductEditPage = () => {
               url: resolvedImage.url,
               publicId: resolvedImage.key,
               altText: image.altText?.trim() || undefined,
-              displayOrder: Number(image.displayOrder ?? index),
+              displayOrder: toNumber(String(image.displayOrder ?? index), index),
               isPrimary: image.isPrimary,
             };
           }),
@@ -253,8 +289,14 @@ export const ProductEditPage = () => {
     }
   };
 
-  const imageCount = watchedValues.images?.length || 0;
   const variantCount = watchedValues.variants?.length || 0;
+  const formChecklist = [
+    { label: 'Tên sản phẩm', done: Boolean(watchedValues.name?.trim()) },
+    { label: 'Danh mục', done: Boolean(selectedCategory) },
+    { label: 'Thương hiệu', done: Boolean(selectedBrand) },
+    { label: 'Ảnh đại diện', done: Boolean(primaryImage) },
+    { label: 'Biến thể', done: variantCount > 0 },
+  ];
 
   return (
     <FormProvider {...form}>
@@ -278,68 +320,70 @@ export const ProductEditPage = () => {
               </h1>
             </div>
           </div>
-
         </header>
 
-        {/* reuse the same UI structure from create page for fields and editors */}
         <div className="relative z-10 grid gap-6 lg:grid-cols-[minmax(0,1.35fr)_minmax(320px,0.8fr)]">
           <div className="grid gap-6">
             <SectionCard title="Thông tin cốt lõi">
               <div className="grid gap-5 md:grid-cols-2">
-                <FieldShell label="Tên sản phẩm" error={form.formState.errors.name?.message}>
-                  <input {...form.register('name')} className={inputClassName} placeholder="Nhập tên sản phẩm mới" />
-                </FieldShell>
+                <div className="grid gap-5">
+                  <FieldShell label="Tên sản phẩm" error={form.formState.errors.name?.message}>
+                    <input {...form.register('name')} className={inputClassName} placeholder="Nhập tên sản phẩm mới" />
+                  </FieldShell>
 
-                <FieldShell
-                  label="Slug"
-                  error={form.formState.errors.slug?.message}
-                  action={
-                    isSlugManuallyEdited ? (
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setIsSlugManuallyEdited(false);
-                          form.setValue('slug', slugify(form.getValues('name')), { shouldDirty: true, shouldValidate: true });
-                        }}
-                        className="rounded-full bg-slate-900 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-slate-800"
-                      >
-                        Dùng slug tự động
-                      </button>
-                    ) : null
-                  }
-                >
-                  <input
-                    {...form.register('slug', {
-                      onChange: () => {
-                        setIsSlugManuallyEdited(true);
-                      },
-                    })}
-                    className={inputClassName}
-                    placeholder="ten-san-pham-cua-ban"
-                  />
-                </FieldShell>
+                  <FieldShell
+                    label="Slug"
+                    error={form.formState.errors.slug?.message}
+                    action={
+                      isSlugManuallyEdited ? (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setIsSlugManuallyEdited(false);
+                            form.setValue('slug', slugify(form.getValues('name')), { shouldDirty: true, shouldValidate: true });
+                          }}
+                          className="rounded-full bg-slate-900 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-slate-800"
+                        >
+                          Dùng slug tự động
+                        </button>
+                      ) : null
+                    }
+                  >
+                    <input
+                      {...form.register('slug', {
+                        onChange: () => {
+                          setIsSlugManuallyEdited(true);
+                        },
+                      })}
+                      className={inputClassName}
+                      placeholder="ten-san-pham-cua-ban"
+                    />
+                  </FieldShell>
+                </div>
 
-                <FieldShell label="Danh mục" error={form.formState.errors.categoryId?.message}>
-                  <select {...form.register('categoryId')} className={inputClassName} disabled={isCatalogOptionsLoading}>
-                    <option value="">{isCatalogOptionsLoading ? 'Đang tải danh mục...' : 'Chọn danh mục từ hệ thống'}</option>
-                    {categoryOptions.map((option) => (
-                      <option key={option.id} value={option.id}>
-                        {option.name}
-                      </option>
-                    ))}
-                  </select>
-                </FieldShell>
+                <div className="grid gap-5">
+                  <FieldShell label="Danh mục" error={form.formState.errors.categoryId?.message}>
+                    <select {...form.register('categoryId')} className={inputClassName} disabled={isCatalogOptionsLoading}>
+                      <option value="">{isCatalogOptionsLoading ? 'Đang tải danh mục...' : 'Chọn danh mục từ hệ thống'}</option>
+                      {categoryOptions.map((option) => (
+                        <option key={option.id} value={option.id}>
+                          {option.name}
+                        </option>
+                      ))}
+                    </select>
+                  </FieldShell>
 
-                <FieldShell label="Thương hiệu" error={form.formState.errors.brandId?.message}>
-                  <select {...form.register('brandId')} className={inputClassName} disabled={isCatalogOptionsLoading}>
-                    <option value="">{isCatalogOptionsLoading ? 'Đang tải thương hiệu...' : 'Chọn thương hiệu từ hệ thống'}</option>
-                    {brandOptions.map((option) => (
-                      <option key={option.id} value={option.id}>
-                        {option.name}
-                      </option>
-                    ))}
-                  </select>
-                </FieldShell>
+                  <FieldShell label="Thương hiệu" error={form.formState.errors.brandId?.message}>
+                    <select {...form.register('brandId')} className={inputClassName} disabled={isCatalogOptionsLoading}>
+                      <option value="">{isCatalogOptionsLoading ? 'Đang tải thương hiệu...' : 'Chọn thương hiệu từ hệ thống'}</option>
+                      {brandOptions.map((option) => (
+                        <option key={option.id} value={option.id}>
+                          {option.name}
+                        </option>
+                      ))}
+                    </select>
+                  </FieldShell>
+                </div>
               </div>
 
               <div className="mt-5 grid gap-4 sm:grid-cols-2">
@@ -354,7 +398,7 @@ export const ProductEditPage = () => {
                 <label className="inline-flex items-start gap-3 rounded-2xl border border-slate-200 bg-slate-50 p-4">
                   <input {...form.register('isFeatured')} type="checkbox" className="mt-1 h-4 w-4 rounded border-slate-300 text-amber-600 focus:ring-amber-500" />
                   <span>
-                    <span className="block text-sm font-semibold text-slate-900">Đánh dấu nổi bật</span>
+                    <span className="block text-sm font-semibold text-slate-900">Sản phẩm nổi bật</span>
                     <span className="block text-xs text-slate-500">Ưu tiên hiển thị tại khu vực hero hoặc landing.</span>
                   </span>
                 </label>
@@ -410,26 +454,26 @@ export const ProductEditPage = () => {
                     )}
                   />
                 </FieldShell>
+              </div>
+            </SectionCard>
 
-                <FieldShell label="Loại da phù hợp" error={form.formState.errors.suitableSkinTypes?.message}>
-                  <TagInput
-                    name="suitableSkinTypes"
-                    label="Loại da phù hợp"
-                    hint="Tối đa 8 mục, click chip để xoá"
-                    placeholder="Ví dụ: Da dầu"
-                    suggestions={skinTypeSuggestions}
-                  />
-                </FieldShell>
+            <SectionCard title="Phân loại AI">
+              <div className="grid gap-5">
+                <TagInput
+                  name="suitableSkinTypes"
+                  label="Loại da phù hợp"
+                  hint="Tối đa 8 mục, click chip để xoá"
+                  placeholder="Ví dụ: Da dầu"
+                  suggestions={skinTypeSuggestions}
+                />
 
-                <FieldShell label="Vấn đề da" error={form.formState.errors.skinConcerns?.message}>
-                  <TagInput
-                    name="skinConcerns"
-                    label="Vấn đề da"
-                    hint="Tối đa 8 mục, dùng để gợi ý AI"
-                    placeholder="Ví dụ: Mụn"
-                    suggestions={skinConcernSuggestions}
-                  />
-                </FieldShell>
+                <TagInput
+                  name="skinConcerns"
+                  label="Vấn đề da"
+                  hint="Tối đa 8 mục, dùng để gợi ý AI"
+                  placeholder="Ví dụ: Mụn"
+                  suggestions={skinConcernSuggestions}
+                />
               </div>
             </SectionCard>
 
@@ -439,7 +483,6 @@ export const ProductEditPage = () => {
                 lineSource={selectedCategory?.slug || selectedCategory?.name || ''}
               />
             </SectionCard>
-
           </div>
 
           <aside className="grid gap-6 lg:sticky lg:top-6 lg:self-start">
@@ -447,30 +490,66 @@ export const ProductEditPage = () => {
               <ProductImageEditor />
             </SectionCard>
 
-            <div className="rounded-2xl border border-slate-200 bg-white p-4">
-              <p className="m-0 text-xs font-bold uppercase tracking-[0.12em] text-slate-500">Kiểm tra</p>
-              <div className="mt-3 grid gap-2">
-                <div className="text-sm text-slate-700">- Tên: {form.getValues('name') || '—'}</div>
-                <div className="text-sm text-slate-700">- Danh mục: {selectedCategory?.name || '—'}</div>
-                <div className="text-sm text-slate-700">- Thương hiệu: {selectedBrand?.name || '—'}</div>
-                <div className="text-sm text-slate-700">- Ảnh: {imageCount}</div>
-                <div className="text-sm text-slate-700">- Biến thể: {variantCount}</div>
+            <SectionCard title="Tổng quan giá">
+              <div className="grid gap-3 sm:grid-cols-2">
+                <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                  <p className="m-0 text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">Giá từ</p>
+                  <p className="m-0 mt-1 text-lg font-bold text-slate-900">{minPrice !== null ? formatCurrency(String(minPrice)) : 'Liên hệ'}</p>
+                </div>
+                <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                  <p className="m-0 text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">Giá đến</p>
+                  <p className="m-0 mt-1 text-lg font-bold text-slate-900">{maxPrice !== null ? formatCurrency(String(maxPrice)) : 'Liên hệ'}</p>
+                </div>
               </div>
-            </div>
+            </SectionCard>
 
-            <div className="rounded-2xl border border-slate-200 bg-white p-4">
-              <p className="m-0 text-xs font-bold uppercase tracking-[0.12em] text-slate-500">Hành động</p>
-              <div className="mt-3 grid gap-3">
-                <button type="submit" disabled={form.formState.isSubmitting} className="inline-flex items-center justify-center rounded-2xl bg-amber-600 px-4 py-3 text-sm font-bold text-white transition hover:bg-amber-700 disabled:opacity-60 disabled:cursor-not-allowed">
-                  {form.formState.isSubmitting ? 'Đang lưu...' : 'Lưu thay đổi'}
-                </button>
-                <Link to="/admin/products" className="inline-flex items-center justify-center rounded-2xl border border-slate-200 px-4 py-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50">
-                  Hủy
-                </Link>
+            <SectionCard title="Danh sách kiểm tra">
+              <div className="grid gap-3">
+                {formChecklist.map((item) => (
+                  <div key={item.label} className="flex items-center justify-between gap-3 rounded-2xl border border-slate-200 bg-white px-4 py-3">
+                    <span className="text-sm font-medium text-slate-700">{item.label}</span>
+                    <span
+                      className={`inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-xs font-semibold ${
+                        item.done ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-500'
+                      }`}
+                    >
+                      {item.done ? <CheckCircle2 size={12} /> : <Leaf size={12} />}
+                      {item.done ? 'Đã đủ' : 'Chưa đủ'}
+                    </span>
+                  </div>
+                ))}
               </div>
-            </div>
-
+            </SectionCard>
           </aside>
+        </div>
+
+        <div className="fixed bottom-0 left-0 right-0 z-40 border-t border-slate-200 bg-white/95 backdrop-blur lg:left-[280px]">
+          <div className="mx-auto flex max-w-[1800px] flex-wrap items-center justify-between gap-3 px-4 py-3 lg:px-8">
+            <p className="m-0 text-sm text-slate-500">
+              {form.formState.isValid ? 'Biểu mẫu hợp lệ, có thể lưu ngay.' : 'Biểu mẫu còn lỗi, kiểm tra các trường được tô đỏ.'}
+            </p>
+
+            <div className="flex flex-wrap gap-3">
+              <button
+                type="button"
+                onClick={() => {
+                  form.reset(initialValues);
+                  setIsSlugManuallyEdited(false);
+                }}
+                className="rounded-2xl border border-slate-200 bg-white px-5 py-3 text-sm font-semibold text-slate-700 transition hover:border-slate-300 hover:bg-slate-50"
+              >
+                Hủy thay đổi
+              </button>
+
+              <button
+                type="submit"
+                disabled={!form.formState.isValid || form.formState.isSubmitting}
+                className="rounded-2xl bg-gradient-to-r from-indigo-600 to-blue-600 px-6 py-3 text-sm font-bold text-white shadow-lg shadow-indigo-200 transition hover:shadow-xl disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {form.formState.isSubmitting ? 'Đang lưu...' : 'Lưu thay đổi'}
+              </button>
+            </div>
+          </div>
         </div>
       </form>
     </FormProvider>

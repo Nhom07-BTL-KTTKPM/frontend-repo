@@ -388,7 +388,7 @@ export const ProductList: React.FC = () => {
         </div>
         
         {/* Khung chứa thanh trượt kép sử dụng Pointer Events */}
-        <div className="relative w-full h-2 bg-gray-100 rounded-full" style={{ paddingRight: 12, boxSizing: 'border-box', width: '100%' }}>
+        <div className="relative w-full h-2 bg-gray-100 rounded-full" style={{ padding: '0 12px', boxSizing: 'border-box', width: '100%' }}>
           {/* ĐƯỜNG NỐI MÀU VÀNG GIỮA MIN VÀ MAX */}
           <div 
             className="absolute h-2 bg-[#D4AF37] rounded-full z-10"
@@ -404,7 +404,8 @@ export const ProductList: React.FC = () => {
             max={computedPriceMax}
             value={priceMin}
             onChange={(e) => setPriceMin(Math.min(Number(e.target.value), priceMax))}
-            className="absolute w-full h-2 bg-transparent appearance-none left-0 top-0 z-20
+            style={{ left: 12, width: `calc(100% - 24px)` }}
+            className="absolute h-2 bg-transparent appearance-none top-0 z-20
                       pointer-events-none accent-[#D4AF37]
                       [&::-webkit-slider-thumb]:pointer-events-auto [&::-webkit-slider-thumb]:relative [&::-webkit-slider-thumb]:z-30
                       [&::-moz-range-thumb]:pointer-events-auto [&::-moz-range-thumb]:relative [&::-moz-range-thumb]:z-30"
@@ -417,7 +418,8 @@ export const ProductList: React.FC = () => {
             max={computedPriceMax}
             value={priceMax}
             onChange={(e) => setPriceMax(Math.max(Number(e.target.value), priceMin))}
-            className="absolute w-full h-2 bg-transparent appearance-none left-0 top-0 z-20
+            style={{ left: 12, width: `calc(100% - 24px)` }}
+            className="absolute h-2 bg-transparent appearance-none top-0 z-20
                       pointer-events-none accent-[#D4AF37]
                       [&::-webkit-slider-thumb]:pointer-events-auto [&::-webkit-slider-thumb]:relative [&::-webkit-slider-thumb]:z-30
                       [&::-moz-range-thumb]:pointer-events-auto [&::-moz-range-thumb]:relative [&::-moz-range-thumb]:z-30"
