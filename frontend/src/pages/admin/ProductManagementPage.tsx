@@ -497,9 +497,9 @@ const ProductsTab = ({
                     >
                       <Eye size={16} className="text-slate-700" />
                     </button>
-                    <button className="rounded-full bg-white p-2.5 shadow-lg transition hover:bg-slate-50" title="Chỉnh sửa">
+                    <Link to={`/admin/products/${product.id}/edit`} className="rounded-full bg-white p-2.5 shadow-lg transition hover:bg-slate-50" title="Chỉnh sửa">
                       <Edit2 size={16} className="text-slate-700" />
-                    </button>
+                    </Link>
                     <button
                       type="button"
                       title={product.isActive ? 'Ẩn sản phẩm' : 'Hiển thị sản phẩm'}

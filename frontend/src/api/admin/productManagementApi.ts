@@ -61,8 +61,8 @@ export const productManagementApi = {
     });
   },
 
-  updateProduct: (productId: string, payload: UpdateProductPayload) => {
-    return axiosClient.put<unknown, CatalogProduct>(`${catalogProductsPath}/${productId}`, payload, {
+  updateProduct: (productId: string, payload: CatalogProductCreateRequest) => {
+    return axiosClient.put<unknown, CatalogProductDetail>(`${catalogProductsPath}/${productId}`, payload, {
       baseURL: resolveBaseUrl(serviceBase.catalog),
     });
   },
