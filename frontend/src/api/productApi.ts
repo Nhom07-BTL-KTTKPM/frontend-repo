@@ -1,9 +1,39 @@
 import { axiosClient } from './axiosClient';
 import type { Product } from '../types/product';
 import type { PageResponse } from '../types/api';
+import type { ProductCardResponse, CategorySummaryResponse, BrandSummaryResponse } from '../types/catalog';
 
 
 const catalogProductsPath = '/catalog/products';
+
+const serializeParams = (params: Record<string, unknown>) => {
+  const searchParams = new URLSearchParams();
+
+  Object.entries(params).forEach(([key, value]) => {
+    if (value === undefined || value === null) {
+      return;
+    }
+
+    if (Array.isArray(value)) {
+      value.forEach((item) => {
+        if (item === undefined || item === null || item === '') {
+          return;
+        }
+        searchParams.append(key, String(item));
+      });
+      return;
+    }
+
+    const stringValue = String(value);
+    if (stringValue.trim() === '') {
+      return;
+    }
+
+    searchParams.append(key, stringValue);
+  });
+
+  return searchParams.toString();
+};
 
 export const productApi = {
   // GET /api/v1/catalog/products (list with pagination)
@@ -25,6 +55,14 @@ export const productApi = {
   searchProducts: (keyword: string, params?: Record<string, unknown>) => {
     return axiosClient.get<unknown, PageResponse<Product>>(`${catalogProductsPath}/search`, {
       params: { keyword, ...params },
+    });
+  },
+
+  // GET /api/v1/catalog/products/filter?keyword=...&categoryIds=...&brandIds=...
+  filterProducts: (params?: Record<string, unknown>) => {
+    return axiosClient.get<unknown, PageResponse<ProductCardResponse>>(`${catalogProductsPath}/filter`, {
+      params,
+      paramsSerializer: (serializedParams) => serializeParams(serializedParams as Record<string, unknown>),
     });
   },
 
@@ -54,11 +92,11 @@ export const productApi = {
 
   // GET /api/v1/catalog/categories/summary
   getCategoriesSummary: () => {
-    return axiosClient.get<unknown, unknown[]>('/catalog/categories/summary');
+    return axiosClient.get<unknown, CategorySummaryResponse[]>('/catalog/categories/summary');
   },
 
   // GET /api/v1/catalog/brands/summary
   getBrandsSummary: () => {
-    return axiosClient.get<unknown, unknown[]>('/catalog/brands/summary');
+    return axiosClient.get<unknown, BrandSummaryResponse[]>('/catalog/brands/summary');
   },
 };

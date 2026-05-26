@@ -4,15 +4,18 @@ import { ChevronLeft, ChevronRight, Search, SlidersHorizontal, Star, X } from 'l
 import { productApi } from '../api/productApi';
 import ProductCard from '../components/ProductCard';
 import type { Product } from '../types/product';
+import type { ProductCardResponse, CategorySummaryResponse, BrandSummaryResponse } from '../types/catalog';
 import type { PageResponse } from '../types/api';
 
-type ProductListItem = Product & {
-  price?: number;
-  averageRating?: number;
-  totalReviews?: number;
-  totalSold?: number;
-  suitableSkinTypes?: string[];
+type ProductListItem = ProductCardResponse;
+
+type SelectOption = {
+  id: string;
+  label: string;
 };
+
+const skinTypeOptions = ['Da dầu', 'Da hỗn hợp', 'Da mụn', 'Da khô', 'Da nhạy cảm', 'Da thường', 'Da lão hóa', 'Da mất độ đàn hồi', 'Mọi loại da'];
+const promotionOptions = ['Hàng mới', 'Bán chạy', 'Đang giảm giá'];
 
 export const ProductList: React.FC = () => {
   const [searchInput, setSearchInput] = useState('');
@@ -24,8 +27,7 @@ export const ProductList: React.FC = () => {
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
   const [selectedSkinTypes, setSelectedSkinTypes] = useState<string[]>([]);
   const [selectedRatings, setSelectedRatings] = useState<number[]>([]);
-  const [selectedAvailability, setSelectedAvailability] = useState<string[]>(['in-stock']);
-  const [selectedPromotions, setSelectedPromotions] = useState<string[]>(['best-seller']);
+  const [selectedPromotions, setSelectedPromotions] = useState<string[]>([]);
   const [selectedBrands, setSelectedBrands] = useState<string[]>([]);
 
   const [priceMin, setPriceMin] = useState(0);
@@ -46,19 +48,75 @@ export const ProductList: React.FC = () => {
 
   const isSearching = searchKeyword.trim().length > 0;
 
+  const filterParams = useMemo(() => {
+    const params: Record<string, unknown> = {
+      page: currentPage - 1,
+      size: pageSize,
+    };
+
+    if (searchKeyword.trim()) {
+      params.keyword = searchKeyword.trim();
+    }
+    if (selectedCategories.length > 0) {
+      params.categoryIds = selectedCategories;
+    }
+    if (selectedBrands.length > 0) {
+      params.brandIds = selectedBrands;
+    }
+    if (selectedSkinTypes.length > 0) {
+      params.skinTypes = selectedSkinTypes;
+    }
+    if (priceMin > 0) {
+      params.minPrice = priceMin;
+    }
+    if (priceMax > 0) {
+      params.maxPrice = priceMax;
+    }
+    if (selectedRatings.length > 0) {
+      params.rating = Math.max(...selectedRatings);
+    }
+    if (selectedPromotions.length > 0) {
+      params.promotions = selectedPromotions;
+    }
+
+    return params;
+  }, [
+    currentPage,
+    pageSize,
+    searchKeyword,
+    selectedCategories,
+    selectedBrands,
+    selectedSkinTypes,
+    priceMin,
+    priceMax,
+    selectedRatings,
+    selectedPromotions,
+  ]);
+
   const { data: pageData, isLoading, error } = useQuery<PageResponse<ProductListItem>>({
-    queryKey: ['products', searchKeyword, currentPage, pageSize],
+    queryKey: ['products', filterParams],
     queryFn: async (): Promise<PageResponse<ProductListItem>> => {
-      const params = { page: currentPage - 1, size: pageSize };
-      if (isSearching) {
-        return productApi.searchProducts(searchKeyword.trim(), params) as unknown as PageResponse<ProductListItem>;
-      }
-      return productApi.getProducts(params) as unknown as PageResponse<ProductListItem>;
+      return productApi.filterProducts(filterParams) as unknown as PageResponse<ProductListItem>;
     },
     placeholderData: keepPreviousData,
   });
 
   const products = (pageData?.content ?? []) as ProductListItem[];
+  const cardProducts: Product[] = useMemo(
+    () =>
+      products.map((product) => ({
+        id: product.id,
+        name: product.name,
+        slug: product.slug,
+        averageRating: product.averageRating,
+        totalSold: product.totalSold,
+        minPrice: product.minPrice ?? undefined,
+        maxPrice: product.maxPrice ?? undefined,
+        isFeatured: product.isFeatured,
+        thumbnail: product.thumbnail,
+      })),
+    [products]
+  );
 
   // fetch summaries lazily via productApi
   const {
@@ -66,7 +124,7 @@ export const ProductList: React.FC = () => {
     isLoading: isLoadingCategories,
   } = useQuery({
     queryKey: ['categories', 'summary'],
-    queryFn: () => productApi.getCategoriesSummary().then((res: any) => res ?? []),
+    queryFn: () => productApi.getCategoriesSummary().then((res) => res ?? []),
     enabled: shouldLoadFilters,
   });
 
@@ -75,80 +133,34 @@ export const ProductList: React.FC = () => {
     isLoading: isLoadingBrands,
   } = useQuery({
     queryKey: ['brands', 'summary'],
-    queryFn: () => productApi.getBrandsSummary().then((res: any) => res ?? []),
+    queryFn: () => productApi.getBrandsSummary().then((res) => res ?? []),
     enabled: shouldLoadFilters,
   });
 
-  const categoryOptions = useMemo(() => {
-    if (!shouldLoadFilters) return [];
+  const categoryOptions: SelectOption[] = useMemo(() => {
+    if (!shouldLoadFilters || !Array.isArray(categoriesSummary)) return [];
+    return categoriesSummary.map((category: CategorySummaryResponse) => ({
+      id: category.id,
+      label: category.name,
+    }));
+  }, [categoriesSummary, shouldLoadFilters]);
 
-    if (Array.isArray(categoriesSummary) && categoriesSummary.length > 0) {
-      // Prefer summary endpoint response; try to map to name or title
-      return Array.from(new Set(categoriesSummary.map((c: any) => c.name ?? c.title ?? String(c))));
-    }
-    return Array.from(
-      new Set(products.map((p) => p.category?.name).filter((name): name is string => Boolean(name && name.trim())))
-    );
-  }, [categoriesSummary, products, shouldLoadFilters]);
+  const brandOptions: SelectOption[] = useMemo(() => {
+    if (!shouldLoadFilters || !Array.isArray(brandsSummary)) return [];
+    return brandsSummary.map((brand: BrandSummaryResponse) => ({
+      id: brand.id,
+      label: brand.name,
+    }));
+  }, [brandsSummary, shouldLoadFilters]);
 
-  const brandOptions = useMemo(() => {
-    if (!shouldLoadFilters) return [];
-
-    if (Array.isArray(brandsSummary) && brandsSummary.length > 0) {
-      return Array.from(new Set(brandsSummary.map((b: any) => b.name ?? b.title ?? String(b))));
-    }
-    return Array.from(new Set(products.map((p) => p.brand?.name).filter((name): name is string => Boolean(name && name.trim()))));
-  }, [brandsSummary, products, shouldLoadFilters]);
-
-  const skinTypeOptions = ['Normal', 'Oily', 'Dry', 'Combination', 'Sensitive'];
-  const promotionOptions = ['Hàng mới', 'Bán chạy', 'Đang giảm giá'];
-  const displayedProducts = useMemo(() => {
-    let list = products;
-
-    // keyword
-    if (searchKeyword.trim()) {
-      const keyword = searchKeyword.trim().toLowerCase();
-      list = list.filter((p) => p.name.toLowerCase().includes(keyword));
-    }
-
-    // categories filter
-    if (selectedCategories.length > 0) {
-      list = list.filter((p) => selectedCategories.includes(p.category?.name ?? ''));
-    }
-
-    // brands filter
-    if (selectedBrands.length > 0) {
-      list = list.filter((p) => selectedBrands.includes(p.brand?.name ?? ''));
-    }
-
-    // skin types (if available on product)
-    if (selectedSkinTypes.length > 0) {
-      list = list.filter((p) => {
-        const types = p.suitableSkinTypes ?? [];
-        return selectedSkinTypes.some((t) => types.includes(t));
-      });
-    }
-
-    // price range (min/max may come from product fields minPrice/maxPrice)
-    list = list.filter((p) => {
-      const min = p.minPrice ?? 0;
-      const max = p.maxPrice ?? 0;
-      return max >= priceMin && min <= priceMax;
-    });
-
-    // ratings
-    if (selectedRatings.length > 0) {
-      list = list.filter((p) => selectedRatings.includes(Math.round(p.averageRating ?? 0)));
-    }
-
-    return list;
-  }, [products, searchKeyword, selectedCategories, selectedBrands, selectedSkinTypes, priceMin, priceMax, selectedRatings]);
+  const categoryLabelById = useMemo(() => new Map(categoryOptions.map((option) => [option.id, option.label])), [categoryOptions]);
+  const brandLabelById = useMemo(() => new Map(brandOptions.map((option) => [option.id, option.label])), [brandOptions]);
 
   // compute global price bounds from products so default slider doesn't filter everything
   React.useEffect(() => {
     if (!products || products.length === 0) return;
-    const mins = products.map((p) => Number(p.minPrice ?? p.price ?? 0)).filter((v) => !Number.isNaN(v));
-    const maxs = products.map((p) => Number(p.maxPrice ?? p.price ?? 0)).filter((v) => !Number.isNaN(v));
+    const mins = products.map((p) => Number(p.minPrice ?? 0)).filter((v) => !Number.isNaN(v));
+    const maxs = products.map((p) => Number(p.maxPrice ?? 0)).filter((v) => !Number.isNaN(v));
     const globalMin = mins.length ? Math.min(...mins) : 0;
     const globalMax = maxs.length ? Math.max(...maxs) : 200;
     setComputedPriceMax(globalMax > 0 ? globalMax : 200);
@@ -162,13 +174,16 @@ export const ProductList: React.FC = () => {
 
   const totalPages = Math.max(1, pageData?.totalPages ?? 1);
   const safeCurrentPage = Math.min(currentPage, totalPages);
-  const paginatedProducts = displayedProducts;
-  const pageStart = displayedProducts.length === 0 ? 0 : (safeCurrentPage - 1) * pageSize + 1;
-  const pageEnd = Math.min((safeCurrentPage - 1) * pageSize + displayedProducts.length, pageData?.totalElements ?? displayedProducts.length);
+  const pageStart = products.length === 0 ? 0 : (pageData?.number ?? safeCurrentPage - 1) * (pageData?.size ?? pageSize) + 1;
+  const pageEnd = products.length === 0 ? 0 : pageStart + products.length - 1;
 
   React.useEffect(() => {
     setCurrentPage(1);
   }, [searchKeyword]);
+
+  React.useEffect(() => {
+    setCurrentPage(1);
+  }, [searchKeyword, selectedCategories, selectedBrands, selectedSkinTypes, selectedRatings, priceMin, priceMax, selectedPromotions]);
 
   // Scroll to top of product list when user navigates pages
   React.useEffect(() => {
@@ -214,7 +229,7 @@ export const ProductList: React.FC = () => {
     setSelectedBrands([]);
     setSelectedSkinTypes([]);
     setSelectedRatings([]);
-    setSelectedAvailability([]);
+    setSelectedPromotions([]);
     setSelectedPromotions([]);
     setPriceMin(0);
     setPriceMax(computedPriceMax);
@@ -225,7 +240,6 @@ export const ProductList: React.FC = () => {
   const removeBrand = (value: string) => setSelectedBrands((prev) => prev.filter((v) => v !== value));
   const removeSkinType = (value: string) => setSelectedSkinTypes((prev) => prev.filter((v) => v !== value));
   const removeRating = (value: number) => setSelectedRatings((prev) => prev.filter((v) => v !== value));
-  const removeAvailability = (value: string) => setSelectedAvailability((prev) => prev.filter((v) => v !== value));
   const removePromotion = (value: string) => setSelectedPromotions((prev) => prev.filter((v) => v !== value));
 
   const hasActiveFilters = React.useMemo(() => {
@@ -233,7 +247,6 @@ export const ProductList: React.FC = () => {
       isSearching ||
       priceMin !== 0 ||
       priceMax !== computedPriceMax ||
-      selectedAvailability.length > 0 ||
       selectedPromotions.length > 0 ||
       selectedCategories.length > 0 ||
       selectedBrands.length > 0 ||
@@ -245,7 +258,6 @@ export const ProductList: React.FC = () => {
     priceMin,
     priceMax,
     computedPriceMax,
-    selectedAvailability,
     selectedPromotions,
     selectedCategories,
     selectedBrands,
@@ -287,15 +299,15 @@ export const ProductList: React.FC = () => {
         {shouldLoadFilters && isLoadingCategories ? (
           <p className="text-xs text-gray-500 animate-pulse">Đang tải danh mục...</p>
         ) : categoryOptions.length > 0 ? (
-          categoryOptions.map((categoryName) => (
-            <label key={categoryName} className="flex items-center gap-2.5 text-sm text-gray-700 cursor-pointer select-none hover:text-gray-900 transition-colors">
+          categoryOptions.map((category) => (
+            <label key={category.id} className="flex items-center gap-2.5 text-sm text-gray-700 cursor-pointer select-none hover:text-gray-900 transition-colors">
               <input
                 type="checkbox"
-                checked={selectedCategories.includes(categoryName)}
-                onChange={() => toggleTextFilter(categoryName, setSelectedCategories)}
+                checked={selectedCategories.includes(category.id)}
+                onChange={() => toggleTextFilter(category.id, setSelectedCategories)}
                 className="w-4 h-4 rounded border-gray-300 text-[#D4AF37] focus:ring-[#D4AF37]/50 cursor-pointer"
               />
-              <span>{categoryName}</span>
+              <span>{category.label}</span>
             </label>
           ))
         ) : (
@@ -313,15 +325,15 @@ export const ProductList: React.FC = () => {
         {shouldLoadFilters && isLoadingBrands ? (
           <p className="text-xs text-gray-500 animate-pulse">Đang tải thương hiệu...</p>
         ) : brandOptions.length > 0 ? (
-          brandOptions.map((brandName) => (
-            <label key={brandName} className="flex items-center gap-2.5 text-sm text-gray-700 cursor-pointer select-none hover:text-gray-900 transition-colors">
+          brandOptions.map((brand) => (
+            <label key={brand.id} className="flex items-center gap-2.5 text-sm text-gray-700 cursor-pointer select-none hover:text-gray-900 transition-colors">
               <input
                 type="checkbox"
-                checked={selectedBrands.includes(brandName)}
-                onChange={() => toggleTextFilter(brandName, setSelectedBrands)}
+                checked={selectedBrands.includes(brand.id)}
+                onChange={() => toggleTextFilter(brand.id, setSelectedBrands)}
                 className="w-4 h-4 rounded border-gray-300 text-[#D4AF37] focus:ring-[#D4AF37]/50 cursor-pointer"
               />
-              <span>{brandName}</span>
+              <span>{brand.label}</span>
             </label>
           ))
         ) : (
@@ -541,8 +553,8 @@ export const ProductList: React.FC = () => {
 
           {selectedCategories.map((c) => (
             <span key={`cat-${c}`} className="chip">
-              {c}
-              <button type="button" className="chip__close" onClick={() => removeCategory(c)} aria-label={`Xóa ${c}`}>
+              {categoryLabelById.get(c) ?? c}
+              <button type="button" className="chip__close" onClick={() => removeCategory(c)} aria-label={`Xóa ${categoryLabelById.get(c) ?? c}`}>
                 <X size={12} />
               </button>
             </span>
@@ -550,8 +562,8 @@ export const ProductList: React.FC = () => {
 
           {selectedBrands.map((b) => (
             <span key={`brand-${b}`} className="chip">
-              {b}
-              <button type="button" className="chip__close" onClick={() => removeBrand(b)} aria-label={`Xóa ${b}`}>
+              {brandLabelById.get(b) ?? b}
+              <button type="button" className="chip__close" onClick={() => removeBrand(b)} aria-label={`Xóa ${brandLabelById.get(b) ?? b}`}>
                 <X size={12} />
               </button>
             </span>
@@ -591,7 +603,7 @@ export const ProductList: React.FC = () => {
 
         <div className="product-list__meta-row">
           <p>
-            Đang hiển thị {pageStart}-{pageEnd} / {displayedProducts.length} sản phẩm
+            Đang hiển thị {pageStart}-{pageEnd} / {pageData?.totalElements ?? 0} sản phẩm
           </p>
           <label className="product-list__sort">
             <span>Sắp xếp</span>
@@ -620,13 +632,13 @@ export const ProductList: React.FC = () => {
           </aside>
 
           <div className="product-list__grid">
-            {paginatedProducts.map((p) => (
-              <div key={p.id || p.productId} className="product-list__grid-item">
+            {cardProducts.map((p) => (
+              <div key={p.id} className="product-list__grid-item">
                 <ProductCard product={p} />
               </div>
             ))}
-            {!isLoading && displayedProducts.length === 0 && (
-              <div className="product-list__empty">Không có sản phẩm phù hợp với từ khóa đã tìm.</div>
+            {!isLoading && products.length === 0 && (
+              <div className="product-list__empty">Không có sản phẩm phù hợp.</div>
             )}
           </div>
         </div>
