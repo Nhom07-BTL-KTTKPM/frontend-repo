@@ -18,7 +18,7 @@ import Select from 'react-select';
 // @ts-ignore - optional dependency
 import countryList from 'react-select-country-list';
 import { toast } from 'sonner';
-import { productManagementApi } from '../../api/admin/productManagementApi';
+import { productManagementApi, type ProductOverviewResponse } from '../../api/admin/productManagementApi';
 import { brandApi } from '../../api/brandApi';
 import { categoryApi } from '../../api/categoryApi';
 import type {
@@ -207,20 +207,26 @@ const StatCard = ({ label, value, tone }: { label: string; value: string | numbe
   </article>
 );
 
-const ProductStats = ({ products }: { products: ProductCardRow[] }) => {
-  const stats = {
-    total: products.length,
-    active: products.filter((product) => product.isActive).length,
-    featured: products.filter((product) => product.isFeatured).length,
-    outOfStock: products.filter((product) => (product.totalStock ?? 0) === 0).length,
+const ProductStats = ({
+  overview,
+  products,
+}: {
+  overview: ProductOverviewResponse | null;
+  products: ProductCardRow[];
+}) => {
+  const stats = overview ?? {
+    totalProducts: products.length,
+    activeProducts: products.filter((product) => product.isActive).length,
+    featuredProducts: products.filter((product) => product.isFeatured).length,
+    outOfStockProducts: products.filter((product) => (product.totalStock ?? 0) === 0).length,
   };
 
   return (
     <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-      <StatCard label="Tổng sản phẩm" value={stats.total} tone="bg-gradient-to-br from-blue-50 to-white border-blue-100" />
-      <StatCard label="Đang bán" value={stats.active} tone="bg-gradient-to-br from-emerald-50 to-white border-emerald-100" />
-      <StatCard label="Sản phẩm tiêu biểu" value={stats.featured} tone="bg-gradient-to-br from-amber-50 to-white border-amber-100" />
-      <StatCard label="Hết hàng" value={stats.outOfStock} tone="bg-gradient-to-br from-rose-50 to-white border-rose-100" />
+      <StatCard label="Tổng sản phẩm" value={stats.totalProducts} tone="bg-gradient-to-br from-blue-50 to-white border-blue-100" />
+      <StatCard label="Đang bán" value={stats.activeProducts} tone="bg-gradient-to-br from-emerald-50 to-white border-emerald-100" />
+      <StatCard label="Sản phẩm tiêu biểu" value={stats.featuredProducts} tone="bg-gradient-to-br from-amber-50 to-white border-amber-100" />
+      <StatCard label="Hết hàng" value={stats.outOfStockProducts} tone="bg-gradient-to-br from-rose-50 to-white border-rose-100" />
     </div>
   );
 };
@@ -238,6 +244,7 @@ const buildVisiblePages = (totalPages: number, currentPage: number, maxVisible =
 
 const ProductsTab = ({
   products,
+  overview,
   loading,
   error,
   currentPage,
@@ -259,6 +266,7 @@ const ProductsTab = ({
   onToggleStatus,
 }: {
   products: ProductCardRow[];
+  overview: ProductOverviewResponse | null;
   loading: boolean;
   error: string | null;
   currentPage: number;
@@ -298,7 +306,7 @@ const ProductsTab = ({
         </Link>
       </div>
 
-      <ProductStats products={products} />
+      <ProductStats overview={overview} products={products} />
 
       <section className="grid gap-4 rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
         <form className="grid gap-3 xl:grid-cols-[1.8fr_1fr_1fr_1fr_auto_auto]" onSubmit={(event) => {
@@ -998,6 +1006,7 @@ export const ProductManagement = () => {
   const [productPage, setProductPage] = useState(0);
   const [productTotalPages, setProductTotalPages] = useState(0);
   const [productTotalElements, setProductTotalElements] = useState(0);
+  const [productOverview, setProductOverview] = useState<ProductOverviewResponse | null>(null);
   const [productSearch, setProductSearch] = useState('');
   const [selectedBrandId, setSelectedBrandId] = useState('');
   const [selectedCategoryId, setSelectedCategoryId] = useState('');
@@ -1075,6 +1084,15 @@ export const ProductManagement = () => {
     }
   };
 
+  const loadProductOverview = async () => {
+    try {
+      const response = await productManagementApi.getProductOverview();
+      setProductOverview(response);
+    } catch (requestError) {
+      setProductOverview(null);
+    }
+  };
+
   const loadCategories = async () => {
     try {
       setCategoryLoading(true);
@@ -1126,6 +1144,7 @@ export const ProductManagement = () => {
   useEffect(() => {
     void loadBrandSummaries();
     void loadCategorySummaries();
+    void loadProductOverview();
   }, []);
 
   useEffect(() => {
@@ -1357,6 +1376,7 @@ export const ProductManagement = () => {
     try {
       const updated = await productManagementApi.changeProductStatus(product.id, payload);
       setProducts((current) => current.map((item) => (item.id === updated.id ? { ...item, isActive: updated.isActive } : item)));
+      void loadProductOverview();
       toast.success(updated.isActive ? 'Đã hiển thị product.' : 'Đã ẩn product.');
     } catch (requestError) {
       const message = requestError instanceof Error ? requestError.message : 'Không thể thay đổi trạng thái product.';
@@ -1531,6 +1551,7 @@ export const ProductManagement = () => {
       {activeTab === 'products' ? (
         <ProductsTab
           products={products}
+          overview={productOverview}
           loading={productLoading}
           error={productError}
           currentPage={productPage}

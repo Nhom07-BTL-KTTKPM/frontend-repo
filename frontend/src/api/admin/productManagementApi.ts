@@ -3,6 +3,13 @@ import { resolveBaseUrl, serviceBase } from '../serviceBase';
 import type { PageResponse } from '../../types/api';
 import type { CatalogProduct, CatalogProductCreateRequest, CatalogProductDetail, ProductCardResponse, ProductStatusRequest } from '../../types/catalog';
 
+export interface ProductOverviewResponse {
+  totalProducts: number;
+  activeProducts: number;
+  featuredProducts: number;
+  outOfStockProducts: number;
+}
+
 export interface UpdateProductPayload {
   name?: string;
   description?: string;
@@ -31,6 +38,12 @@ export const productManagementApi = {
     return axiosClient.get<unknown, PageResponse<ProductCardResponse>>(`${catalogProductsPath}/admin`, {
       baseURL: resolveBaseUrl(serviceBase.catalog),
       params,
+    });
+  },
+
+  getProductOverview: () => {
+    return axiosClient.get<unknown, ProductOverviewResponse>(`${catalogProductsPath}/admin/overview`, {
+      baseURL: resolveBaseUrl(serviceBase.catalog),
     });
   },
 
