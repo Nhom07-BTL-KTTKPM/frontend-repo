@@ -483,8 +483,8 @@ export const ProductEditPage = () => {
             <div className="rounded-2xl border border-slate-200 bg-white p-4">
               <p className="m-0 text-xs font-bold uppercase tracking-[0.12em] text-slate-500">Hành động</p>
               <div className="mt-3 grid gap-3">
-                <button type="submit" className="inline-flex items-center justify-center rounded-2xl bg-amber-600 px-4 py-3 text-sm font-bold text-white transition hover:bg-amber-700">
-                  Lưu thay đổi
+                <button type="submit" disabled={form.formState.isSubmitting} className="inline-flex items-center justify-center rounded-2xl bg-amber-600 px-4 py-3 text-sm font-bold text-white transition hover:bg-amber-700 disabled:opacity-60 disabled:cursor-not-allowed">
+                  {form.formState.isSubmitting ? 'Đang lưu...' : 'Lưu thay đổi'}
                 </button>
                 <Link to="/admin/products" className="inline-flex items-center justify-center rounded-2xl border border-slate-200 px-4 py-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50">
                   Hủy

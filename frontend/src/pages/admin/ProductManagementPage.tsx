@@ -643,6 +643,7 @@ const CategoryPanel = ({
   onView,
   onCloseView,
   onToggleStatus,
+  statusUpdatingId,
 }: {
   categories: CategoryResponse[];
   loading: boolean;
@@ -661,6 +662,7 @@ const CategoryPanel = ({
   onView: (category: CategoryResponse) => void;
   onCloseView: () => void;
   onToggleStatus: (category: CategoryResponse) => void;
+  statusUpdatingId?: string | null;
 }) => {
   const isViewing = panelMode === 'view' && Boolean(selectedCategory);
   const [parentCategoryName, setParentCategoryName] = useState<string | null>(null);
@@ -814,14 +816,15 @@ const CategoryPanel = ({
                           <button
                             type="button"
                             onClick={() => onToggleStatus(category)}
+                            disabled={statusUpdatingId === category.id}
                             className={`inline-flex items-center gap-1 rounded-lg px-3 py-2 text-xs font-bold transition ${
                               category.isActive
                                 ? 'border border-amber-200 bg-amber-50 text-amber-800 hover:bg-amber-100'
                                 : 'border border-emerald-200 bg-emerald-50 text-emerald-800 hover:bg-emerald-100'
-                            }`}
+                            } ${statusUpdatingId === category.id ? 'opacity-60 cursor-not-allowed' : ''}`}
                           >
                             <EyeOff size={14} />
-                            {category.isActive ? 'Ẩn' : 'Hiện'}
+                            {statusUpdatingId === category.id ? 'Đang...' : (category.isActive ? 'Ẩn' : 'Hiện')}
                           </button>
                         </div>
                       </div>
@@ -930,6 +933,7 @@ const BrandPanel = ({
   onView,
   onCloseView,
   onToggleStatus,
+  statusUpdatingId,
 }: {
   brands: BrandResponse[];
   loading: boolean;
@@ -948,6 +952,7 @@ const BrandPanel = ({
   onView: (brand: BrandResponse) => void;
   onCloseView: () => void;
   onToggleStatus: (brand: BrandResponse) => void;
+  statusUpdatingId?: string | null;
 }) => {
   const isViewing = panelMode === 'view' && Boolean(selectedBrand);
 
@@ -1077,14 +1082,15 @@ const BrandPanel = ({
                           <button
                             type="button"
                             onClick={() => onToggleStatus(brand)}
+                            disabled={statusUpdatingId === brand.id}
                             className={`inline-flex flex-none items-center gap-1 rounded-lg px-3 py-2 text-xs font-bold transition ${
                               brand.isActive
                                 ? 'border border-amber-200 bg-amber-50 text-amber-800 hover:bg-amber-100'
                                 : 'border border-emerald-200 bg-emerald-50 text-emerald-800 hover:bg-emerald-100'
-                            }`}
+                            } ${statusUpdatingId === brand.id ? 'opacity-60 cursor-not-allowed' : ''}`}
                           >
                             <EyeOff size={14} />
-                            {brand.isActive ? 'Ẩn' : 'Hiện'}
+                            {statusUpdatingId === brand.id ? 'Đang...' : (brand.isActive ? 'Ẩn' : 'Hiện')}
                           </button>
                         </div>
                       </div>
@@ -1218,6 +1224,10 @@ export const ProductManagement = () => {
 
   const [brandFormErrors, setBrandFormErrors] = useState<BrandFormErrors>({});
   const [categoryFormErrors, setCategoryFormErrors] = useState<CategoryFormErrors>({});
+  const [brandSaving, setBrandSaving] = useState(false);
+  const [categorySaving, setCategorySaving] = useState(false);
+  const [brandStatusUpdatingId, setBrandStatusUpdatingId] = useState<string | null>(null);
+  const [categoryStatusUpdatingId, setCategoryStatusUpdatingId] = useState<string | null>(null);
 
   const [categorySearchActive, setCategorySearchActive] = useState(false);
   const [categorySearchResults, setCategorySearchResults] = useState<CategoryResponse[]>([]);
@@ -1539,6 +1549,7 @@ useEffect(() => {
     setBrandFormErrors({});
 
     try {
+      setBrandSaving(true);
       const resolvedLogoUrl = brandImageFile
         ? (await uploadSingleMedia(brandImageFile, 'AVATAR')).url
         : trimOrUndefined(brandForm.logoUrl);
@@ -1591,6 +1602,8 @@ useEffect(() => {
     } catch (requestError) {
       const message = requestError instanceof Error ? requestError.message : 'Không thể lưu brand.';
       toast.error(message);
+    } finally {
+      setBrandSaving(false);
     }
   };
 
@@ -1614,6 +1627,7 @@ useEffect(() => {
     setCategoryFormErrors({});
 
     try {
+      setCategorySaving(true);
       const resolvedImageUrl = categoryImageFile
         ? (await uploadSingleMedia(categoryImageFile, 'PRODUCT')).url
         : trimOrUndefined((categoryForm as CategoryFormState).imageUrl);
@@ -1663,6 +1677,8 @@ useEffect(() => {
     } catch (requestError) {
       const message = requestError instanceof Error ? requestError.message : 'Không thể lưu category.';
       toast.error(message);
+    } finally {
+      setCategorySaving(false);
     }
   };
 
@@ -1670,6 +1686,7 @@ useEffect(() => {
     const payload: CategoryStatusRequest = { isActive: !category.isActive };
 
     try {
+      setCategoryStatusUpdatingId(category.id);
       await categoryApi.updateCategoryStatus(category.id, payload);
       const updated = { ...category, isActive: payload.isActive };
       setCategories((current) => current.map((item) => (item.id === category.id ? updated : item)));
@@ -1681,6 +1698,8 @@ useEffect(() => {
     } catch (requestError) {
       const message = requestError instanceof Error ? requestError.message : 'Không thể thay đổi trạng thái category.';
       toast.error(message);
+    } finally {
+      setCategoryStatusUpdatingId(null);
     }
   };
 
@@ -1688,6 +1707,7 @@ useEffect(() => {
     const payload: BrandStatusRequest = { isActive: !brand.isActive };
 
     try {
+      setBrandStatusUpdatingId(brand.id);
       const updated = await brandApi.updateBrandStatus(brand.id, payload);
       setBrands((current) => current.map((item) => (item.id === brand.id ? updated : item)));
       if (brandSelected?.id === brand.id) {
@@ -1698,6 +1718,8 @@ useEffect(() => {
     } catch (requestError) {
       const message = requestError instanceof Error ? requestError.message : 'Không thể thay đổi trạng thái brand.';
       toast.error(message);
+    } finally {
+      setBrandStatusUpdatingId(null);
     }
   };
 
@@ -1950,6 +1972,7 @@ useEffect(() => {
           onView={openCategoryView}
           onCloseView={closeCategoryView}
           onToggleStatus={toggleCategoryStatus}
+          statusUpdatingId={categoryStatusUpdatingId}
         />
       ) : null}
 
@@ -1972,6 +1995,7 @@ useEffect(() => {
           onView={openBrandView}
           onCloseView={closeBrandView}
           onToggleStatus={toggleBrandStatus}
+          statusUpdatingId={brandStatusUpdatingId}
         />
       ) : null}
       {/* ================= MODAL BRAND ================= */}
@@ -2093,9 +2117,9 @@ useEffect(() => {
                 </div>
 
                 <div className="flex items-center justify-end gap-3 mt-4 pt-4 border-t border-slate-100">
-                  <button type="button" onClick={() => setBrandModalOpen(false)} className="px-5 py-2.5 text-sm font-semibold text-slate-600 hover:text-slate-800">Hủy</button>
-                  <button type="submit" className="bg-amber-600 hover:bg-amber-700 px-6 py-2.5 rounded-lg text-sm font-bold text-white transition">
-                    {brandPanelMode === 'edit' ? 'Lưu thay đổi' : 'Tạo brand'}
+                  <button type="button" onClick={() => setBrandModalOpen(false)} disabled={brandSaving} className="px-5 py-2.5 text-sm font-semibold text-slate-600 hover:text-slate-800">Hủy</button>
+                  <button type="submit" disabled={brandSaving} className="bg-amber-600 hover:bg-amber-700 px-6 py-2.5 rounded-lg text-sm font-bold text-white transition disabled:opacity-60 disabled:cursor-not-allowed">
+                    {brandSaving ? 'Đang lưu...' : (brandPanelMode === 'edit' ? 'Lưu thay đổi' : 'Tạo brand')}
                   </button>
                 </div>
               </div>
@@ -2207,8 +2231,8 @@ useEffect(() => {
                 </div>
 
                 <div className="flex items-center justify-end gap-3 mt-4 pt-4 border-t border-slate-100">
-                  <button type="button" onClick={() => setCategoryModalOpen(false)} className="px-5 py-2.5 text-sm font-semibold text-slate-600 hover:text-slate-800">Hủy</button>
-                  <button type="submit" className="bg-amber-600 hover:bg-amber-700 px-6 py-2.5 rounded-lg text-sm font-bold text-white transition">Lưu thay đổi</button>
+                  <button type="button" onClick={() => setCategoryModalOpen(false)} disabled={categorySaving} className="px-5 py-2.5 text-sm font-semibold text-slate-600 hover:text-slate-800">Hủy</button>
+                  <button type="submit" disabled={categorySaving} className="bg-amber-600 hover:bg-amber-700 px-6 py-2.5 rounded-lg text-sm font-bold text-white transition disabled:opacity-60 disabled:cursor-not-allowed">{categorySaving ? 'Đang lưu...' : 'Lưu thay đổi'}</button>
                 </div>
               </div>
             </form>
