@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState, type FormEvent, type ChangeEvent, type DragEvent } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import {
   BadgeCheck,
   Edit2,
@@ -24,6 +24,7 @@ import { toast } from 'sonner';
 import { productManagementApi, type ProductOverviewResponse } from '../../api/admin/productManagementApi';
 import { brandApi } from '../../api/brandApi';
 import { categoryApi } from '../../api/categoryApi';
+import { AdminProductDetail } from './AdminProductDetail';
 import type {
   BrandRequest,
   BrandResponse,
@@ -276,6 +277,7 @@ const ProductsTab = ({
   onClearFilters,
   onPageChange,
   onToggleStatus,
+  onView,
 }: {
   products: ProductCardRow[];
   overview: ProductOverviewResponse | null;
@@ -299,8 +301,8 @@ const ProductsTab = ({
   onClearFilters: () => void;
   onPageChange: (page: number) => void;
   onToggleStatus: (product: ProductCardRow) => void;
+  onView: (product: ProductCardRow) => void;
 }) => {
-  const navigate = useNavigate();
   const visiblePages = buildVisiblePages(totalPages, currentPage);
   const isUpdatingStatus = Boolean(statusUpdatingProductId);
 
@@ -491,7 +493,7 @@ const ProductsTab = ({
                       type="button"
                       className="rounded-full bg-white p-2.5 shadow-lg transition hover:bg-slate-50"
                       title="Xem chi tiết"
-                      onClick={() => navigate(`/product/${product.slug}`, { state: { productId: product.id } })}
+                      onClick={() => onView(product)}
                     >
                       <Eye size={16} className="text-slate-700" />
                     </button>
@@ -1186,6 +1188,7 @@ export const ProductManagement = () => {
   const [appliedSearch, setAppliedSearch] = useState('');
   const [brandSummaries, setBrandSummaries] = useState<BrandSummaryResponse[]>([]);
   const [categorySummaries, setCategorySummaries] = useState<CategorySummaryResponse[]>([]);
+  const [viewingProduct, setViewingProduct] = useState<{ slug: string; productId: string } | null>(null);
 
   const [categories, setCategories] = useState<CategoryResponse[]>([]);
   const [categoryLoading, setCategoryLoading] = useState(false);
@@ -1916,6 +1919,7 @@ useEffect(() => {
           onClearFilters={handleClearFilters}
           onPageChange={handlePageChange}
           onToggleStatus={toggleProductStatus}
+          onView={(product) => setViewingProduct({ slug: product.slug, productId: product.id })}
         />
       ) : null}
 
@@ -2200,6 +2204,24 @@ useEffect(() => {
                 </div>
               </div>
             </form>
+          </div>
+        </div>
+      ) : null}
+
+      {viewingProduct ? (
+        <div className="fixed inset-0 z-50 flex items-start justify-center bg-black/50 p-4 overflow-y-auto">
+          <div className="relative my-8 w-full max-w-6xl rounded-2xl bg-white shadow-2xl">
+            <button
+              type="button"
+              onClick={() => setViewingProduct(null)}
+              aria-label="Đóng"
+              className="absolute -top-3 -right-3 z-10 inline-flex h-9 w-9 items-center justify-center rounded-full border border-rose-500 bg-rose-600 text-white shadow-md transition hover:bg-rose-700 active:scale-95"
+            >
+              <X size={18} />
+            </button>
+            <div className="max-h-[calc(100vh-4rem)] overflow-y-auto rounded-2xl">
+              <AdminProductDetail slug={viewingProduct.slug} productId={viewingProduct.productId} />
+            </div>
           </div>
         </div>
       ) : null}
