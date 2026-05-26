@@ -64,7 +64,7 @@ export const TagInput = ({ name, label, hint, placeholder, suggestions }: TagInp
               }
             }}
             placeholder={placeholder}
-            className="min-w-0 flex-1 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 outline-none transition focus:border-primary-400 focus:ring-4 focus:ring-primary-100"
+            className="min-w-0 flex-1 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 outline-none transition focus:border-amber-400 focus:ring-4 focus:ring-amber-100"
           />
 
           <button
@@ -83,7 +83,7 @@ export const TagInput = ({ name, label, hint, placeholder, suggestions }: TagInp
               key={suggestion}
               type="button"
               onClick={() => addItem(suggestion)}
-              className="rounded-full border border-primary-200 bg-primary-50 px-3 py-1.5 text-xs font-semibold text-primary-900 transition hover:border-primary-300 hover:bg-primary-100"
+              className="rounded-full border border-amber-200 bg-amber-50 px-3 py-1.5 text-xs font-semibold text-amber-900 transition hover:border-amber-300 hover:bg-amber-100"
             >
               {suggestion}
             </button>

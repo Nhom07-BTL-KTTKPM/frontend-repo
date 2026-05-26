@@ -5,7 +5,7 @@ import { FieldShell } from './FieldShell';
 import type { ProductCreateFormValues } from '../productCreate.schema';
 
 const inputClassName =
-  'w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 outline-none transition focus:border-primary-400 focus:ring-4 focus:ring-primary-100';
+  'w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 outline-none transition focus:border-amber-400 focus:ring-4 focus:ring-amber-100';
 
 export const ProductImageEditor = () => {
   const fileInputRef = useRef<HTMLInputElement | null>(null);
@@ -41,7 +41,7 @@ export const ProductImageEditor = () => {
         <button
           type="button"
           onClick={() => fileInputRef.current?.click()}
-          className="inline-flex items-center gap-2 rounded-full bg-primary-50 px-3 py-2 text-xs font-semibold text-primary-900 transition hover:bg-primary-100"
+          className="inline-flex items-center gap-2 rounded-full bg-amber-50 px-3 py-2 text-xs font-semibold text-amber-900 transition hover:bg-amber-100"
         >
           <ImagePlus size={14} />
           Tải ảnh lên
@@ -54,10 +54,10 @@ export const ProductImageEditor = () => {
         <button
           type="button"
           onClick={() => fileInputRef.current?.click()}
-          className="group grid min-h-[180px] place-items-center rounded-3xl border-2 border-dashed border-slate-300 bg-[linear-gradient(180deg,rgba(250,246,240,0.96),rgba(255,255,255,0.96))] px-6 py-8 text-center transition hover:border-primary-300 hover:bg-[linear-gradient(180deg,rgba(255,250,240,0.98),rgba(255,255,255,0.98))]"
+          className="group grid min-h-[180px] place-items-center rounded-3xl border-2 border-dashed border-slate-300 bg-[linear-gradient(180deg,rgba(250,246,240,0.96),rgba(255,255,255,0.96))] px-6 py-8 text-center transition hover:border-amber-300 hover:bg-[linear-gradient(180deg,rgba(255,250,240,0.98),rgba(255,255,255,0.98))]"
         >
           <div className="grid place-items-center gap-3 text-slate-500">
-            <div className="grid h-14 w-14 place-items-center rounded-2xl bg-primary-50 text-primary-700 transition group-hover:bg-primary-100">
+            <div className="grid h-14 w-14 place-items-center rounded-2xl bg-amber-50 text-amber-700 transition group-hover:bg-amber-100">
               <ImagePlus size={24} />
             </div>
             <div>
