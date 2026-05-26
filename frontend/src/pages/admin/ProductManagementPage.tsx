@@ -184,7 +184,7 @@ const formatDateTime = (value?: string) => {
 
 const tabStyles = (active: boolean) =>
   active
-    ? 'bg-amber-600 text-white shadow-sm'
+    ? 'bg-[#222222] text-[#c8ab76] shadow-sm'
     : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50';
 
 const resourceCardStyles = (active: boolean) =>
@@ -197,17 +197,14 @@ const FieldLabel = ({ children }: { children: string }) => (
 );
 
 const SectionTitle = ({
-  eyebrow,
   title,
   description,
 }: {
-  eyebrow: string;
   title: string;
   description?: string;
 }) => (
   <div className="flex flex-wrap items-start justify-between gap-4">
     <div>
-      <p className="m-0 text-[0.72rem] font-bold uppercase tracking-[0.24em] text-amber-600">{eyebrow}</p>
       <h2 className="m-0 mt-2 text-2xl font-extrabold tracking-tight text-slate-900">{title}</h2>
       {description ? <p className="m-0 mt-2 max-w-3xl text-sm leading-6 text-slate-500">{description}</p> : null}
     </div>
@@ -325,8 +322,7 @@ const ProductsTab = ({
 
         <Link
           to="/admin/products/new"
-          className="inline-flex items-center gap-2 rounded-lg bg-gradient-to-r from-amber-600 to-amber-500 px-6 py-3 font-bold text-white shadow transition hover:shadow-lg"
-        >
+          className="inline-flex items-center gap-2 rounded-lg bg-[#c8ab76] px-6 py-3 font-bold text-[#222222] shadow transition hover:opacity-90 hover:shadow-lg">
           <Plus size={16} />
           Thêm sản phẩm
         </Link>
@@ -696,28 +692,23 @@ const CategoryPanel = ({
 
   return (
     <section className="grid gap-6 rounded-[32px] border border-slate-200 bg-[#f8f9fa] p-4 shadow-[0_20px_55px_rgba(15,23,42,0.06)] lg:p-6">
-      <SectionTitle
-        eyebrow="Danh mục"
-        title="Quản lý category"
-        description="Tạo, chỉnh sửa và đổi trạng thái category ngay trong cùng một tab."
-      />
+      <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
+        <SectionTitle
+          title="Quản lý danh mục"
+          description="Thêm mới, cập nhật thông tin hoặc chuyển trạng thái danh mục nhanh chóng."
+        />
+        <button
+          type="button"
+          onClick={onCreateNew}
+          className="inline-flex items-center gap-2 rounded-lg bg-[#c8ab76] px-4 py-2.5 text-sm font-bold text-[#222222] shadow transition hover:opacity-90 hover:shadow-lg"
+          >
+          <Plus size={16} />
+          Thêm category
+        </button>
+      </div>
 
       <div className="grid gap-6 xl:grid-cols-[1.15fr_0.85fr]">
         <div className="grid gap-4">
-          <div className="flex flex-wrap items-center justify-between gap-3 rounded-[28px] border border-slate-200 bg-white p-4 shadow-sm">
-            <div className="flex items-center gap-2 text-sm font-bold text-slate-600">
-              <Layers3 size={16} />
-              Danh sách category
-            </div>
-            <button
-              type="button"
-              onClick={onCreateNew}
-              className="inline-flex items-center gap-2 rounded-lg bg-gradient-to-r from-amber-500 to-amber-500 px-4 py-2.5 text-sm font-bold text-white shadow transition hover:shadow-lg"
-            >
-              <Plus size={16} />
-              Thêm category
-            </button>
-          </div>
 
           <label className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-white px-4 py-3 shadow-sm transition focus-within:border-amber-300 focus-within:ring-4 focus-within:ring-amber-100">
             <Search size={18} className="text-slate-400" />
@@ -919,29 +910,24 @@ const BrandPanel = ({
 
   return (
     <section className="grid gap-6 rounded-[32px] border border-slate-200 bg-[#f8f9fa] p-4 shadow-[0_20px_55px_rgba(15,23,42,0.06)] lg:p-6">
-      <SectionTitle
-        eyebrow="Brand"
-        title="Quản lý brand"
-        description="Tạo mới, cập nhật và bật/tắt brand từ cùng một tab làm việc."
-      />
+      <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
+        <SectionTitle
+          title="Quản lý brand"
+          description="Tạo mới, cập nhật và chuyển trạng thái thương hiệu nhanh chóng."
+        />
+        <button
+          type="button"
+          onClick={onCreateNew}
+          className="inline-flex items-center gap-2 rounded-lg bg-[#c8ab76] px-4 py-2.5 text-sm font-bold text-[#222222] shadow transition hover:opacity-90 hover:shadow-lg"
+        >
+          <Plus size={16} />
+          Thêm brand
+        </button>
+      </div>
 
       <div className="grid gap-6 xl:grid-cols-[1.15fr_0.85fr]">
         <div className="grid gap-4">
-          <div className="flex flex-wrap items-center justify-between gap-3 rounded-[28px] border border-slate-200 bg-white p-4 shadow-sm">
-            <div className="flex items-center gap-2 text-sm font-bold text-slate-600">
-              <BadgeCheck size={16} />
-              Danh sách brand
-            </div>
-            <button
-              type="button"
-              onClick={onCreateNew}
-              className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-indigo-600 to-blue-600 px-4 py-2.5 text-sm font-bold text-white shadow-lg transition hover:shadow-xl"
-            >
-              <Plus size={16} />
-              Thêm brand
-            </button>
-          </div>
-
+          
           <label className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-white px-4 py-3 shadow-sm transition focus-within:border-indigo-300 focus-within:ring-4 focus-within:ring-indigo-100">
             <Search size={18} className="text-slate-400" />
             <input
@@ -1770,23 +1756,24 @@ useEffect(() => {
     <div className="grid gap-6">
       <div className="flex flex-wrap items-center justify-between gap-4 rounded-[32px] border border-slate-200 bg-white p-4 shadow-sm">
         <div>
-          <p className="m-0 text-[0.72rem] font-bold uppercase tracking-[0.24em] text-amber-700">Quản trị nội dung catalog</p>
-          <h1 className="m-0 mt-2 text-2xl font-extrabold tracking-tight text-slate-900">Products, categories, brands</h1>
-          <p className="m-0 mt-2 text-sm text-slate-500">Chuyển tab để quản lý sản phẩm, category và brand ngay trong cùng một màn hình.</p>
+          <h1 className="m-0 mt-2 text-2xl font-extrabold tracking-tight text-slate-900">Quản lý thông tin sản phẩm, danh mục, thương hiệu</h1>
         </div>
 
         <div className="flex flex-wrap gap-2 rounded-2xl border border-slate-200 bg-slate-50 p-2">
-          <button type="button" onClick={() => setActiveTab('products')} className={`inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-bold transition ${tabStyles(activeTab === 'products')}`}>
+          <button type="button" onClick={() => setActiveTab('products')} 
+          className={`inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-bold transition ${tabStyles(activeTab === 'products')}`}>
             <Package2 size={16} />
-            Quản lý sản phẩm
+            Sản phẩm
           </button>
-          <button type="button" onClick={() => setActiveTab('categories')} className={`inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-bold transition ${tabStyles(activeTab === 'categories')}`}>
+          <button type="button" onClick={() => setActiveTab('categories')} 
+          className={`inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-bold transition ${tabStyles(activeTab === 'categories')}`}>
             <LayoutGrid size={16} />
-            Category
+            Danh mục
           </button>
-          <button type="button" onClick={() => setActiveTab('brands')} className={`inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-bold transition ${tabStyles(activeTab === 'brands')}`}>
+          <button type="button" onClick={() => setActiveTab('brands')} 
+          className={`inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-bold transition ${tabStyles(activeTab === 'brands')}`}>
             <BadgeCheck size={16} />
-            Brand
+            Thương hiệu
           </button>
         </div>
       </div>
