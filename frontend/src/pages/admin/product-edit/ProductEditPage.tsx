@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { ArrowLeft, BadgeCheck, CheckCircle2, Flame, Leaf, Sparkles, WandSparkles } from 'lucide-react';
+import { ArrowLeft } from 'lucide-react';
 import { Controller, FormProvider, useForm, useWatch, type SubmitHandler } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Link, useNavigate, useParams } from 'react-router-dom';
@@ -78,7 +78,6 @@ export const ProductEditPage = () => {
   const [categoryOptions, setCategoryOptions] = useState<CategorySummaryResponse[]>([]);
   const [brandOptions, setBrandOptions] = useState<BrandSummaryResponse[]>([]);
   const [isCatalogOptionsLoading, setIsCatalogOptionsLoading] = useState(false);
-  const [loadingProduct, setLoadingProduct] = useState(false);
 
   const form = useForm<ProductCreateFormValues>({
     resolver: zodResolver(productCreateSchema),
@@ -129,8 +128,6 @@ export const ProductEditPage = () => {
   useEffect(() => {
     if (!productId) return;
     let active = true;
-    setLoadingProduct(true);
-
     const loadProduct = async () => {
       try {
         const product = await productApi.getProduct(productId);
@@ -168,8 +165,6 @@ export const ProductEditPage = () => {
         form.reset(mapped);
       } catch (error) {
         toast.error('Không thể tải sản phẩm để chỉnh sửa.');
-      } finally {
-        if (active) setLoadingProduct(false);
       }
     };
 
@@ -189,14 +184,6 @@ export const ProductEditPage = () => {
     () => brandOptions.find((item) => item.id === watchedValues.brandId),
     [brandOptions, watchedValues.brandId],
   );
-
-  const variantPrices = (watchedValues.variants || [])
-    .map((variant) => Number(variant.price))
-    .filter((price) => Number.isFinite(price) && price > 0);
-
-  const minPrice = variantPrices.length > 0 ? Math.min(...variantPrices) : null;
-  const maxPrice = variantPrices.length > 0 ? Math.max(...variantPrices) : null;
-  const primaryImage = watchedValues.images?.find((item) => item.isPrimary) || watchedValues.images?.[0];
 
   const onSubmit: SubmitHandler<ProductCreateFormValues> = async (values) => {
     if (!productId) {
@@ -285,17 +272,6 @@ export const ProductEditPage = () => {
               Quay lại danh sách sản phẩm
             </Link>
 
-            <div className="flex flex-wrap items-center gap-3">
-              <span className="inline-flex items-center gap-2 rounded-full bg-amber-50 px-3 py-1.5 text-xs font-bold uppercase tracking-[0.18em] text-amber-900">
-                <Sparkles size={12} />
-                Xưởng sản phẩm
-              </span>
-              <span className="inline-flex items-center gap-2 rounded-full bg-indigo-50 px-3 py-1.5 text-xs font-semibold text-indigo-700">
-                <WandSparkles size={12} />
-                Chỉ kiểm tra phía giao diện
-              </span>
-            </div>
-
             <div>
               <h1 className="m-0 text-3xl font-bold text-slate-950" style={{ fontFamily: 'var(--font-display)' }}>
                 Cập nhật sản phẩm
@@ -303,20 +279,6 @@ export const ProductEditPage = () => {
             </div>
           </div>
 
-          <div className="grid gap-3 sm:grid-cols-3">
-            <div className="rounded-2xl border border-emerald-100 bg-emerald-50 px-4 py-3">
-              <p className="m-0 text-xs font-semibold uppercase tracking-[0.18em] text-emerald-700">Trạng thái</p>
-              <p className="m-0 mt-1 text-sm font-bold text-emerald-900">Bản nháp hợp lệ</p>
-            </div>
-            <div className="rounded-2xl border border-indigo-100 bg-indigo-50 px-4 py-3">
-              <p className="m-0 text-xs font-semibold uppercase tracking-[0.18em] text-indigo-700">Biến thể</p>
-              <p className="m-0 mt-1 text-sm font-bold text-indigo-900">{variantCount} mục</p>
-            </div>
-            <div className="rounded-2xl border border-amber-100 bg-amber-50 px-4 py-3">
-              <p className="m-0 text-xs font-semibold uppercase tracking-[0.18em] text-amber-800">Hình ảnh</p>
-              <p className="m-0 mt-1 text-sm font-bold text-amber-900">{imageCount} ảnh</p>
-            </div>
-          </div>
         </header>
 
         {/* reuse the same UI structure from create page for fields and editors */}
@@ -450,25 +412,41 @@ export const ProductEditPage = () => {
                 </FieldShell>
 
                 <FieldShell label="Loại da phù hợp" error={form.formState.errors.suitableSkinTypes?.message}>
-                  <TagInput name="suitableSkinTypes" suggestions={skinTypeSuggestions} />
+                  <TagInput
+                    name="suitableSkinTypes"
+                    label="Loại da phù hợp"
+                    hint="Tối đa 8 mục, click chip để xoá"
+                    placeholder="Ví dụ: Da dầu"
+                    suggestions={skinTypeSuggestions}
+                  />
                 </FieldShell>
 
                 <FieldShell label="Vấn đề da" error={form.formState.errors.skinConcerns?.message}>
-                  <TagInput name="skinConcerns" suggestions={skinConcernSuggestions} />
+                  <TagInput
+                    name="skinConcerns"
+                    label="Vấn đề da"
+                    hint="Tối đa 8 mục, dùng để gợi ý AI"
+                    placeholder="Ví dụ: Mụn"
+                    suggestions={skinConcernSuggestions}
+                  />
                 </FieldShell>
               </div>
             </SectionCard>
 
             <SectionCard title="Biến thể">
-              <ProductVariantEditor name="variants" />
+              <ProductVariantEditor
+                brandSource={selectedBrand?.slug || selectedBrand?.name || ''}
+                lineSource={selectedCategory?.slug || selectedCategory?.name || ''}
+              />
             </SectionCard>
 
-            <SectionCard title="Hình ảnh">
-              <ProductImageEditor name="images" />
-            </SectionCard>
           </div>
 
-          <aside className="grid gap-6">
+          <aside className="grid gap-6 lg:sticky lg:top-6 lg:self-start">
+            <SectionCard title="Ảnh sản phẩm">
+              <ProductImageEditor />
+            </SectionCard>
+
             <div className="rounded-2xl border border-slate-200 bg-white p-4">
               <p className="m-0 text-xs font-bold uppercase tracking-[0.12em] text-slate-500">Kiểm tra</p>
               <div className="mt-3 grid gap-2">

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { ArrowLeft, BadgeCheck, CheckCircle2, Flame, Leaf, Sparkles, WandSparkles } from 'lucide-react';
+import { ArrowLeft, CheckCircle2, Flame, Leaf } from 'lucide-react';
 import { Controller, FormProvider, useForm, useWatch, type SubmitHandler } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Link, useNavigate } from 'react-router-dom';
@@ -225,7 +225,6 @@ export const ProductCreatePage = () => {
     }
   };
 
-  const imageCount = watchedValues.images?.length || 0;
   const variantCount = watchedValues.variants?.length || 0;
   const formChecklist = [
     { label: 'Tên sản phẩm', done: Boolean(watchedValues.name?.trim()) },
@@ -251,17 +250,6 @@ export const ProductCreatePage = () => {
               Quay lại danh sách sản phẩm
             </Link>
 
-            <div className="flex flex-wrap items-center gap-3">
-              <span className="inline-flex items-center gap-2 rounded-full bg-amber-50 px-3 py-1.5 text-xs font-bold uppercase tracking-[0.18em] text-amber-900">
-                <Sparkles size={12} />
-                Xưởng sản phẩm
-              </span>
-              <span className="inline-flex items-center gap-2 rounded-full bg-indigo-50 px-3 py-1.5 text-xs font-semibold text-indigo-700">
-                <WandSparkles size={12} />
-                Chỉ kiểm tra phía giao diện
-              </span>
-            </div>
-
             <div>
               <h1 className="m-0 text-3xl font-bold text-slate-950" style={{ fontFamily: 'var(--font-display)' }}>
                 Thêm sản phẩm mới
@@ -269,20 +257,6 @@ export const ProductCreatePage = () => {
             </div>
           </div>
 
-          <div className="grid gap-3 sm:grid-cols-3">
-            <div className="rounded-2xl border border-emerald-100 bg-emerald-50 px-4 py-3">
-              <p className="m-0 text-xs font-semibold uppercase tracking-[0.18em] text-emerald-700">Trạng thái</p>
-              <p className="m-0 mt-1 text-sm font-bold text-emerald-900">Bản nháp hợp lệ</p>
-            </div>
-            <div className="rounded-2xl border border-indigo-100 bg-indigo-50 px-4 py-3">
-              <p className="m-0 text-xs font-semibold uppercase tracking-[0.18em] text-indigo-700">Biến thể</p>
-              <p className="m-0 mt-1 text-sm font-bold text-indigo-900">{variantCount} mục</p>
-            </div>
-            <div className="rounded-2xl border border-amber-100 bg-amber-50 px-4 py-3">
-              <p className="m-0 text-xs font-semibold uppercase tracking-[0.18em] text-amber-800">Hình ảnh</p>
-              <p className="m-0 mt-1 text-sm font-bold text-amber-900">{imageCount} ảnh</p>
-            </div>
-          </div>
         </header>
 
         <div className="relative z-10 grid gap-6 lg:grid-cols-[minmax(0,1.35fr)_minmax(320px,0.8fr)]">
@@ -443,10 +417,7 @@ export const ProductCreatePage = () => {
           </div>
 
           <aside className="grid gap-6 lg:sticky lg:top-6 lg:self-start">
-            <SectionCard
-              title="Ảnh sản phẩm"
-              badge={<span className="inline-flex items-center gap-2 rounded-full bg-slate-100 px-3 py-1.5 text-xs font-semibold text-slate-600"><BadgeCheck size={12} />Minh họa nội bộ</span>}
-            >
+            <SectionCard title="Ảnh sản phẩm">
               <ProductImageEditor />
             </SectionCard>
 
