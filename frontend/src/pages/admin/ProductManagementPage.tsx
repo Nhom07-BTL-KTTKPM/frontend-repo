@@ -10,7 +10,10 @@ import {
   Package2,
   Plus,
   Search,
+  X,
   Users,
+  LayoutTemplate,
+  Upload
 } from 'lucide-react';
 import { uploadSingleMedia } from '../../api/uploadApi';
 // @ts-ignore - optional dependency, install `react-select` + `react-select-country-list` to enable enhanced selects
@@ -26,6 +29,7 @@ import type {
   BrandResponse,
   BrandStatusRequest,
   BrandSummaryResponse,
+  CategoryRequest,
   CategoryResponse,
   CategoryStatusRequest,
   CategorySummaryResponse,
@@ -578,12 +582,18 @@ const ProductsTab = ({
 
 const ResourceListItem = ({
   active,
+  onClick,
   children,
 }: {
   active: boolean;
+  onClick?: () => void;
   children: React.ReactNode;
 }) => (
-  <article className={`relative rounded-lg border p-4 transition ${resourceCardStyles(active)}`} style={{ overflow: 'visible' }}>
+  <article
+    onClick={onClick}
+    className={`relative rounded-lg border p-4 transition cursor-pointer hover:border-amber-300 hover:bg-amber-50/30 ${resourceCardStyles(active)}`}
+    style={{ overflow: 'visible' }}
+  >
     {children}
   </article>
 );
@@ -619,6 +629,7 @@ const CategoryPanel = ({
   onCreateNew,
   onEdit,
   onView,
+  onCloseView,
   onToggleStatus,
 }: {
   categories: CategoryResponse[];
@@ -632,9 +643,46 @@ const CategoryPanel = ({
   onCreateNew: () => void;
   onEdit: (category: CategoryResponse) => void;
   onView: (category: CategoryResponse) => void;
+  onCloseView: () => void;
   onToggleStatus: (category: CategoryResponse) => void;
 }) => {
   const isViewing = panelMode === 'view' && Boolean(selectedCategory);
+  const [parentCategoryName, setParentCategoryName] = useState<string | null>(null);
+  const [parentCategoryLoading, setParentCategoryLoading] = useState(false);
+
+  useEffect(() => {
+    const parentId = selectedCategory?.parentId;
+    if (!parentId) {
+      setParentCategoryName(null);
+      setParentCategoryLoading(false);
+      return;
+    }
+
+    let cancelled = false;
+    setParentCategoryLoading(true);
+    setParentCategoryName(null);
+    categoryApi
+      .getCategoryById(parentId)
+      .then((parent) => {
+        if (!cancelled) {
+          setParentCategoryName(parent?.name || null);
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setParentCategoryName(null);
+        }
+      })
+      .finally(() => {
+        if (!cancelled) {
+          setParentCategoryLoading(false);
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [selectedCategory?.parentId]);
 
   return (
     <section className="grid gap-6 rounded-[32px] border border-slate-200 bg-[#f8f9fa] p-4 shadow-[0_20px_55px_rgba(15,23,42,0.06)] lg:p-6">
@@ -698,7 +746,7 @@ const CategoryPanel = ({
                 const active = selectedCategory?.id === category.id;
 
                 return (
-                  <ResourceListItem key={category.id} active={active}>
+                  <ResourceListItem key={category.id} active={active} onClick={() => onView(category)}>
                       <div className="relative">
                         <div className="flex min-w-0 items-start gap-3 pr-28">
                             <div className="flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-lg border border-slate-200 bg-slate-50">
@@ -722,23 +770,11 @@ const CategoryPanel = ({
                           </div>
                         </div>
 
-                        <div className="absolute right-4 top-4 flex flex-wrap gap-2">
-                          <button
-                            type="button"
-                            onClick={() => onView(category)}
-                            className="inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-bold text-slate-700 transition hover:bg-slate-50"
-                          >
-                            <Eye size={14} />
-                            Xem
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => onEdit(category)}
-                            className="inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-bold text-slate-700 transition hover:bg-slate-50"
-                          >
-                            <Edit2 size={14} />
-                            Sửa
-                          </button>
+                        <div
+                          className="absolute right-4 top-4 flex flex-wrap gap-2"
+                          onClick={(event) => event.stopPropagation()}
+                        >
+                          
                           <button
                             type="button"
                             onClick={() => onToggleStatus(category)}
@@ -760,50 +796,81 @@ const CategoryPanel = ({
           )}
         </div>
 
-        <aside className="rounded-lg border border-slate-200 bg-white p-5 shadow-[0_12px_30px_rgba(15,23,42,0.06)]">
-          {isViewing && selectedCategory ? (
-            <div className="grid gap-5">
-              <div className="flex flex-wrap items-start justify-between gap-3">
-                <div>
-                  <p className="m-0 text-[0.72rem] font-bold uppercase tracking-[0.2em] text-amber-600">Chi tiết category</p>
-                  <h3 className="m-0 mt-2 text-xl font-extrabold text-slate-900">{selectedCategory.name}</h3>
-                  <p className="m-0 mt-1 text-sm text-slate-500">{selectedCategory.slug}</p>
+        <aside className="sticky top-5 h-fit rounded-lg border border-slate-200 bg-white p-5 shadow-[0_12px_30px_rgba(15,23,42,0.06)]">
+        {isViewing && selectedCategory ? (
+          <div className="grid gap-6">
+            {/* Header với Status Badge */}
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <div className="flex items-center gap-2 mb-2">
+                  <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider border ${
+                    selectedCategory.isActive
+                      ? 'bg-emerald-50 text-emerald-600 border-emerald-100'
+                      : 'bg-rose-50 text-rose-600 border-rose-100'
+                  }`}>
+                    <span className={`h-1.5 w-1.5 rounded-full ${selectedCategory.isActive ? 'bg-emerald-500' : 'bg-rose-500'}`} />
+                    {selectedCategory.isActive ? 'Active' : 'Hidden'}
+                  </span>
                 </div>
+                <h3 className="m-0 text-xl font-extrabold text-slate-900">{selectedCategory.name}</h3>
+                <p className="m-0 text-xs text-slate-400 font-mono mt-1">slug: {selectedCategory.slug}</p>
+              </div>
 
+              <div className="flex flex-shrink-0 items-center gap-2">
                 <button
                   type="button"
                   onClick={() => onEdit(selectedCategory)}
-                  className="inline-flex items-center gap-2 rounded-lg bg-slate-900 px-3 py-2 text-xs font-bold text-white transition hover:bg-slate-800"
+                  className="inline-flex items-center gap-2 rounded-lg px-3 py-2 text-xs font-bold text-[#232323] transition "
                 >
                   <Edit2 size={14} />
-                  Chỉnh sửa
+                </button>
+                <button
+                  type="button"
+                  onClick={onCloseView}
+                  aria-label="Đóng"
+                  className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-500 transition hover:bg-slate-50 hover:text-slate-700"
+                >
+                  <X size={14} />
                 </button>
               </div>
-
-              <ImagePreview src={selectedCategory.imageUrl} alt={selectedCategory.name} />
-
-              <div className="grid gap-3">
-                <DetailRow label="ID" value={selectedCategory.id} />
-                <DetailRow label="Tên" value={selectedCategory.name} />
-                <DetailRow label="Slug" value={selectedCategory.slug} />
-                <DetailRow label="Mô tả" value={selectedCategory.description || 'Chưa có'} />
-                <DetailRow label="Ảnh" value={selectedCategory.imageUrl || 'Chưa có'} />
-                <DetailRow label="Parent" value={selectedCategory.parentId || 'Root'} />
-                <DetailRow label="Trạng thái" value={selectedCategory.isActive ? 'Đang hoạt động' : 'Đã ẩn'} />
-                <DetailRow label="Tạo lúc" value={formatDateTime(selectedCategory.createdAt)} />
-                <DetailRow label="Cập nhật lúc" value={formatDateTime(selectedCategory.updatedAt)} />
-              </div>
             </div>
-          ) : (
-            <div className="grid gap-3">
-              <p className="m-0 text-sm text-slate-600">Chọn một category từ danh sách để xem chi tiết.</p>
-              <p className="m-0 text-sm text-slate-500">Để tạo category mới, hãy bấm nút "Thêm category" ở bên trái (sẽ mở modal).</p>
-              <div className="mt-4 flex justify-end">
-                <button type="button" onClick={onCreateNew} className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-bold text-slate-700">Tạo category</button>
-              </div>
+
+            <ImagePreview src={selectedCategory.imageUrl} alt={selectedCategory.name} />
+
+            {/* Thông tin chi tiết */}
+            <div className="grid gap-3 pt-2">
+              <DetailRow
+                label="Danh mục cha"
+                value={
+                  selectedCategory.parentId
+                    ? parentCategoryLoading
+                      ? 'Đang tải...'
+                      : parentCategoryName || 'Không xác định'
+                    : 'Danh mục gốc'
+                }
+              />
+              <DetailRow label="Mô tả" value={selectedCategory.description || 'Chưa có mô tả'} />
+              <DetailRow label="Ngày tạo" value={formatDateTime(selectedCategory.createdAt)} />
             </div>
-          )}
-        </aside>
+          </div>
+        ) : (
+          /* Empty State chuyên nghiệp */
+          <div className="flex h-[300px] flex-col items-center justify-center p-8 text-center text-slate-400">
+            <LayoutTemplate size={48} className="mb-4 opacity-20" />
+            <h4 className="text-sm font-bold text-slate-900">Chưa chọn danh mục</h4>
+            <p className="mt-1 text-xs text-slate-500 max-w-[200px]">
+              Chọn một category từ danh sách để xem chi tiết hoặc tạo danh mục mới.
+            </p>
+            <button 
+              type="button" 
+              onClick={onCreateNew} 
+              className="mt-6 rounded-lg border border-slate-200 bg-white px-4 py-2 text-xs font-bold text-slate-700 hover:bg-slate-50 transition"
+            >
+              Tạo category mới
+            </button>
+          </div>
+        )}
+      </aside>
       </div>
     </section>
   );
@@ -821,6 +888,7 @@ const BrandPanel = ({
   onCreateNew,
   onEdit,
   onView,
+  onCloseView,
   onToggleStatus,
 }: {
   brands: BrandResponse[];
@@ -834,6 +902,7 @@ const BrandPanel = ({
   onCreateNew: () => void;
   onEdit: (brand: BrandResponse) => void;
   onView: (brand: BrandResponse) => void;
+  onCloseView: () => void;
   onToggleStatus: (brand: BrandResponse) => void;
 }) => {
   const isViewing = panelMode === 'view' && Boolean(selectedBrand);
@@ -912,7 +981,7 @@ const BrandPanel = ({
                 const active = selectedBrand?.id === brand.id;
 
                 return (
-                  <ResourceListItem key={brand.id} active={active}>
+                  <ResourceListItem key={brand.id} active={active} onClick={() => onView(brand)}>
                       <div className="relative">
                         <div className="flex min-w-0 items-start gap-3 pr-28">
                           <div className="flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-2xl border border-slate-200 bg-slate-50">
@@ -936,15 +1005,10 @@ const BrandPanel = ({
                           </div>
                         </div>
 
-                        <div className="absolute right-4 top-4 flex flex-wrap gap-2">
-                          <button
-                            type="button"
-                            onClick={() => onView(brand)}
-                            className="inline-flex flex-none items-center gap-1 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-bold text-slate-700 transition hover:bg-slate-50"
-                          >
-                            <Eye size={14} />
-                            Xem
-                          </button>
+                        <div
+                          className="absolute right-4 top-4 flex flex-wrap gap-2"
+                          onClick={(event) => event.stopPropagation()}
+                        >
                           <button
                             type="button"
                             onClick={() => onEdit(brand)}
@@ -979,25 +1043,33 @@ const BrandPanel = ({
             <div className="grid gap-5">
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <div>
-                  <p className="m-0 text-[0.72rem] font-bold uppercase tracking-[0.2em] text-amber-600">Chi tiết brand</p>
+                  <p className="m-0 text-[0.72rem] font-bold uppercase tracking-[0.2em] text-amber-600">Thông tin chi tiết brand</p>
                   <h3 className="m-0 mt-2 text-xl font-extrabold text-slate-900">{selectedBrand.name}</h3>
-                  <p className="m-0 mt-1 text-sm text-slate-500">{selectedBrand.slug}</p>
                 </div>
 
-                <button
-                  type="button"
-                  onClick={() => onEdit(selectedBrand)}
-                  className="inline-flex items-center gap-2 rounded-lg bg-slate-900 px-3 py-2 text-xs font-bold text-white transition hover:bg-slate-800"
-                >
-                  <Edit2 size={14} />
-                  Chỉnh sửa
-                </button>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => onEdit(selectedBrand)}
+                    className="inline-flex items-center gap-2 rounded-lg bg-slate-900 px-3 py-2 text-xs font-bold text-white transition hover:bg-slate-800"
+                  >
+                    <Edit2 size={14} />
+                    Chỉnh sửa
+                  </button>
+                  <button
+                    type="button"
+                    onClick={onCloseView}
+                    aria-label="Đóng"
+                    className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-500 transition hover:bg-slate-50 hover:text-slate-700"
+                  >
+                    <X size={14} />
+                  </button>
+                </div>
               </div>
 
               <ImagePreview src={selectedBrand.logoUrl} alt={selectedBrand.name} />
 
               <div className="grid gap-3">
-                <DetailRow label="ID" value={selectedBrand.id} />
                 <DetailRow label="Tên" value={selectedBrand.name} />
                 <DetailRow label="Slug" value={selectedBrand.slug} />
                 <DetailRow label="Mô tả" value={selectedBrand.description || 'Chưa có'} />
@@ -1006,16 +1078,17 @@ const BrandPanel = ({
                 <DetailRow label="Website" value={selectedBrand.websiteUrl || 'Chưa có'} />
                 <DetailRow label="Trạng thái" value={selectedBrand.isActive ? 'Đang hoạt động' : 'Đã ẩn'} />
                 <DetailRow label="Tạo lúc" value={formatDateTime(selectedBrand.createdAt)} />
-                <DetailRow label="Cập nhật lúc" value={formatDateTime(selectedBrand.updatedAt)} />
               </div>
             </div>
           ) : (
-            <div className="grid gap-3">
-              <p className="m-0 text-sm text-slate-600">Chọn một brand từ danh sách để xem chi tiết.</p>
-              <p className="m-0 text-sm text-slate-500">Để tạo brand mới, hãy bấm nút "Thêm brand" ở bên trái (sẽ mở modal).</p>
-              <div className="mt-4 flex justify-end">
-                <button type="button" onClick={onCreateNew} className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-bold text-slate-700">Tạo brand</button>
+            <div className="flex h-full flex-col items-center justify-center p-8 text-center">
+              <div className="mb-4 rounded-full bg-slate-50 p-4">
+                <LayoutTemplate size={32} className="text-slate-300" />
               </div>
+              <h4 className="text-base font-bold text-slate-900">Chưa chọn brand</h4>
+              <p className="mt-1 text-sm text-slate-500">
+                Chọn một brand từ danh sách để xem thông tin chi tiết hoặc bắt đầu chỉnh sửa.
+              </p>
             </div>
           )}
         </aside>
@@ -1053,6 +1126,8 @@ export const ProductManagement = () => {
   const [categoryPanelMode, setCategoryPanelMode] = useState<PanelMode>('create');
   const [categorySelected, setCategorySelected] = useState<CategoryResponse | null>(null);
   const [categoryForm, setCategoryForm] = useState<CategoryFormState>(emptyCategoryForm());
+  const [categoryImageFile, setCategoryImageFile] = useState<File | null>(null);
+  const [categoryImagePreviewUrl, setCategoryImagePreviewUrl] = useState<string | null>(null);
   
 
   const [brands, setBrands] = useState<BrandResponse[]>([]);
@@ -1062,13 +1137,77 @@ export const ProductManagement = () => {
   const [brandPanelMode, setBrandPanelMode] = useState<PanelMode>('create');
   const [brandSelected, setBrandSelected] = useState<BrandResponse | null>(null);
   const [brandForm, setBrandForm] = useState<BrandFormState>(emptyBrandForm());
+  const [brandImageFile, setBrandImageFile] = useState<File | null>(null);
+  const [brandImagePreviewUrl, setBrandImagePreviewUrl] = useState<string | null>(null);
   
   const [brandModalOpen, setBrandModalOpen] = useState(false);
   const brandFileInputRef = useRef<HTMLInputElement | null>(null);
-  const [brandUploading, setBrandUploading] = useState(false);
   const [categoryModalOpen, setCategoryModalOpen] = useState(false);
   const categoryFileInputRef = useRef<HTMLInputElement | null>(null);
-  const [categoryUploading, setCategoryUploading] = useState(false);
+
+  useEffect(() => {
+    return () => {
+      if (brandImagePreviewUrl) {
+        URL.revokeObjectURL(brandImagePreviewUrl);
+      }
+    };
+  }, [brandImagePreviewUrl]);
+
+  useEffect(() => {
+    return () => {
+      if (categoryImagePreviewUrl) {
+        URL.revokeObjectURL(categoryImagePreviewUrl);
+      }
+    };
+  }, [categoryImagePreviewUrl]);
+
+  const resetBrandImageDraft = () => {
+    setBrandImageFile(null);
+    setBrandImagePreviewUrl(null);
+    if (brandFileInputRef.current) {
+      brandFileInputRef.current.value = '';
+    }
+  };
+
+  const resetCategoryImageDraft = () => {
+    setCategoryImageFile(null);
+    setCategoryImagePreviewUrl(null);
+    if (categoryFileInputRef.current) {
+      categoryFileInputRef.current.value = '';
+    }
+  };
+
+  const clearBrandImage = () => {
+    resetBrandImageDraft();
+    setBrandForm((current) => ({ ...current, logoUrl: '' }));
+  };
+
+  const clearCategoryImage = () => {
+    resetCategoryImageDraft();
+    setCategoryForm((current) => ({ ...current, imageUrl: '' }));
+  };
+
+  const selectBrandImage = (file: File | null) => {
+    if (!file) {
+      return;
+    }
+
+    setBrandImageFile(file);
+    setBrandImagePreviewUrl(URL.createObjectURL(file));
+  };
+
+  const selectCategoryImage = (file: File | null) => {
+    if (!file) {
+      return;
+    }
+
+    setCategoryImageFile(file);
+    setCategoryImagePreviewUrl(URL.createObjectURL(file));
+  };
+
+  const getBrandImageSource = () => brandImagePreviewUrl || brandForm.logoUrl;
+
+  const getCategoryImageSource = () => categoryImagePreviewUrl || (categoryForm as CategoryFormState).imageUrl;
 
   const loadProducts = async (
     page = productPage,
@@ -1192,6 +1331,7 @@ export const ProductManagement = () => {
     setCategoryPanelMode('create');
     setCategorySelected(null);
     setCategoryForm(emptyCategoryForm());
+    resetCategoryImageDraft();
     setCategoryModalOpen(true);
   };
 
@@ -1206,6 +1346,7 @@ export const ProductManagement = () => {
       parentId: category.parentId || '',
       isActive: category.isActive,
     });
+    resetCategoryImageDraft();
   };
 
   const openCategoryEdit = (category: CategoryResponse) => {
@@ -1219,6 +1360,7 @@ export const ProductManagement = () => {
       parentId: category.parentId || '',
       isActive: category.isActive,
     });
+    resetCategoryImageDraft();
     setCategoryModalOpen(true);
   };
 
@@ -1226,6 +1368,7 @@ export const ProductManagement = () => {
     setBrandPanelMode('create');
     setBrandSelected(null);
     setBrandForm(emptyBrandForm());
+    resetBrandImageDraft();
     setBrandModalOpen(true);
   };
 
@@ -1241,6 +1384,7 @@ export const ProductManagement = () => {
       websiteUrl: brand.websiteUrl || '',
       isActive: brand.isActive,
     });
+    resetBrandImageDraft();
   };
 
   const openBrandEdit = (brand: BrandResponse) => {
@@ -1255,7 +1399,22 @@ export const ProductManagement = () => {
       websiteUrl: brand.websiteUrl || '',
       isActive: brand.isActive,
     });
+    resetBrandImageDraft();
     setBrandModalOpen(true);
+  };
+
+  const closeCategoryView = () => {
+    setCategoryPanelMode('create');
+    setCategorySelected(null);
+    setCategoryForm(emptyCategoryForm());
+    resetCategoryImageDraft();
+  };
+
+  const closeBrandView = () => {
+    setBrandPanelMode('create');
+    setBrandSelected(null);
+    setBrandForm(emptyBrandForm());
+    resetBrandImageDraft();
   };
 
   
@@ -1263,17 +1422,21 @@ export const ProductManagement = () => {
   const submitBrand = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
-    const payload: BrandRequest = {
-      name: brandForm.name.trim(),
-      slug: brandForm.slug.trim(),
-      description: trimOrUndefined(brandForm.description),
-      logoUrl: trimOrUndefined(brandForm.logoUrl),
-      originCountry: trimOrUndefined(brandForm.originCountry),
-      websiteUrl: trimOrUndefined(brandForm.websiteUrl),
-      isActive: brandForm.isActive,
-    };
-
     try {
+      const resolvedLogoUrl = brandImageFile
+        ? (await uploadSingleMedia(brandImageFile, 'AVATAR')).url
+        : trimOrUndefined(brandForm.logoUrl);
+
+      const payload: BrandRequest = {
+        name: brandForm.name.trim(),
+        slug: brandForm.slug.trim(),
+        description: trimOrUndefined(brandForm.description),
+        logoUrl: resolvedLogoUrl,
+        originCountry: trimOrUndefined(brandForm.originCountry),
+        websiteUrl: trimOrUndefined(brandForm.websiteUrl),
+        isActive: brandForm.isActive,
+      };
+
       if (brandPanelMode === 'edit' && brandSelected) {
         const updated = await brandApi.updateBrand(brandSelected.id, payload);
         setBrands((current) => current.map((item) => (item.id === updated.id ? updated : item)));
@@ -1287,6 +1450,7 @@ export const ProductManagement = () => {
           websiteUrl: updated.websiteUrl || '',
           isActive: updated.isActive,
         });
+        resetBrandImageDraft();
         setBrandPanelMode('view');
         toast.success('Đã cập nhật brand.');
         if (brandModalOpen) setBrandModalOpen(false);
@@ -1303,6 +1467,7 @@ export const ProductManagement = () => {
           websiteUrl: created.websiteUrl || '',
           isActive: created.isActive,
         });
+        resetBrandImageDraft();
         setBrandPanelMode('view');
         toast.success('Đã tạo brand mới.');
         if (brandModalOpen) setBrandModalOpen(false);
@@ -1316,16 +1481,20 @@ export const ProductManagement = () => {
   const submitCategory = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
-    const payload = {
-      name: (categoryForm as CategoryFormState).name.trim(),
-      slug: (categoryForm as CategoryFormState).slug.trim(),
-      description: trimOrUndefined((categoryForm as CategoryFormState).description),
-      imageUrl: trimOrUndefined((categoryForm as CategoryFormState).imageUrl),
-      parentId: (categoryForm as CategoryFormState).parentId || undefined,
-      isActive: (categoryForm as CategoryFormState).isActive,
-    } as unknown as any;
-
     try {
+      const resolvedImageUrl = categoryImageFile
+        ? (await uploadSingleMedia(categoryImageFile, 'PRODUCT')).url
+        : trimOrUndefined((categoryForm as CategoryFormState).imageUrl);
+
+      const payload = {
+        name: (categoryForm as CategoryFormState).name.trim(),
+        slug: (categoryForm as CategoryFormState).slug.trim(),
+        description: trimOrUndefined((categoryForm as CategoryFormState).description),
+        imageUrl: resolvedImageUrl,
+        parentId: (categoryForm as CategoryFormState).parentId || undefined,
+        isActive: (categoryForm as CategoryFormState).isActive,
+      } satisfies CategoryRequest;
+
       if (categoryPanelMode === 'edit' && categorySelected) {
         const updated = await categoryApi.updateCategory(categorySelected.id, payload);
         setCategories((current) => current.map((item) => (item.id === updated.id ? updated : item)));
@@ -1338,6 +1507,7 @@ export const ProductManagement = () => {
           parentId: updated.parentId || '',
           isActive: updated.isActive,
         });
+        resetCategoryImageDraft();
         setCategoryPanelMode('view');
         toast.success('Đã cập nhật category.');
         if (categoryModalOpen) setCategoryModalOpen(false);
@@ -1353,6 +1523,7 @@ export const ProductManagement = () => {
           parentId: created.parentId || '',
           isActive: created.isActive,
         });
+        resetCategoryImageDraft();
         setCategoryPanelMode('view');
         toast.success('Đã tạo category mới.');
         if (categoryModalOpen) setCategoryModalOpen(false);
@@ -1415,44 +1586,16 @@ export const ProductManagement = () => {
     }
   };
 
-  // Brand upload helpers for modal
-  const handleBrandFile = async (file: File | null) => {
-    if (!file) return;
-    setBrandUploading(true);
-    try {
-      const uploaded = await uploadSingleMedia(file, 'AVATAR');
-      setBrandForm((cur) => ({ ...cur, logoUrl: uploaded.url }));
-      toast.success('Ảnh logo đã được tải lên.');
-    } catch (err) {
-      toast.error('Không thể upload ảnh.');
-    } finally {
-      setBrandUploading(false);
-    }
-  };
-
-  const handleCategoryFile = async (file: File | null) => {
-    if (!file) return;
-    setCategoryUploading(true);
-    try {
-      const uploaded = await uploadSingleMedia(file, 'PRODUCT');
-      setCategoryForm((cur) => ({ ...cur, imageUrl: uploaded.url }));
-      toast.success('Ảnh category đã được tải lên.');
-    } catch (err) {
-      toast.error('Không thể upload ảnh.');
-    } finally {
-      setCategoryUploading(false);
-    }
-  };
-
   const onBrandFileInput = (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0] || null;
-    void handleBrandFile(file);
+    selectBrandImage(file);
+    event.target.value = '';
   };
 
   const onBrandDrop = (event: DragEvent<HTMLDivElement>) => {
     event.preventDefault();
     const file = event.dataTransfer.files?.[0] || null;
-    void handleBrandFile(file);
+    selectBrandImage(file);
   };
 
   const openBrandFilePicker = () => brandFileInputRef.current?.click();
@@ -1619,6 +1762,7 @@ export const ProductManagement = () => {
           onCreateNew={openCreateCategory}
           onEdit={openCategoryEdit}
           onView={openCategoryView}
+          onCloseView={closeCategoryView}
           onToggleStatus={toggleCategoryStatus}
         />
       ) : null}
@@ -1636,6 +1780,7 @@ export const ProductManagement = () => {
           onCreateNew={openCreateBrand}
           onEdit={openBrandEdit}
           onView={openBrandView}
+          onCloseView={closeBrandView}
           onToggleStatus={toggleBrandStatus}
         />
       ) : null}
@@ -1660,9 +1805,17 @@ export const ProductManagement = () => {
                     className="relative mt-2 flex items-center justify-center gap-4 rounded-lg border-2 border-dashed border-slate-200 bg-slate-50 p-4 text-center"
                   >
                     <input ref={brandFileInputRef} type="file" accept="image/*" onChange={onBrandFileInput} className="hidden" />
-                    {brandForm.logoUrl ? (
-                      <div className="flex h-28 w-28 items-center justify-center overflow-hidden rounded-md border border-slate-200 bg-white p-1">
-                        <img src={brandForm.logoUrl} alt="logo" className="max-h-full max-w-full object-contain" />
+                    {getBrandImageSource() ? (
+                      <div className="relative flex h-28 w-28 items-center justify-center overflow-hidden rounded-md border border-slate-200 bg-white p-1">
+                        <button
+                          type="button"
+                          onClick={clearBrandImage}
+                          className="absolute right-1 top-1 inline-flex h-7 w-7 items-center justify-center rounded-full bg-slate-900/80 text-white transition hover:bg-rose-600"
+                          aria-label="Xóa ảnh logo"
+                        >
+                          <X size={14} />
+                        </button>
+                        <img src={getBrandImageSource()} alt="logo" className="max-h-full max-w-full object-contain" />
                       </div>
                     ) : (
                       <div className="flex flex-col items-center gap-2">
@@ -1670,7 +1823,11 @@ export const ProductManagement = () => {
                         <button type="button" onClick={openBrandFilePicker} className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-semibold text-slate-700">Chọn file</button>
                       </div>
                     )}
-                    {brandUploading ? <div className="absolute right-3 top-3 text-xs text-slate-500">Đang upload...</div> : null}
+                    {getBrandImageSource() ? (
+                      <button type="button" onClick={openBrandFilePicker} className="absolute bottom-3 right-3 rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs font-semibold text-slate-700 shadow-sm">
+                        Chọn ảnh khác
+                      </button>
+                    ) : null}
                   </div>
                 </div>
 
@@ -1727,95 +1884,98 @@ export const ProductManagement = () => {
         </div>
       ) : null}
       {categoryModalOpen ? (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-          <div className="mx-4 w-full max-w-2xl rounded-lg bg-white p-6 shadow-lg">
-            <form onSubmit={submitCategory} className="grid gap-4">
-              <div className="flex items-start justify-between gap-4">
-                <div>
-                  <p className="m-0 text-[0.72rem] font-bold uppercase tracking-[0.18em] text-amber-600">Thêm / Sửa category</p>
-                  <h3 className="m-0 mt-2 text-xl font-extrabold text-slate-900">{categoryPanelMode === 'edit' ? 'Chỉnh sửa category' : 'Tạo category'}</h3>
-                </div>
-                <button type="button" onClick={() => setCategoryModalOpen(false)} className="text-sm text-slate-500 hover:text-slate-700">Đóng</button>
-              </div>
-
-              <div className="grid gap-3">
-                <div>
-                  <FieldLabel>Ảnh danh mục</FieldLabel>
-                  <div
-                    onDrop={(e) => { e.preventDefault(); const file = e.dataTransfer.files?.[0] || null; void handleCategoryFile(file); }}
-                    onDragOver={(e) => e.preventDefault()}
-                    className="relative mt-2 flex items-center justify-center gap-4 rounded-lg border-2 border-dashed border-slate-200 bg-slate-50 p-4 text-center"
-                  >
-                    <input ref={categoryFileInputRef} type="file" accept="image/*" onChange={(e) => { const file = e.target.files?.[0] || null; void handleCategoryFile(file); }} className="hidden" />
-                    {(categoryForm as CategoryFormState).imageUrl ? (
-                      <div className="flex h-28 w-28 items-center justify-center overflow-hidden rounded-md border border-slate-200 bg-white p-1">
-                        <img src={(categoryForm as CategoryFormState).imageUrl} alt="category" className="max-h-full max-w-full object-contain" />
-                      </div>
-                    ) : (
-                      <div className="flex flex-col items-center gap-2">
-                        <p className="text-sm text-slate-500">Kéo thả hoặc</p>
-                        <button type="button" onClick={openCategoryFilePicker} className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-semibold text-slate-700">Chọn file</button>
-                      </div>
-                    )}
-                    {categoryUploading ? <div className="absolute right-3 top-3 text-xs text-slate-500">Đang upload...</div> : null}
+  <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+    <div className="mx-4 w-full max-w-4xl max-h-[90vh] overflow-y-auto rounded-xl bg-white p-6 shadow-2xl">
+      <form onSubmit={submitCategory} className="grid grid-cols-1 md:grid-cols-12 gap-8">
+        
+        {/* CỘT TRÁI: Ảnh & Trạng thái */}
+        <div className="md:col-span-5 grid gap-6 content-start">
+          <div className="flex items-center justify-between">
+            <h3 className="text-xl font-extrabold text-slate-900">
+              {categoryPanelMode === 'edit' ? 'Chỉnh sửa' : 'Tạo mới'}
+            </h3>
+            <button type="button" onClick={() => setCategoryModalOpen(false)} className="text-slate-400 hover:text-slate-700">Đóng</button>
+          </div>
+          
+          {/* Ảnh danh mục (Giữ logic cũ của bạn) */}
+          <div className="w-full aspect-video">
+            <div className="relative h-full w-full">
+              <input ref={categoryFileInputRef} type="file" accept="image/*" onChange={(e) => { const file = e.target.files?.[0] || null; selectCategoryImage(file); e.target.value = ''; }} className="hidden" />
+              {getCategoryImageSource() ? (
+                <div className="group relative h-full w-full overflow-hidden rounded-lg border border-slate-300 bg-slate-50">
+                  <img src={getCategoryImageSource()} alt="category" className="h-full w-full object-contain p-2" />
+                  <div className="absolute inset-0 flex items-center justify-center gap-2 bg-black/40 opacity-0 transition-opacity group-hover:opacity-100">
+                    <button type="button" onClick={openCategoryFilePicker} className="rounded-lg bg-white px-3 py-1.5 text-xs font-bold text-slate-900 shadow-sm">Thay đổi</button>
+                    <button type="button" onClick={clearCategoryImage} className="rounded-lg bg-rose-600 px-3 py-1.5 text-xs font-bold text-white shadow-sm">Xóa</button>
                   </div>
                 </div>
-
-                <div className="grid gap-2">
-                  <FieldLabel>Tên</FieldLabel>
-                  <input
-                    placeholder="Tên danh mục"
-                    value={(categoryForm as CategoryFormState).name}
-                    onChange={(e) => {
-                      const name = e.target.value;
-                      setCategoryForm((c) => ({ ...(c as CategoryFormState), name, slug: categoryPanelMode === 'create' ? slugify(name) : (c as CategoryFormState).slug }));
-                    }}
-                    className="w-full rounded-lg border border-slate-300 bg-white px-4 py-3 text-sm outline-none placeholder:text-slate-400 transition-all focus:border-amber-600 focus:ring-2 focus:ring-amber-500/10"
-                  />
+              ) : (
+                <div onClick={openCategoryFilePicker} className="flex h-full w-full cursor-pointer flex-col items-center justify-center rounded-lg border-2 border-dashed border-slate-400 bg-slate-50 p-4 text-center transition hover:border-amber-500">
+                  <p className="text-sm text-slate-500">Tải ảnh lên</p>
                 </div>
+              )}
+            </div>
+          </div>
 
-                <div className="grid gap-2">
-                  <FieldLabel>Slug (tự động)</FieldLabel>
-                  <input placeholder="Tự động sinh" readOnly value={(categoryForm as CategoryFormState).slug} className="w-full rounded-lg border border-slate-300 bg-slate-50 px-4 py-3 text-sm text-slate-700 outline-none" />
-                </div>
+        </div>
 
-                <div className="grid gap-2">
-                  <FieldLabel>Mô tả</FieldLabel>
-                  <textarea value={(categoryForm as CategoryFormState).description} onChange={(e) => setCategoryForm((c) => ({ ...(c as CategoryFormState), description: e.target.value }))} rows={4} className="w-full rounded-lg border border-slate-300 bg-white px-4 py-3 text-sm outline-none transition-all focus:border-amber-600 focus:ring-2 focus:ring-amber-500/10" />
-                </div>
+        {/* CỘT PHẢI: Thông tin nhập liệu */}
+        <div className="md:col-span-7 grid gap-5">
+          <div className="grid gap-2">
+            <FieldLabel>Tên danh mục</FieldLabel>
+            <input 
+              value={(categoryForm as CategoryFormState).name}
+              onChange={(e) => {
+                const name = e.target.value;
+                setCategoryForm((c) => ({ ...(c as CategoryFormState), name, slug: categoryPanelMode === 'create' ? slugify(name) : (c as CategoryFormState).slug }));
+              }}
+              style={{ border: '1px solid black' }}
+              className="w-full rounded-lg border !border-black p-3 text-sm focus:border-amber-600 focus:ring-1 focus:ring-amber-600 outline-none transition" 
+            />
+          </div>
 
-                <div className="grid gap-2 sm:grid-cols-2">
-                  <div>
-                    <FieldLabel>Parent</FieldLabel>
-                    <Select
-                      options={parentCategoryOptions}
-                      value={parentCategoryOptions.find((o: any) => o.value === (categoryForm as CategoryFormState).parentId) || null}
-                      onChange={(opt: any) => setCategoryForm((c) => ({ ...(c as CategoryFormState), parentId: (opt as any)?.value || '' }))}
-                      isClearable
-                      placeholder="Chọn parent"
-                      styles={reactSelectStyles}
-                      menuPlacement="top"
-                      menuPosition="fixed"
-                      className="w-full"
-                      classNamePrefix="react-select"
-                    />
-                  </div>
+          <div className="grid gap-2">
+            <FieldLabel>Slug</FieldLabel>
+            <div className="w-full rounded-lg border border-slate-300 bg-slate-100 p-3 text-sm text-slate-600 font-mono">
+              {(categoryForm as CategoryFormState).slug || <span className="italic text-slate-400">Tự động sinh...</span>}
+            </div>
+          </div>
 
-                  <div>
-                    <FieldLabel>Ẩn / Hiện</FieldLabel>
-                    <p className="text-sm text-slate-500 mt-2">Trạng thái mặc định: đang hiển thị</p>
-                  </div>
-                </div>
+          <div className="grid gap-2">
+            <FieldLabel>Mô tả</FieldLabel>
+            <textarea 
+              rows={3} 
+              value={(categoryForm as CategoryFormState).description} 
+              onChange={(e) => setCategoryForm((c) => ({ ...(c as CategoryFormState), description: e.target.value }))}
+               style={{ border: '1px solid black' }}
+              className="w-full rounded-lg border border-slate-400 p-3 text-sm focus:border-amber-600 focus:ring-1 focus:ring-amber-600 outline-none transition" 
+            />
+          </div>
 
-                <div className="flex items-center justify-end gap-2">
-                  <button type="button" onClick={() => setCategoryModalOpen(false)} className="rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700">Hủy</button>
-                  <button type="submit" className="rounded-lg bg-gradient-to-r from-amber-600 to-amber-500 px-4 py-2 text-sm font-bold text-white">{categoryPanelMode === 'edit' ? 'Lưu' : 'Tạo'}</button>
-                </div>
-              </div>
-            </form>
+          <div className="grid gap-2">
+            <FieldLabel>Danh mục cha</FieldLabel>
+            <Select 
+              options={parentCategoryOptions}
+              value={parentCategoryOptions.find((o: any) => o.value === (categoryForm as CategoryFormState).parentId) || null}
+              onChange={(opt: any) => setCategoryForm((c) => ({ ...(c as CategoryFormState), parentId: opt?.value || '' }))}
+              isClearable
+              styles={{
+                ...reactSelectStyles,
+                control: (base) => ({ ...base, borderColor: '#94a3b8', padding: '4px' })
+              }}
+              placeholder="Chọn danh mục cha (nếu có)"
+            />
+          </div>
+
+          <div className="flex items-center justify-end gap-3 mt-4 pt-4 border-t border-slate-100">
+            <button type="button" onClick={() => setCategoryModalOpen(false)} className="px-5 py-2.5 text-sm font-semibold text-slate-600 hover:text-slate-800">Hủy</button>
+            <button type="submit" className="bg-amber-600 hover:bg-amber-700 px-6 py-2.5 rounded-lg text-sm font-bold text-white transition">Lưu thay đổi</button>
           </div>
         </div>
-      ) : null}
+      </form>
+    </div>
+  </div>
+) : null}
     </div>
   );
 };
