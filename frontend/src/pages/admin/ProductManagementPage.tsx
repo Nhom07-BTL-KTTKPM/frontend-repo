@@ -71,6 +71,16 @@ type BrandFormState = {
   isActive: boolean;
 };
 
+type BrandFormErrors = {
+  name?: string;
+  logo?: string;
+};
+
+type CategoryFormErrors = {
+  name?: string;
+  image?: string;
+};
+
 const emptyCategoryForm = (): CategoryFormState => ({
   name: '',
   slug: '',
@@ -1009,14 +1019,7 @@ const BrandPanel = ({
                           className="absolute right-4 top-4 flex flex-wrap gap-2"
                           onClick={(event) => event.stopPropagation()}
                         >
-                          <button
-                            type="button"
-                            onClick={() => onEdit(brand)}
-                            className="inline-flex flex-none items-center gap-1 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-bold text-slate-700 transition hover:bg-slate-50"
-                          >
-                            <Edit2 size={14} />
-                            Sửa
-                          </button>
+                          
                           <button
                             type="button"
                             onClick={() => onToggleStatus(brand)}
@@ -1038,23 +1041,33 @@ const BrandPanel = ({
           )}
         </div>
 
-        <aside className="rounded-lg border border-slate-200 bg-white p-5 shadow-[0_12px_30px_rgba(15,23,42,0.06)]">
+        <aside className="sticky top-5 h-fit rounded-lg border border-slate-200 bg-white p-5 shadow-[0_12px_30px_rgba(15,23,42,0.06)]">
           {isViewing && selectedBrand ? (
-            <div className="grid gap-5">
-              <div className="flex flex-wrap items-start justify-between gap-3">
+            <div className="grid gap-6">
+              {/* Header với Status Badge */}
+              <div className="flex items-start justify-between gap-3">
                 <div>
-                  <p className="m-0 text-[0.72rem] font-bold uppercase tracking-[0.2em] text-amber-600">Thông tin chi tiết brand</p>
-                  <h3 className="m-0 mt-2 text-xl font-extrabold text-slate-900">{selectedBrand.name}</h3>
+                  <div className="flex items-center gap-2 mb-2">
+                    <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider border ${
+                      selectedBrand.isActive
+                        ? 'bg-emerald-50 text-emerald-600 border-emerald-100'
+                        : 'bg-rose-50 text-rose-600 border-rose-100'
+                    }`}>
+                      <span className={`h-1.5 w-1.5 rounded-full ${selectedBrand.isActive ? 'bg-emerald-500' : 'bg-rose-500'}`} />
+                      {selectedBrand.isActive ? 'Active' : 'Hidden'}
+                    </span>
+                  </div>
+                  <h3 className="m-0 text-xl font-extrabold text-slate-900">{selectedBrand.name}</h3>
+                  <p className="m-0 text-xs text-slate-400 font-mono mt-1">slug: {selectedBrand.slug}</p>
                 </div>
 
-                <div className="flex items-center gap-2">
+                <div className="flex flex-shrink-0 items-center gap-2">
                   <button
                     type="button"
                     onClick={() => onEdit(selectedBrand)}
-                    className="inline-flex items-center gap-2 rounded-lg bg-slate-900 px-3 py-2 text-xs font-bold text-white transition hover:bg-slate-800"
+                    className="inline-flex items-center gap-2 rounded-lg px-3 py-2 text-xs font-bold text-[#232323] transition hover:bg-slate-50"
                   >
                     <Edit2 size={14} />
-                    Chỉnh sửa
                   </button>
                   <button
                     type="button"
@@ -1069,26 +1082,29 @@ const BrandPanel = ({
 
               <ImagePreview src={selectedBrand.logoUrl} alt={selectedBrand.name} />
 
-              <div className="grid gap-3">
-                <DetailRow label="Tên" value={selectedBrand.name} />
-                <DetailRow label="Slug" value={selectedBrand.slug} />
-                <DetailRow label="Mô tả" value={selectedBrand.description || 'Chưa có'} />
-                <DetailRow label="Logo" value={selectedBrand.logoUrl || 'Chưa có'} />
-                <DetailRow label="Quốc gia" value={selectedBrand.originCountry || 'Chưa có'} />
+              {/* Thông tin chi tiết */}
+              <div className="grid gap-3 pt-2">
+                <DetailRow label="Mô tả" value={selectedBrand.description || 'Chưa có mô tả'} />
+                <DetailRow label="Quốc gia" value={selectedBrand.originCountry || 'Chưa xác định'} />
                 <DetailRow label="Website" value={selectedBrand.websiteUrl || 'Chưa có'} />
-                <DetailRow label="Trạng thái" value={selectedBrand.isActive ? 'Đang hoạt động' : 'Đã ẩn'} />
-                <DetailRow label="Tạo lúc" value={formatDateTime(selectedBrand.createdAt)} />
+                <DetailRow label="Ngày tạo" value={formatDateTime(selectedBrand.createdAt)} />
               </div>
             </div>
           ) : (
-            <div className="flex h-full flex-col items-center justify-center p-8 text-center">
-              <div className="mb-4 rounded-full bg-slate-50 p-4">
-                <LayoutTemplate size={32} className="text-slate-300" />
-              </div>
-              <h4 className="text-base font-bold text-slate-900">Chưa chọn brand</h4>
-              <p className="mt-1 text-sm text-slate-500">
-                Chọn một brand từ danh sách để xem thông tin chi tiết hoặc bắt đầu chỉnh sửa.
+            /* Empty State chuyên nghiệp */
+            <div className="flex h-[300px] flex-col items-center justify-center p-8 text-center text-slate-400">
+              <LayoutTemplate size={48} className="mb-4 opacity-20" />
+              <h4 className="text-sm font-bold text-slate-900">Chưa chọn brand</h4>
+              <p className="mt-1 text-xs text-slate-500 max-w-[200px]">
+                Chọn một brand từ danh sách để xem chi tiết hoặc tạo brand mới.
               </p>
+              <button 
+                type="button" 
+                onClick={onCreateNew} 
+                className="mt-6 rounded-lg border border-slate-200 bg-white px-4 py-2 text-xs font-bold text-slate-700 hover:bg-slate-50 transition"
+              >
+                Tạo brand mới
+              </button>
             </div>
           )}
         </aside>
@@ -1145,6 +1161,9 @@ export const ProductManagement = () => {
   const [categoryModalOpen, setCategoryModalOpen] = useState(false);
   const categoryFileInputRef = useRef<HTMLInputElement | null>(null);
 
+  const [brandFormErrors, setBrandFormErrors] = useState<BrandFormErrors>({});
+  const [categoryFormErrors, setCategoryFormErrors] = useState<CategoryFormErrors>({});
+
   useEffect(() => {
     return () => {
       if (brandImagePreviewUrl) {
@@ -1160,6 +1179,17 @@ export const ProductManagement = () => {
       }
     };
   }, [categoryImagePreviewUrl]);
+useEffect(() => {
+    if (brandModalOpen || categoryModalOpen) {
+      document.body.classList.add('overflow-hidden');
+    } else {
+      document.body.classList.remove('overflow-hidden');
+    }
+
+    return () => {
+      document.body.classList.remove('overflow-hidden');
+    };
+  }, [brandModalOpen, categoryModalOpen]);
 
   const resetBrandImageDraft = () => {
     setBrandImageFile(null);
@@ -1194,6 +1224,7 @@ export const ProductManagement = () => {
 
     setBrandImageFile(file);
     setBrandImagePreviewUrl(URL.createObjectURL(file));
+    setBrandFormErrors((current) => ({ ...current, logo: undefined }));
   };
 
   const selectCategoryImage = (file: File | null) => {
@@ -1203,6 +1234,7 @@ export const ProductManagement = () => {
 
     setCategoryImageFile(file);
     setCategoryImagePreviewUrl(URL.createObjectURL(file));
+    setCategoryFormErrors((current) => ({ ...current, image: undefined }));
   };
 
   const getBrandImageSource = () => brandImagePreviewUrl || brandForm.logoUrl;
@@ -1332,6 +1364,7 @@ export const ProductManagement = () => {
     setCategorySelected(null);
     setCategoryForm(emptyCategoryForm());
     resetCategoryImageDraft();
+    setCategoryFormErrors({});
     setCategoryModalOpen(true);
   };
 
@@ -1361,6 +1394,7 @@ export const ProductManagement = () => {
       isActive: category.isActive,
     });
     resetCategoryImageDraft();
+    setCategoryFormErrors({});
     setCategoryModalOpen(true);
   };
 
@@ -1369,6 +1403,7 @@ export const ProductManagement = () => {
     setBrandSelected(null);
     setBrandForm(emptyBrandForm());
     resetBrandImageDraft();
+    setBrandFormErrors({});
     setBrandModalOpen(true);
   };
 
@@ -1400,6 +1435,7 @@ export const ProductManagement = () => {
       isActive: brand.isActive,
     });
     resetBrandImageDraft();
+    setBrandFormErrors({});
     setBrandModalOpen(true);
   };
 
@@ -1408,6 +1444,7 @@ export const ProductManagement = () => {
     setCategorySelected(null);
     setCategoryForm(emptyCategoryForm());
     resetCategoryImageDraft();
+    setCategoryFormErrors({});
   };
 
   const closeBrandView = () => {
@@ -1415,12 +1452,28 @@ export const ProductManagement = () => {
     setBrandSelected(null);
     setBrandForm(emptyBrandForm());
     resetBrandImageDraft();
+    setBrandFormErrors({});
   };
 
   
 
   const submitBrand = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+
+    const errors: BrandFormErrors = {};
+    if (!brandForm.name.trim()) {
+      errors.name = 'Tên brand không được để trống.';
+    }
+    const hasBrandImage = Boolean(brandImageFile) || Boolean(trimOrUndefined(brandForm.logoUrl));
+    if (!hasBrandImage) {
+      errors.logo = 'Vui lòng tải logo brand.';
+    }
+    if (errors.name || errors.logo) {
+      setBrandFormErrors(errors);
+      toast.error(errors.name || errors.logo || 'Vui lòng kiểm tra thông tin.');
+      return;
+    }
+    setBrandFormErrors({});
 
     try {
       const resolvedLogoUrl = brandImageFile
@@ -1480,6 +1533,22 @@ export const ProductManagement = () => {
 
   const submitCategory = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+
+    const errors: CategoryFormErrors = {};
+    if (!(categoryForm as CategoryFormState).name.trim()) {
+      errors.name = 'Tên danh mục không được để trống.';
+    }
+    const hasCategoryImage =
+      Boolean(categoryImageFile) || Boolean(trimOrUndefined((categoryForm as CategoryFormState).imageUrl));
+    if (!hasCategoryImage) {
+      errors.image = 'Vui lòng tải ảnh danh mục.';
+    }
+    if (errors.name || errors.image) {
+      setCategoryFormErrors(errors);
+      toast.error(errors.name || errors.image || 'Vui lòng kiểm tra thông tin.');
+      return;
+    }
+    setCategoryFormErrors({});
 
     try {
       const resolvedImageUrl = categoryImageFile
@@ -1784,73 +1853,97 @@ export const ProductManagement = () => {
           onToggleStatus={toggleBrandStatus}
         />
       ) : null}
+      {/* ================= MODAL BRAND ================= */}
       {brandModalOpen ? (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-          <div className="mx-4 w-full max-w-2xl rounded-lg bg-white p-6 shadow-lg">
-            <form onSubmit={submitBrand} className="grid gap-4">
-              <div className="flex items-start justify-between gap-4">
-                <div>
-                  <p className="m-0 text-[0.72rem] font-bold uppercase tracking-[0.18em] text-amber-600">Thêm / Sửa brand</p>
-                  <h3 className="m-0 mt-2 text-xl font-extrabold text-slate-900">{brandPanelMode === 'edit' ? 'Chỉnh sửa brand' : 'Tạo brand'}</h3>
-                </div>
-                <button type="button" onClick={() => setBrandModalOpen(false)} className="text-sm text-slate-500 hover:text-slate-700">Đóng</button>
-              </div>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+          <div className="relative mx-4 w-full max-w-4xl rounded-xl bg-white p-6 shadow-2xl">
+            {/* Nút đóng dấu X lớn bo tròn ở góc phải trên */}
+            <button 
+              type="button" 
+              onClick={() => setBrandModalOpen(false)} 
+              aria-label="Đóng"
+              className="absolute -top-3 -right-3 z-50 inline-flex h-8 w-8 items-center justify-center rounded-full bg-rose-600 text-white transition hover:bg-rose-700 active:scale-95 shadow-md border border-rose-500"
+            >
+              <X size={16} strokeWidth={3} />
+            </button>
 
-              <div className="grid gap-3">
+            <form onSubmit={submitBrand} className="grid grid-cols-1 md:grid-cols-12 gap-8">
+              
+              {/* CỘT TRÁI: Logo Brand */}
+              <div className="md:col-span-5 grid gap-6 content-start">
                 <div>
-                  <FieldLabel>Logo (1:1)</FieldLabel>
-                  <div
-                    onDrop={onBrandDrop}
-                    onDragOver={(e) => e.preventDefault()}
-                    className="relative mt-2 flex items-center justify-center gap-4 rounded-lg border-2 border-dashed border-slate-200 bg-slate-50 p-4 text-center"
-                  >
+                 
+                  <h3 className="m-0 mt-1 text-xl font-extrabold text-slate-900">
+                    {brandPanelMode === 'edit' ? 'Chỉnh sửa brand' : 'Tạo brand'}
+                  </h3>
+                </div>
+                
+                <div className="w-full aspect-square">
+                  
+                  <div className="relative mt-2 h-[calc(100%-28px)] w-full">
                     <input ref={brandFileInputRef} type="file" accept="image/*" onChange={onBrandFileInput} className="hidden" />
                     {getBrandImageSource() ? (
-                      <div className="relative flex h-28 w-28 items-center justify-center overflow-hidden rounded-md border border-slate-200 bg-white p-1">
-                        <button
-                          type="button"
-                          onClick={clearBrandImage}
-                          className="absolute right-1 top-1 inline-flex h-7 w-7 items-center justify-center rounded-full bg-slate-900/80 text-white transition hover:bg-rose-600"
-                          aria-label="Xóa ảnh logo"
-                        >
-                          <X size={14} />
-                        </button>
-                        <img src={getBrandImageSource()} alt="logo" className="max-h-full max-w-full object-contain" />
+                      <div className={`group relative h-full w-full overflow-hidden rounded-lg border bg-slate-50 ${brandFormErrors.logo ? 'border-rose-500' : 'border-slate-300'}`}>
+                        <img src={getBrandImageSource()} alt="logo" className="h-full w-full object-contain p-4" />
+                        <div className="absolute inset-0 flex items-center justify-center gap-2 bg-black/40 opacity-0 transition-opacity group-hover:opacity-100">
+                          <button type="button" onClick={openBrandFilePicker} className="rounded-lg bg-white px-3 py-1.5 text-xs font-bold text-slate-900 shadow-sm">Thay đổi</button>
+                          <button type="button" onClick={clearBrandImage} className="rounded-lg bg-rose-600 px-3 py-1.5 text-xs font-bold text-white shadow-sm">Xóa</button>
+                        </div>
                       </div>
                     ) : (
-                      <div className="flex flex-col items-center gap-2">
-                        <p className="text-sm text-slate-500">Kéo thả hoặc</p>
-                        <button type="button" onClick={openBrandFilePicker} className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-semibold text-slate-700">Chọn file</button>
+                      <div onClick={openBrandFilePicker} className={`flex h-full w-full cursor-pointer flex-col items-center justify-center rounded-lg border-2 border-dashed bg-slate-50 p-4 text-center transition ${brandFormErrors.logo ? 'border-rose-500 hover:border-rose-600' : 'border-slate-400 hover:border-amber-500'}`}>
+                        <p className="text-sm text-slate-500">Tải logo lên</p>
                       </div>
                     )}
-                    {getBrandImageSource() ? (
-                      <button type="button" onClick={openBrandFilePicker} className="absolute bottom-3 right-3 rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs font-semibold text-slate-700 shadow-sm">
-                        Chọn ảnh khác
-                      </button>
-                    ) : null}
                   </div>
+                  {brandFormErrors.logo ? (
+                    <p className="mt-2 text-xs font-semibold text-rose-600">{brandFormErrors.logo}</p>
+                  ) : null}
                 </div>
+              </div>
 
+              {/* CỘT PHẢI: Thông tin nhập liệu Brand */}
+              <div className="md:col-span-7 grid gap-5">
                 <div className="grid gap-2">
                   <FieldLabel>Tên brand</FieldLabel>
-                  <input placeholder="Ví dụ: L'Oréal Paris" value={brandForm.name} onChange={(e) => {
+                  <input
+                    placeholder="Ví dụ: L'Oréal Paris"
+                    value={brandForm.name}
+                    onChange={(e) => {
                       const name = e.target.value;
                       setBrandForm((c) => ({ ...c, name, slug: brandPanelMode === 'create' ? slugify(name) : c.slug }));
-                    }} className="w-full rounded-lg border border-b-slate-900 bg-white px-4 py-3 text-sm outline-none placeholder:text-slate-400 transition-all focus:border-amber-600 focus:ring-2 focus:ring-amber-500/10" />
+                      if (brandFormErrors.name) {
+                        setBrandFormErrors((current) => ({ ...current, name: undefined }));
+                      }
+                    }}
+                    style={{ border: brandFormErrors.name ? '1px solid #f43f5e' : '1px solid black' }}
+                    className={`w-full rounded-lg border p-3 text-sm outline-none transition placeholder:text-slate-400 ${brandFormErrors.name ? '!border-rose-500 focus:border-rose-600 focus:ring-1 focus:ring-rose-500' : '!border-black focus:border-amber-600 focus:ring-1 focus:ring-amber-600'}`}
+                  />
+                  {brandFormErrors.name ? (
+                    <p className="m-0 text-xs font-semibold text-rose-600">{brandFormErrors.name}</p>
+                  ) : null}
                 </div>
 
                 <div className="grid gap-2">
                   <FieldLabel>Slug (tự động)</FieldLabel>
-                  <input placeholder="Tự động sinh từ tên" readOnly value={brandForm.slug} className="w-full rounded-lg border border-slate-300 bg-slate-50 px-4 py-3 text-sm text-slate-700 outline-none" />
+                  <div className="w-full rounded-lg border border-slate-300 bg-slate-100 p-3 text-sm text-slate-600 font-mono">
+                    {brandForm.slug || <span className="italic text-slate-400">Tự động sinh...</span>}
+                  </div>
                 </div>
 
                 <div className="grid gap-2">
                   <FieldLabel>Mô tả</FieldLabel>
-                  <textarea  value={brandForm.description} onChange={(e) => setBrandForm((c) => ({ ...c, description: e.target.value }))} rows={4} className="w-full rounded-lg border border-slate-300 bg-white px-4 py-3 text-sm outline-none transition-all focus:border-amber-600 focus:ring-2 focus:ring-amber-500/10" />
+                  <textarea 
+                    rows={3} 
+                    value={brandForm.description} 
+                    onChange={(e) => setBrandForm((c) => ({ ...c, description: e.target.value }))} 
+                    style={{ border: '1px solid black' }}
+                    className="w-full rounded-lg border border-slate-400 p-3 text-sm focus:border-amber-600 focus:ring-1 focus:ring-amber-600 outline-none transition" 
+                  />
                 </div>
 
-                <div className="grid gap-2 sm:grid-cols-2">
-                  <div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="grid gap-2">
                     <FieldLabel>Quốc gia</FieldLabel>
                     <Select
                       options={countryOptions}
@@ -1858,124 +1951,149 @@ export const ProductManagement = () => {
                       onChange={(opt: any) => setBrandForm((c) => ({ ...c, originCountry: opt?.label || '' }))}
                       isClearable
                       placeholder="Chọn quốc gia"
-                      styles={reactSelectStyles}
-                      menuPlacement="top"
-                      menuPosition="fixed"
+                      styles={{
+                        ...reactSelectStyles,
+                        control: (base) => ({ ...base, borderColor: '#94a3b8', padding: '4px' })
+                      }}
                       className="w-full"
-                      classNamePrefix="react-select"
                     />
                   </div>
 
-                  <div>
+                  <div className="grid gap-2">
                     <FieldLabel>Website</FieldLabel>
-                    <input value={brandForm.websiteUrl} onChange={(e) => setBrandForm((c) => ({ ...c, websiteUrl: e.target.value }))} placeholder="https://example.com" className="w-full rounded-lg border border-slate-300 bg-white px-4 py-3 text-sm outline-none placeholder:text-slate-400" />
+                    <input 
+                      value={brandForm.websiteUrl} 
+                      onChange={(e) => setBrandForm((c) => ({ ...c, websiteUrl: e.target.value }))} 
+                      placeholder="https://example.com" 
+                      style={{ border: '1px solid black' }}
+                      className="w-full rounded-lg border border-slate-400 p-3 text-sm focus:border-amber-600 focus:ring-1 focus:ring-amber-600 outline-none transition placeholder:text-slate-400" 
+                    />
                   </div>
                 </div>
 
-                {/* Đang hiển thị mặc định true; không hiển thị checkbox theo yêu cầu */}
-
-                <div className="flex items-center justify-end gap-2">
-                  <button type="button" onClick={() => setBrandModalOpen(false)} className="rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700">Hủy</button>
-                  <button type="submit" className="rounded-lg bg-gradient-to-r from-amber-600 to-amber-500 px-4 py-2 text-sm font-bold text-white">{brandPanelMode === 'edit' ? 'Lưu' : 'Tạo'}</button>
+                <div className="flex items-center justify-end gap-3 mt-4 pt-4 border-t border-slate-100">
+                  <button type="button" onClick={() => setBrandModalOpen(false)} className="px-5 py-2.5 text-sm font-semibold text-slate-600 hover:text-slate-800">Hủy</button>
+                  <button type="submit" className="bg-amber-600 hover:bg-amber-700 px-6 py-2.5 rounded-lg text-sm font-bold text-white transition">
+                    {brandPanelMode === 'edit' ? 'Lưu thay đổi' : 'Tạo brand'}
+                  </button>
                 </div>
               </div>
             </form>
           </div>
         </div>
       ) : null}
+
+
+      {/* ================= MODAL CATEGORY ================= */}
       {categoryModalOpen ? (
-  <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-    <div className="mx-4 w-full max-w-4xl max-h-[90vh] overflow-y-auto rounded-xl bg-white p-6 shadow-2xl">
-      <form onSubmit={submitCategory} className="grid grid-cols-1 md:grid-cols-12 gap-8">
-        
-        {/* CỘT TRÁI: Ảnh & Trạng thái */}
-        <div className="md:col-span-5 grid gap-6 content-start">
-          <div className="flex items-center justify-between">
-            <h3 className="text-xl font-extrabold text-slate-900">
-              {categoryPanelMode === 'edit' ? 'Chỉnh sửa' : 'Tạo mới'}
-            </h3>
-            <button type="button" onClick={() => setCategoryModalOpen(false)} className="text-slate-400 hover:text-slate-700">Đóng</button>
-          </div>
-          
-          {/* Ảnh danh mục (Giữ logic cũ của bạn) */}
-          <div className="w-full aspect-video">
-            <div className="relative h-full w-full">
-              <input ref={categoryFileInputRef} type="file" accept="image/*" onChange={(e) => { const file = e.target.files?.[0] || null; selectCategoryImage(file); e.target.value = ''; }} className="hidden" />
-              {getCategoryImageSource() ? (
-                <div className="group relative h-full w-full overflow-hidden rounded-lg border border-slate-300 bg-slate-50">
-                  <img src={getCategoryImageSource()} alt="category" className="h-full w-full object-contain p-2" />
-                  <div className="absolute inset-0 flex items-center justify-center gap-2 bg-black/40 opacity-0 transition-opacity group-hover:opacity-100">
-                    <button type="button" onClick={openCategoryFilePicker} className="rounded-lg bg-white px-3 py-1.5 text-xs font-bold text-slate-900 shadow-sm">Thay đổi</button>
-                    <button type="button" onClick={clearCategoryImage} className="rounded-lg bg-rose-600 px-3 py-1.5 text-xs font-bold text-white shadow-sm">Xóa</button>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+          <div className="relative mx-4 w-full max-w-4xl rounded-xl bg-white p-6 shadow-2xl"> 
+            {/* Nút đóng dấu X lớn bo tròn ở góc phải trên */}
+            <button 
+              type="button" 
+              onClick={() => setCategoryModalOpen(false)} 
+              aria-label="Đóng"
+              className="absolute -top-3 -right-3 z-50 inline-flex h-8 w-8 items-center justify-center rounded-full bg-rose-600 text-white transition hover:bg-rose-700 active:scale-95 shadow-md border border-rose-500"
+            >
+              <X size={16} strokeWidth={3} />
+            </button>
+
+            <form onSubmit={submitCategory}  className="grid grid-cols-1 md:grid-cols-12 gap-8 items-start">
+              
+              {/* CỘT TRÁI: Ảnh & Trạng thái */}
+              <div className="md:col-span-5 grid gap-6 content-start">
+                <div>
+                  <h3 className="m-0 mt-1 text-xl font-extrabold text-slate-900">
+                    {categoryPanelMode === 'edit' ? 'Chỉnh sửa' : 'Tạo mới'}
+                  </h3>
+                </div>
+                
+                <div className="w-full ">
+                  <div className="relative h-full w-full">
+                    <input ref={categoryFileInputRef} type="file" accept="image/*" onChange={(e) => { const file = e.target.files?.[0] || null; selectCategoryImage(file); e.target.value = ''; }} className="hidden" />
+                    {getCategoryImageSource() ? (
+                      <div className={`group relative h-full w-full overflow-hidden rounded-lg border bg-slate-50 ${categoryFormErrors.image ? 'border-rose-500' : 'border-slate-300'}`}>
+                        <img src={getCategoryImageSource()} alt="category" className="h-full w-full object-contain p-2" />
+                        <div className="absolute inset-0 flex items-center justify-center gap-2 bg-black/40 opacity-0 transition-opacity group-hover:opacity-100">
+                          <button type="button" onClick={openCategoryFilePicker} className="rounded-lg bg-white px-3 py-1.5 text-xs font-bold text-slate-900 shadow-sm">Thay đổi</button>
+                          <button type="button" onClick={clearCategoryImage} className="rounded-lg bg-rose-600 px-3 py-1.5 text-xs font-bold text-white shadow-sm">Xóa</button>
+                        </div>
+                      </div>
+                    ) : (
+                      <div onClick={openCategoryFilePicker} className={`flex h-full w-full cursor-pointer flex-col items-center justify-center rounded-lg border-2 border-dashed bg-slate-50 p-4 text-center transition ${categoryFormErrors.image ? 'border-rose-500 hover:border-rose-600' : 'border-slate-400 hover:border-amber-500'}`}>
+                        <p className="text-sm text-slate-500">Tải ảnh lên</p>
+                      </div>
+                    )}
+                  </div>
+                  {categoryFormErrors.image ? (
+                    <p className="mt-2 text-xs font-semibold text-rose-600">{categoryFormErrors.image}</p>
+                  ) : null}
+                </div>
+              </div>
+
+              {/* CỘT PHẢI: Thông tin nhập liệu Category */}
+              <div className="md:col-span-7 grid gap-5">
+                <div className="grid gap-2">
+                  <FieldLabel>Tên danh mục</FieldLabel>
+                  <input
+                    value={(categoryForm as CategoryFormState).name}
+                    onChange={(e) => {
+                      const name = e.target.value;
+                      setCategoryForm((c) => ({ ...(c as CategoryFormState), name, slug: categoryPanelMode === 'create' ? slugify(name) : (c as CategoryFormState).slug }));
+                      if (categoryFormErrors.name) {
+                        setCategoryFormErrors((current) => ({ ...current, name: undefined }));
+                      }
+                    }}
+                    style={{ border: categoryFormErrors.name ? '1px solid #f43f5e' : '1px solid black' }}
+                    className={`w-full rounded-lg border p-3 text-sm outline-none transition ${categoryFormErrors.name ? '!border-rose-500 focus:border-rose-600 focus:ring-1 focus:ring-rose-500' : '!border-black focus:border-amber-600 focus:ring-1 focus:ring-amber-600'}`}
+                  />
+                  {categoryFormErrors.name ? (
+                    <p className="m-0 text-xs font-semibold text-rose-600">{categoryFormErrors.name}</p>
+                  ) : null}
+                </div>
+
+                <div className="grid gap-2">
+                  <FieldLabel>Slug</FieldLabel>
+                  <div className="w-full rounded-lg border border-slate-300 bg-slate-100 p-3 text-sm text-slate-600 font-mono">
+                    {(categoryForm as CategoryFormState).slug || <span className="italic text-slate-400">Tự động sinh...</span>}
                   </div>
                 </div>
-              ) : (
-                <div onClick={openCategoryFilePicker} className="flex h-full w-full cursor-pointer flex-col items-center justify-center rounded-lg border-2 border-dashed border-slate-400 bg-slate-50 p-4 text-center transition hover:border-amber-500">
-                  <p className="text-sm text-slate-500">Tải ảnh lên</p>
+
+                <div className="grid gap-2">
+                  <FieldLabel>Mô tả</FieldLabel>
+                  <textarea 
+                    rows={3} 
+                    value={(categoryForm as CategoryFormState).description} 
+                    onChange={(e) => setCategoryForm((c) => ({ ...(c as CategoryFormState), description: e.target.value }))}
+                    style={{ border: '1px solid black' }}
+                    className="w-full rounded-lg border border-slate-400 p-3 text-sm focus:border-amber-600 focus:ring-1 focus:ring-amber-600 outline-none transition" 
+                  />
                 </div>
-              )}
-            </div>
-          </div>
 
-        </div>
+                <div className="grid gap-2">
+                  <FieldLabel>Danh mục cha</FieldLabel>
+                  <Select 
+                    options={parentCategoryOptions}
+                    value={parentCategoryOptions.find((o: any) => o.value === (categoryForm as CategoryFormState).parentId) || null}
+                    onChange={(opt: any) => setCategoryForm((c) => ({ ...(c as CategoryFormState), parentId: opt?.value || '' }))}
+                    isClearable
+                    styles={{
+                      ...reactSelectStyles,
+                      control: (base) => ({ ...base, borderColor: '#94a3b8', padding: '4px' })
+                    }}
+                    placeholder="Chọn danh mục cha (nếu có)"
+                  />
+                </div>
 
-        {/* CỘT PHẢI: Thông tin nhập liệu */}
-        <div className="md:col-span-7 grid gap-5">
-          <div className="grid gap-2">
-            <FieldLabel>Tên danh mục</FieldLabel>
-            <input 
-              value={(categoryForm as CategoryFormState).name}
-              onChange={(e) => {
-                const name = e.target.value;
-                setCategoryForm((c) => ({ ...(c as CategoryFormState), name, slug: categoryPanelMode === 'create' ? slugify(name) : (c as CategoryFormState).slug }));
-              }}
-              style={{ border: '1px solid black' }}
-              className="w-full rounded-lg border !border-black p-3 text-sm focus:border-amber-600 focus:ring-1 focus:ring-amber-600 outline-none transition" 
-            />
-          </div>
-
-          <div className="grid gap-2">
-            <FieldLabel>Slug</FieldLabel>
-            <div className="w-full rounded-lg border border-slate-300 bg-slate-100 p-3 text-sm text-slate-600 font-mono">
-              {(categoryForm as CategoryFormState).slug || <span className="italic text-slate-400">Tự động sinh...</span>}
-            </div>
-          </div>
-
-          <div className="grid gap-2">
-            <FieldLabel>Mô tả</FieldLabel>
-            <textarea 
-              rows={3} 
-              value={(categoryForm as CategoryFormState).description} 
-              onChange={(e) => setCategoryForm((c) => ({ ...(c as CategoryFormState), description: e.target.value }))}
-               style={{ border: '1px solid black' }}
-              className="w-full rounded-lg border border-slate-400 p-3 text-sm focus:border-amber-600 focus:ring-1 focus:ring-amber-600 outline-none transition" 
-            />
-          </div>
-
-          <div className="grid gap-2">
-            <FieldLabel>Danh mục cha</FieldLabel>
-            <Select 
-              options={parentCategoryOptions}
-              value={parentCategoryOptions.find((o: any) => o.value === (categoryForm as CategoryFormState).parentId) || null}
-              onChange={(opt: any) => setCategoryForm((c) => ({ ...(c as CategoryFormState), parentId: opt?.value || '' }))}
-              isClearable
-              styles={{
-                ...reactSelectStyles,
-                control: (base) => ({ ...base, borderColor: '#94a3b8', padding: '4px' })
-              }}
-              placeholder="Chọn danh mục cha (nếu có)"
-            />
-          </div>
-
-          <div className="flex items-center justify-end gap-3 mt-4 pt-4 border-t border-slate-100">
-            <button type="button" onClick={() => setCategoryModalOpen(false)} className="px-5 py-2.5 text-sm font-semibold text-slate-600 hover:text-slate-800">Hủy</button>
-            <button type="submit" className="bg-amber-600 hover:bg-amber-700 px-6 py-2.5 rounded-lg text-sm font-bold text-white transition">Lưu thay đổi</button>
+                <div className="flex items-center justify-end gap-3 mt-4 pt-4 border-t border-slate-100">
+                  <button type="button" onClick={() => setCategoryModalOpen(false)} className="px-5 py-2.5 text-sm font-semibold text-slate-600 hover:text-slate-800">Hủy</button>
+                  <button type="submit" className="bg-amber-600 hover:bg-amber-700 px-6 py-2.5 rounded-lg text-sm font-bold text-white transition">Lưu thay đổi</button>
+                </div>
+              </div>
+            </form>
           </div>
         </div>
-      </form>
-    </div>
-  </div>
-) : null}
+      ) : null}
     </div>
   );
 };
