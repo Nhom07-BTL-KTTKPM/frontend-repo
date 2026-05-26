@@ -632,6 +632,10 @@ const CategoryPanel = ({
   filteredCategories,
   selectedCategory,
   panelMode,
+  searchActive,
+  searchLoading,
+  onSearchSubmit,
+  onSearchClear,
   onCreateNew,
   onEdit,
   onView,
@@ -646,6 +650,10 @@ const CategoryPanel = ({
   filteredCategories: CategoryResponse[];
   selectedCategory: CategoryResponse | null;
   panelMode: PanelMode;
+  searchActive: boolean;
+  searchLoading: boolean;
+  onSearchSubmit: () => void;
+  onSearchClear: () => void;
   onCreateNew: () => void;
   onEdit: (category: CategoryResponse) => void;
   onView: (category: CategoryResponse) => void;
@@ -710,15 +718,40 @@ const CategoryPanel = ({
       <div className="grid gap-6 xl:grid-cols-[1.15fr_0.85fr]">
         <div className="grid gap-4">
 
-          <label className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-white px-4 py-3 shadow-sm transition focus-within:border-amber-300 focus-within:ring-4 focus-within:ring-amber-100">
-            <Search size={18} className="text-slate-400" />
-            <input
-              value={search}
-              onChange={(event) => setSearch(event.target.value)}
-              placeholder="Tìm theo tên, slug, mô tả..."
-              className="w-full border-none bg-transparent text-sm text-slate-900 outline-none placeholder:text-slate-400"
-            />
-          </label>
+          <form
+            onSubmit={(event) => {
+              event.preventDefault();
+              onSearchSubmit();
+            }}
+            className="flex flex-wrap items-stretch gap-2"
+          >
+            <label className="flex flex-1 min-w-[240px] items-center gap-3 rounded-2xl border border-slate-200 bg-white px-4 py-3 shadow-sm transition focus-within:border-amber-300 focus-within:ring-4 focus-within:ring-amber-100">
+              <Search size={18} className="text-slate-400" />
+              <input
+                value={search}
+                onChange={(event) => setSearch(event.target.value)}
+                placeholder="Tìm theo từ khóa..."
+                className="w-full border-none bg-transparent text-sm text-slate-900 outline-none placeholder:text-slate-400"
+              />
+              {search ? (
+                <button
+                  type="button"
+                  onClick={onSearchClear}
+                  aria-label="Xóa tìm kiếm"
+                  className="inline-flex h-6 w-6 items-center justify-center rounded-full text-slate-400 transition hover:bg-slate-100 hover:text-slate-700"
+                >
+                  <X size={14} />
+                </button>
+              ) : null}
+            </label>
+            <button
+              type="submit"
+              disabled={searchLoading}
+              className="inline-flex items-center justify-center rounded-2xl bg-slate-900 px-5 py-3 text-sm font-bold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              {searchLoading ? 'Đang tìm...' : 'Tìm'}
+            </button>
+          </form>
 
           <div className="grid gap-4 sm:grid-cols-3">
             <StatCard label="Tổng danh mục" value={categories.length} tone="bg-white border-slate-200" />
@@ -739,7 +772,7 @@ const CategoryPanel = ({
             </div>
           ) : filteredCategories.length === 0 ? (
             <div className="rounded-lg border border-slate-200 bg-white p-5 text-slate-500">
-              Chưa có category nào phù hợp.
+              {searchActive ? 'Không tìm thấy danh mục nào với từ khóa này.' : 'Chưa có category nào phù hợp.'}
             </div>
           ) : (
             <div className="grid gap-4">
@@ -886,6 +919,10 @@ const BrandPanel = ({
   filteredBrands,
   selectedBrand,
   panelMode,
+  searchActive,
+  searchLoading,
+  onSearchSubmit,
+  onSearchClear,
   onCreateNew,
   onEdit,
   onView,
@@ -900,6 +937,10 @@ const BrandPanel = ({
   filteredBrands: BrandResponse[];
   selectedBrand: BrandResponse | null;
   panelMode: PanelMode;
+  searchActive: boolean;
+  searchLoading: boolean;
+  onSearchSubmit: () => void;
+  onSearchClear: () => void;
   onCreateNew: () => void;
   onEdit: (brand: BrandResponse) => void;
   onView: (brand: BrandResponse) => void;
@@ -928,15 +969,40 @@ const BrandPanel = ({
       <div className="grid gap-6 xl:grid-cols-[1.15fr_0.85fr]">
         <div className="grid gap-4">
           
-          <label className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-white px-4 py-3 shadow-sm transition focus-within:border-indigo-300 focus-within:ring-4 focus-within:ring-indigo-100">
-            <Search size={18} className="text-slate-400" />
-            <input
-              value={search}
-              onChange={(event) => setSearch(event.target.value)}
-              placeholder="Tìm theo tên, slug, mô tả..."
-              className="w-full border-none bg-transparent text-sm text-slate-900 outline-none placeholder:text-slate-400"
-            />
-          </label>
+          <form
+            onSubmit={(event) => {
+              event.preventDefault();
+              onSearchSubmit();
+            }}
+            className="flex flex-wrap items-stretch gap-2"
+          >
+            <label className="flex flex-1 min-w-[240px] items-center gap-3 rounded-2xl border border-slate-200 bg-white px-4 py-3 shadow-sm transition focus-within:border-indigo-300 focus-within:ring-4 focus-within:ring-indigo-100">
+              <Search size={18} className="text-slate-400" />
+              <input
+                value={search}
+                onChange={(event) => setSearch(event.target.value)}
+                placeholder="Tìm theo từ khóa..."
+                className="w-full border-none bg-transparent text-sm text-slate-900 outline-none placeholder:text-slate-400"
+              />
+              {search ? (
+                <button
+                  type="button"
+                  onClick={onSearchClear}
+                  aria-label="Xóa tìm kiếm"
+                  className="inline-flex h-6 w-6 items-center justify-center rounded-full text-slate-400 transition hover:bg-slate-100 hover:text-slate-700"
+                >
+                  <X size={14} />
+                </button>
+              ) : null}
+            </label>
+            <button
+              type="submit"
+              disabled={searchLoading}
+              className="inline-flex items-center justify-center rounded-2xl bg-slate-900 px-5 py-3 text-sm font-bold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              {searchLoading ? 'Đang tìm...' : 'Tìm'}
+            </button>
+          </form>
 
           <div className="grid gap-4 sm:grid-cols-3">
             <StatCard 
@@ -969,7 +1035,7 @@ const BrandPanel = ({
             </div>
           ) : filteredBrands.length === 0 ? (
             <div className="rounded-2xl border border-slate-200 bg-white p-5 text-slate-500">
-              Chưa có brand nào phù hợp.
+              {searchActive ? 'Không tìm thấy brand nào với từ khóa này.' : 'Chưa có brand nào phù hợp.'}
             </div>
           ) : (
             <div className="grid gap-4">
@@ -1149,6 +1215,14 @@ export const ProductManagement = () => {
 
   const [brandFormErrors, setBrandFormErrors] = useState<BrandFormErrors>({});
   const [categoryFormErrors, setCategoryFormErrors] = useState<CategoryFormErrors>({});
+
+  const [categorySearchActive, setCategorySearchActive] = useState(false);
+  const [categorySearchResults, setCategorySearchResults] = useState<CategoryResponse[]>([]);
+  const [categorySearchLoading, setCategorySearchLoading] = useState(false);
+
+  const [brandSearchActive, setBrandSearchActive] = useState(false);
+  const [brandSearchResults, setBrandSearchResults] = useState<BrandResponse[]>([]);
+  const [brandSearchLoading, setBrandSearchLoading] = useState(false);
 
   useEffect(() => {
     return () => {
@@ -1696,29 +1770,69 @@ useEffect(() => {
     setProductPage(page);
   };
 
-  const filteredCategories = useMemo(() => {
-    const keyword = categorySearch.trim().toLowerCase();
+  const handleCategorySearchSubmit = async () => {
+    const keyword = categorySearch.trim();
     if (!keyword) {
-      return categories;
+      setCategorySearchActive(false);
+      setCategorySearchResults([]);
+      return;
     }
 
-    return categories.filter((category) => {
-      const haystack = [category.name, category.slug, category.description, category.parentId].filter(Boolean).join(' ').toLowerCase();
-      return haystack.includes(keyword);
-    });
-  }, [categories, categorySearch]);
+    try {
+      setCategorySearchLoading(true);
+      const results = await categoryApi.searchCategories(keyword);
+      setCategorySearchResults(Array.isArray(results) ? results : []);
+      setCategorySearchActive(true);
+    } catch (requestError) {
+      setCategorySearchResults([]);
+      setCategorySearchActive(true);
+    } finally {
+      setCategorySearchLoading(false);
+    }
+  };
 
-  const filteredBrands = useMemo(() => {
-    const keyword = brandSearch.trim().toLowerCase();
+  const handleCategorySearchClear = () => {
+    setCategorySearch('');
+    setCategorySearchActive(false);
+    setCategorySearchResults([]);
+  };
+
+  const handleBrandSearchSubmit = async () => {
+    const keyword = brandSearch.trim();
     if (!keyword) {
-      return brands;
+      setBrandSearchActive(false);
+      setBrandSearchResults([]);
+      return;
     }
 
-    return brands.filter((brand) => {
-      const haystack = [brand.name, brand.slug, brand.description, brand.originCountry, brand.websiteUrl].filter(Boolean).join(' ').toLowerCase();
-      return haystack.includes(keyword);
-    });
-  }, [brandSearch, brands]);
+    try {
+      setBrandSearchLoading(true);
+      const results = await brandApi.searchBrands(keyword);
+      setBrandSearchResults(Array.isArray(results) ? results : []);
+      setBrandSearchActive(true);
+    } catch (requestError) {
+      setBrandSearchResults([]);
+      setBrandSearchActive(true);
+    } finally {
+      setBrandSearchLoading(false);
+    }
+  };
+
+  const handleBrandSearchClear = () => {
+    setBrandSearch('');
+    setBrandSearchActive(false);
+    setBrandSearchResults([]);
+  };
+
+  const filteredCategories = useMemo(
+    () => (categorySearchActive ? categorySearchResults : categories),
+    [categories, categorySearchActive, categorySearchResults],
+  );
+
+  const filteredBrands = useMemo(
+    () => (brandSearchActive ? brandSearchResults : brands),
+    [brands, brandSearchActive, brandSearchResults],
+  );
 
   // react-select country options for brand origin
   const countryOptions = useMemo(() => {
@@ -1815,6 +1929,10 @@ useEffect(() => {
           filteredCategories={filteredCategories}
           selectedCategory={categorySelected}
           panelMode={categoryPanelMode}
+          searchActive={categorySearchActive}
+          searchLoading={categorySearchLoading}
+          onSearchSubmit={handleCategorySearchSubmit}
+          onSearchClear={handleCategorySearchClear}
           onCreateNew={openCreateCategory}
           onEdit={openCategoryEdit}
           onView={openCategoryView}
@@ -1833,6 +1951,10 @@ useEffect(() => {
           filteredBrands={filteredBrands}
           selectedBrand={brandSelected}
           panelMode={brandPanelMode}
+          searchActive={brandSearchActive}
+          searchLoading={brandSearchLoading}
+          onSearchSubmit={handleBrandSearchSubmit}
+          onSearchClear={handleBrandSearchClear}
           onCreateNew={openCreateBrand}
           onEdit={openBrandEdit}
           onView={openBrandView}
