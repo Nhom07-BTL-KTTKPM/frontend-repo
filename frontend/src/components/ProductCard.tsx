@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { ShoppingCart, Heart, Loader2 } from 'lucide-react';
+import { ShoppingCart, Heart, Loader2, Star } from 'lucide-react';
 import type { Product } from '../types/product';
 
 import { useCustomerId } from '../hooks/useCustomerId';
@@ -25,6 +25,7 @@ export const ProductCard: React.FC<Props> = ({ product }) => {
   const minPrice = product.minPrice ?? activeVariant?.price ?? 0;
   const maxPrice = product.maxPrice ?? activeVariant?.price ?? 0;
   const showPriceRange = maxPrice > 0 && minPrice > 0 && maxPrice !== minPrice;
+  const totalSold = (product as any).totalSold ?? 0;
 
   const handleAddToCart = async (e: React.MouseEvent) => {
     e.preventDefault();
@@ -126,46 +127,34 @@ export const ProductCard: React.FC<Props> = ({ product }) => {
         }}>
           {product.name}
         </h3>
-        <div style={{ color: 'var(--color-gold)', fontWeight: 700, marginTop: 'auto' }}>
-          {showPriceRange
-            ? `${minPrice.toLocaleString('vi-VN')}đ - ${maxPrice.toLocaleString('vi-VN')}đ`
-            : `${(minPrice || maxPrice).toLocaleString('vi-VN')}đ`}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 'auto' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            <Star size={16} fill="currentColor" style={{ color: 'var(--color-gold)' }} />
+            <span style={{ color: '#374151', fontSize: 14, fontWeight: 700 }}>
+              {(product as any).averageRating ? (product as any).averageRating.toFixed(1) : '0.0'}
+            </span>
+            {((product as any).totalReviews ?? 0) > 0 && (
+              <span style={{ color: '#6b7280', fontSize: 12 }}>
+                ({(product as any).totalReviews})
+              </span>
+            )}
+          </div>
+        </div>
+
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginTop: 6 }}>
+          <div style={{ color: 'var(--color-gold)', fontWeight: 700 }}>
+            {minPrice > 0
+              ? `Chỉ từ ${minPrice.toLocaleString('vi-VN')}đ`
+              : `${(minPrice || maxPrice).toLocaleString('vi-VN')}đ`}
+          </div>
+          {totalSold > 0 && (
+            <div style={{ color: '#6b7280', fontSize: 12 }}>
+              • {totalSold.toLocaleString('vi-VN')} đã bán
+            </div>
+          )}
         </div>
       </Link>
 
-      <button
-        type="button"
-        style={{
-          position: 'absolute',
-          bottom: 12,
-          right: 12,
-          width: 36,
-          height: 36,
-          borderRadius: '50%',
-          background: 'var(--color-gold)',
-          border: 'none',
-          cursor: 'pointer',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          color: 'white',
-          boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
-          transition: 'all 0.3s ease'
-        }}
-        onMouseEnter={(e) => {
-          e.currentTarget.style.transform = 'scale(1.1)';
-          e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.15)';
-        }}
-        onMouseLeave={(e) => {
-          e.currentTarget.style.transform = 'scale(1)';
-          e.currentTarget.style.boxShadow = '0 2px 8px rgba(0,0,0,0.1)';
-        }}
-        onClick={handleAddToCart}
-        disabled={isAdding || !activeVariant || (activeVariant.stockQuantity ?? 0) <= 0}
-        title="Thêm vào giỏ hàng"
-      >
-        {isAdding ? <span style={{fontSize: '12px', fontWeight: 600}}>...</span> : <ShoppingCart size={18} />}
-      </button>
 
       <button
         onClick={handleToggleWishlist}

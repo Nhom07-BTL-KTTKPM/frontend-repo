@@ -2,6 +2,7 @@ import React, { useMemo, useState } from 'react';
 import { keepPreviousData, useQuery } from '@tanstack/react-query';
 import { ChevronLeft, ChevronRight, Search, SlidersHorizontal, Star, X } from 'lucide-react';
 import { productApi } from '../api/productApi';
+import { toSlug as skinTypeToSlug } from '../utils/skinTypeUtils';
 import ProductCard from '../components/ProductCard';
 import type { Product } from '../types/product';
 import type { ProductCardResponse, CategorySummaryResponse, BrandSummaryResponse } from '../types/catalog';
@@ -14,7 +15,7 @@ type SelectOption = {
   label: string;
 };
 
-const skinTypeOptions = ['Da dầu', 'Da hỗn hợp', 'Da mụn', 'Da khô', 'Da nhạy cảm', 'Da thường', 'Da lão hóa', 'Da mất độ đàn hồi', 'Mọi loại da'];
+const skinTypeOptions = ['Da dầu', 'Da khô', 'Da hỗn hợp', 'Da thường', 'Da nhạy cảm', 'Da mụn', 'Da lão hóa', 'Da mất độ đàn hồi', 'Mọi loại da'];
 const promotionOptions = ['Hàng mới', 'Bán chạy', 'Đang giảm giá'];
 
 export const ProductList: React.FC = () => {
@@ -35,6 +36,7 @@ export const ProductList: React.FC = () => {
   const [computedPriceMax, setComputedPriceMax] = useState(200);
   const [currentPage, setCurrentPage] = useState(1);
   const pageSize = 12;
+  const [showAllSkinTypes, setShowAllSkinTypes] = useState(false);
 
   // Lazy load filter lists only when user interacts with filter area or opens drawer
   const [shouldLoadFilters, setShouldLoadFilters] = useState(false);
@@ -64,7 +66,7 @@ export const ProductList: React.FC = () => {
       params.brandIds = selectedBrands;
     }
     if (selectedSkinTypes.length > 0) {
-      params.skinTypes = selectedSkinTypes;
+      params.skinTypes = selectedSkinTypes.map((s) => skinTypeToSlug(s));
     }
     if (priceMin > 0) {
       params.minPrice = priceMin;
@@ -348,7 +350,9 @@ export const ProductList: React.FC = () => {
     <div className="flex flex-col gap-3">
       <h3 className="text-sm font-bold text-gray-900 uppercase tracking-wider">Theo loại da</h3>
       <div className="flex flex-col gap-2.5">
-        {skinTypeOptions.map((skinType) => (
+        {(
+          showAllSkinTypes ? skinTypeOptions : skinTypeOptions.slice(0, 5)
+        ).map((skinType) => (
           <label key={skinType} className="flex items-center gap-2.5 text-sm text-gray-700 cursor-pointer select-none hover:text-gray-900 transition-colors">
             <input
               type="checkbox"
@@ -359,6 +363,15 @@ export const ProductList: React.FC = () => {
             <span>{skinType}</span>
           </label>
         ))}
+        {skinTypeOptions.length > 5 && (
+          <button
+            type="button"
+            onClick={() => setShowAllSkinTypes((s) => !s)}
+            className="text-sm text-gray-500 hover:text-gray-700 mt-1 self-start"
+          >
+            {showAllSkinTypes ? 'Thu gọn' : 'Xem thêm'}
+          </button>
+        )}
       </div>
     </div>
 
@@ -368,14 +381,14 @@ export const ProductList: React.FC = () => {
     <div className="flex flex-col gap-3">
       <h3 className="text-sm font-bold text-gray-900 uppercase tracking-wider">Giá</h3>
       <div className="flex flex-col gap-4">
-        <div className="flex items-center justify-between text-xs font-semibold text-gray-700 bg-gray-50 px-2.5 py-1.5 rounded-lg border border-gray-100">
-          <span>{formatCurrency(priceMin)}</span>
+        <div className="flex items-center justify-between text-xs font-semibold text-gray-700 bg-gray-50 px-3 py-2 rounded-lg border border-gray-100" style={{ marginBottom: 8, padding: '8px 12px' }}>
+          <span style={{ minWidth: 80 }}>{formatCurrency(priceMin)}</span>
           <span className="text-gray-300">|</span>
-          <span>{formatCurrency(priceMax)}</span>
+          <span style={{ minWidth: 80, textAlign: 'right' }}>{formatCurrency(priceMax)}</span>
         </div>
         
         {/* Khung chứa thanh trượt kép sử dụng Pointer Events */}
-        <div className="relative w-full h-2 bg-gray-100 rounded-full">
+        <div className="relative w-full h-2 bg-gray-100 rounded-full" style={{ paddingRight: 12, boxSizing: 'border-box', width: '100%' }}>
           {/* ĐƯỜNG NỐI MÀU VÀNG GIỮA MIN VÀ MAX */}
           <div 
             className="absolute h-2 bg-[#D4AF37] rounded-full z-10"
@@ -419,7 +432,7 @@ export const ProductList: React.FC = () => {
     <div className="flex flex-col gap-3">
       <h3 className="text-sm font-bold text-gray-900 uppercase tracking-wider">Đánh giá</h3>
       <div className="flex flex-col gap-1.5">
-        {[5, 4, 3, 2, 1].map((rating) => {
+        {[4, 3, 2, 1].map((rating) => {
           const isActive = selectedRatings.includes(rating);
           return (
             <button
@@ -442,64 +455,26 @@ export const ProductList: React.FC = () => {
                   />
                 ))}
               </span>
-              <span>{rating} sao</span>
+              <span>&gt;={rating} sao</span>
             </button>
           );
         })}
       </div>
     </div>
 
-    <hr className="border-gray-100" />
-
-    {/* 6. Theo khuyến mãi */}
-    <div className="flex flex-col gap-3">
-      <h3 className="text-sm font-bold text-gray-900 uppercase tracking-wider">Theo khuyến mãi</h3>
-      <div className="flex flex-col gap-2.5">
-        {promotionOptions.map((promotion) => (
-          <label key={promotion} className="flex items-center gap-2.5 text-sm text-gray-700 cursor-pointer select-none hover:text-gray-900 transition-colors">
-            <input
-              type="checkbox"
-              checked={selectedPromotions.includes(promotion)}
-              onChange={() => toggleTextFilter(promotion, setSelectedPromotions)}
-              className="w-4 h-4 rounded border-gray-300 text-[#D4AF37] focus:ring-[#D4AF37]/50 cursor-pointer"
-            />
-            <span>{promotion}</span>
-          </label>
-        ))}
-      </div>
-    </div>
   </div>
 );
 
   return (
     <section className="product-list-page">
       <div className="container">
-        <header className="product-list__header">
-          <h1>Tùy chọn lọc</h1>
-          <form className="product-list__search" onSubmit={onSubmitSearch}>
-            <Search size={18} aria-hidden />
-            <input
-              type="text"
-              value={searchInput}
-              onChange={(event) => setSearchInput(event.target.value)}
-              placeholder="Tìm theo tên sản phẩm"
-              aria-label="Tìm sản phẩm"
-            />
-            {searchKeyword && (
-              <button
-                type="button"
-                onClick={clearSearch}
-                aria-label="Xóa tìm kiếm"
-                title="Xóa tìm kiếm"
-              >
-                <X size={16} color="#ffffff"/>
-              </button>
-            )}
-            
-          </form>
+        <header className="flex items-center justify-between w-full gap-4 mb-6">
+          {/* Nút bấm Filter hiển thị trên Mobile. 
+            Nếu trên Desktop (lg) thì ẩn đi vì đã có Sidebar.
+          */}
           <button
             type="button"
-            className="product-list__mobile-filter-btn"
+            className="lg:hidden flex items-center gap-2 px-4 h-11 bg-white border border-solid border-gray-200 rounded-full text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
             onClick={() => {
               setShouldLoadFilters(true);
               setIsFilterDrawerOpen(true);
@@ -508,6 +483,43 @@ export const ProductList: React.FC = () => {
             <SlidersHorizontal size={16} />
             <span>Filters</span>
           </button>
+
+          {/* Thành phần trống đẩy Thanh Search về bên phải trên màn hình lớn.
+            Trên mobile nếu nút filter ẩn thì thanh search tự động giãn rộng 100%.
+          */}
+          <div className="hidden lg:block flex-1" />
+
+          {/* THANH TÌM KIẾM ĐÃ CẢI THIỆN */}
+          <form 
+            className="relative flex items-center w-full max-w-lg h-11 bg-[#FAF6F1] border border-solid border-[#CCDFE3] rounded-full px-4 gap-3 transition-all duration-200 focus-within:bg-white focus-within:border-[#2B6377] focus-within:shadow-[0_0_0_4px_rgba(43,99,119,0.08)]" 
+            onSubmit={onSubmitSearch}
+          >
+            {/* Icon kính lúp - Đổi màu nhẹ khi người dùng tập trung nhập liệu */}
+            <Search className="text-gray-400 transition-colors duration-200 group-focus-within:text-[#2B6377] shrink-0" size={18} aria-hidden />
+            
+            {/* Ô nhập liệu văn bản sạch sẽ, loại bỏ outline mặc định */}
+            <input
+              type="text"
+              value={searchInput}
+              onChange={(event) => setSearchInput(event.target.value)}
+              placeholder="Tìm theo tên sản phẩm..."
+              className="w-full h-full bg-transparent text-sm text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-0 border-none p-0"
+              aria-label="Tìm sản phẩm"
+            />
+            
+            {/* Nút xóa nhanh ký tự (Xuất hiện ngay khi người dùng bắt đầu gõ) */}
+            {searchInput && (
+              <button
+                type="button"
+                onClick={clearSearch}
+                className="flex items-center justify-center w-5 h-5 rounded-full bg-gray-200 hover:bg-gray-300 text-gray-500 hover:text-gray-700 transition-colors shrink-0"
+                aria-label="Xóa tìm kiếm"
+                title="Xóa tìm kiếm"
+              >
+                <X size={12} />
+              </button>
+            )}
+          </form>
         </header>
 
         <div className="product-list__active-filters">
@@ -588,14 +600,14 @@ export const ProductList: React.FC = () => {
           ))}
 
           {hasActiveFilters && (
-            <div className="product-list__active-filters-actions">
+            <div style={{ marginLeft: 'auto' }}>
               <button
                 type="button"
                 onClick={clearAllFilters}
-                className="inline-flex items-center gap-1.5 px-3 py-1 text-xs font-medium text-gray-500 bg-gray-100 hover:bg-red-50 hover:text-red-600 rounded-full border border-gray-200 hover:border-red-200 transition-all shadow-sm"
+                className="text-sm text-gray-500 hover:text-red-600 hover:underline"
+                aria-label="Xóa tất cả bộ lọc"
               >
-                <span>Xóa tất cả</span>
-                <X size={12} className="opacity-70" />
+                Xóa tất cả
               </button>
             </div>
           )}
