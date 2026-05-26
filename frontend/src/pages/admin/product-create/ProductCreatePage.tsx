@@ -86,8 +86,6 @@ const toOptionalNumber = (value: string) => {
 
 export const ProductCreatePage = () => {
   const navigate = useNavigate();
-  const [submittedAt, setSubmittedAt] = useState<string | null>(null);
-  const [submittedName, setSubmittedName] = useState<string>('');
   const [isSlugManuallyEdited, setIsSlugManuallyEdited] = useState(false);
   const [categoryOptions, setCategoryOptions] = useState<CategorySummaryResponse[]>([]);
   const [brandOptions, setBrandOptions] = useState<BrandSummaryResponse[]>([]);
@@ -219,8 +217,6 @@ export const ProductCreatePage = () => {
 
       await productManagementApi.createProduct(payload);
 
-      setSubmittedAt(new Date().toLocaleString('vi-VN'));
-      setSubmittedName(values.name);
       toast.success('Đã thêm sản phẩm mới thành công.');
       navigate('/admin/products');
     } catch (error) {
@@ -495,30 +491,7 @@ export const ProductCreatePage = () => {
               </div>
             </SectionCard>
 
-            <SectionCard title="Xem trước dữ liệu">
-              <div className="grid gap-3 rounded-2xl border border-slate-200 bg-slate-950 p-4 text-slate-100 shadow-inner">
-                <div className="flex items-center justify-between gap-3 text-xs text-slate-400">
-                  <span>du-lieu-san-pham</span>
-                  <span>{submittedAt ? `Đã lưu lúc ${submittedAt}` : 'Bản nháp'}</span>
-                </div>
-                <pre className="m-0 overflow-auto text-xs leading-6 text-slate-200">
-{JSON.stringify(
-  {
-    tenSanPham: submittedName || watchedValues.name,
-    slug: watchedValues.slug || '(tu-dong-sinh)',
-    danhMuc: selectedCategory?.name,
-    thuongHieu: selectedBrand?.name,
-    dangKinhDoanh: watchedValues.isActive,
-    noiBat: watchedValues.isFeatured,
-    soBienThe: variantCount,
-    soAnh: imageCount,
-  },
-  null,
-  2,
-)}
-                </pre>
-              </div>
-            </SectionCard>
+            
 
           </aside>
         </div>
