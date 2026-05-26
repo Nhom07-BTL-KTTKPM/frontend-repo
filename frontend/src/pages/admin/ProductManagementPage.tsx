@@ -1877,17 +1877,17 @@ useEffect(() => {
         </div>
 
         <div className="flex flex-wrap gap-2 rounded-2xl border border-slate-200 bg-slate-50 p-2">
-          <button type="button" onClick={() => setActiveTab('products')} 
+          <button type="button" onClick={() => { setActiveTab('products'); setViewingProduct(null); }}
           className={`inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-bold transition ${tabStyles(activeTab === 'products')}`}>
             <Package2 size={16} />
             Sản phẩm
           </button>
-          <button type="button" onClick={() => setActiveTab('categories')} 
+          <button type="button" onClick={() => { setActiveTab('categories'); setViewingProduct(null); }}
           className={`inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-bold transition ${tabStyles(activeTab === 'categories')}`}>
             <LayoutGrid size={16} />
             Danh mục
           </button>
-          <button type="button" onClick={() => setActiveTab('brands')} 
+          <button type="button" onClick={() => { setActiveTab('brands'); setViewingProduct(null); }}
           className={`inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-bold transition ${tabStyles(activeTab === 'brands')}`}>
             <BadgeCheck size={16} />
             Thương hiệu
@@ -1896,31 +1896,39 @@ useEffect(() => {
       </div>
 
       {activeTab === 'products' ? (
-        <ProductsTab
-          products={products}
-          overview={productOverview}
-          loading={productLoading}
-          error={productError}
-          currentPage={productPage}
-          totalPages={productTotalPages}
-          totalElements={productTotalElements}
-          searchValue={productSearch}
-          brandOptions={brandSummaries}
-          categoryOptions={categorySummaries}
-          selectedBrandId={selectedBrandId}
-          selectedCategoryId={selectedCategoryId}
-          selectedSort={selectedSort}
-          statusUpdatingProductId={statusUpdatingProductId}
-          onBrandChange={handleBrandFilterChange}
-          onCategoryChange={handleCategoryFilterChange}
-          onSortChange={handleSortChange}
-          onSearchChange={handleSearchChange}
-          onApplyFilters={handleApplyFilters}
-          onClearFilters={handleClearFilters}
-          onPageChange={handlePageChange}
-          onToggleStatus={toggleProductStatus}
-          onView={(product) => setViewingProduct({ slug: product.slug, productId: product.id })}
-        />
+        viewingProduct ? (
+          <AdminProductDetail
+            slug={viewingProduct.slug}
+            productId={viewingProduct.productId}
+            onBack={() => setViewingProduct(null)}
+          />
+        ) : (
+          <ProductsTab
+            products={products}
+            overview={productOverview}
+            loading={productLoading}
+            error={productError}
+            currentPage={productPage}
+            totalPages={productTotalPages}
+            totalElements={productTotalElements}
+            searchValue={productSearch}
+            brandOptions={brandSummaries}
+            categoryOptions={categorySummaries}
+            selectedBrandId={selectedBrandId}
+            selectedCategoryId={selectedCategoryId}
+            selectedSort={selectedSort}
+            statusUpdatingProductId={statusUpdatingProductId}
+            onBrandChange={handleBrandFilterChange}
+            onCategoryChange={handleCategoryFilterChange}
+            onSortChange={handleSortChange}
+            onSearchChange={handleSearchChange}
+            onApplyFilters={handleApplyFilters}
+            onClearFilters={handleClearFilters}
+            onPageChange={handlePageChange}
+            onToggleStatus={toggleProductStatus}
+            onView={(product) => setViewingProduct({ slug: product.slug, productId: product.id })}
+          />
+        )
       ) : null}
 
       {activeTab === 'categories' ? (
@@ -2208,23 +2216,6 @@ useEffect(() => {
         </div>
       ) : null}
 
-      {viewingProduct ? (
-        <div className="fixed inset-0 z-50 flex items-start justify-center bg-black/50 p-4 overflow-y-auto">
-          <div className="relative my-8 w-full max-w-6xl rounded-2xl bg-white shadow-2xl">
-            <button
-              type="button"
-              onClick={() => setViewingProduct(null)}
-              aria-label="Đóng"
-              className="absolute -top-3 -right-3 z-10 inline-flex h-9 w-9 items-center justify-center rounded-full border border-rose-500 bg-rose-600 text-white shadow-md transition hover:bg-rose-700 active:scale-95"
-            >
-              <X size={18} />
-            </button>
-            <div className="max-h-[calc(100vh-4rem)] overflow-y-auto rounded-2xl">
-              <AdminProductDetail slug={viewingProduct.slug} productId={viewingProduct.productId} />
-            </div>
-          </div>
-        </div>
-      ) : null}
     </div>
   );
 };

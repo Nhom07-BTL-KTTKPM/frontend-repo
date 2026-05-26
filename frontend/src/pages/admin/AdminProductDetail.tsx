@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { Check, ChevronLeft, ChevronRight, Copy, Package, Star, Tag } from 'lucide-react';
+import { ArrowLeft, Check, ChevronLeft, ChevronRight, Copy, Package, Star, Tag } from 'lucide-react';
 import { toast } from 'sonner';
 import { productApi } from '../../api/productApi';
 import type { Product, ProductImage, ProductVariant } from '../../types/product';
@@ -30,9 +30,10 @@ type RichProduct = Product & {
 type AdminProductDetailProps = {
   slug?: string;
   productId?: string;
+  onBack?: () => void;
 };
 
-export const AdminProductDetail: React.FC<AdminProductDetailProps> = ({ slug, productId }) => {
+export const AdminProductDetail: React.FC<AdminProductDetailProps> = ({ slug, productId, onBack }) => {
   const [selectedVariant, setSelectedVariant] = useState<RichVariant | null>(null);
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
   const [activeTab, setActiveTab] = useState<DetailTab>('description');
@@ -145,9 +146,41 @@ export const AdminProductDetail: React.FC<AdminProductDetailProps> = ({ slug, pr
     return () => window.clearTimeout(timer);
   }, [isLinkCopied]);
 
-  if (isLoading) return <div style={{ padding: '4rem' }}>Đang tải...</div>;
-  if (error) return <div style={{ padding: '4rem', color: 'red' }}>Không thể tải chi tiết sản phẩm</div>;
-  if (!product) return <div style={{ padding: '4rem' }}>Sản phẩm không tồn tại</div>;
+  const backButton = onBack ? (
+    <button
+      type="button"
+      onClick={onBack}
+      className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm transition hover:border-slate-300 hover:bg-slate-50"
+    >
+      <ArrowLeft size={16} />
+      Quay lại danh sách
+    </button>
+  ) : null;
+
+  if (isLoading) {
+    return (
+      <div style={{ padding: '1.5rem' }}>
+        {backButton}
+        <div style={{ padding: '4rem' }}>Đang tải...</div>
+      </div>
+    );
+  }
+  if (error) {
+    return (
+      <div style={{ padding: '1.5rem' }}>
+        {backButton}
+        <div style={{ padding: '4rem', color: 'red' }}>Không thể tải chi tiết sản phẩm</div>
+      </div>
+    );
+  }
+  if (!product) {
+    return (
+      <div style={{ padding: '1.5rem' }}>
+        {backButton}
+        <div style={{ padding: '4rem' }}>Sản phẩm không tồn tại</div>
+      </div>
+    );
+  }
   const handleCopyLink = async () => {
     if (!shareUrl) return;
 
@@ -244,6 +277,7 @@ export const AdminProductDetail: React.FC<AdminProductDetailProps> = ({ slug, pr
   return (
     <div style={{ padding: '1.5rem', background: 'transparent' }}>
       <div style={{ maxWidth: 1280, margin: '0 auto' }}>
+        {backButton ? <div style={{ marginBottom: '1rem' }}>{backButton}</div> : null}
         <section
           style={{
             display: 'flex',
