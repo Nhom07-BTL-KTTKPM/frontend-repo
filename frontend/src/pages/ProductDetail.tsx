@@ -10,6 +10,7 @@ import { useCustomerId } from '../hooks/useCustomerId';
 import { useGuestCartStore } from '../store/guestCartStore';
 import type { Product, ProductImage, ProductVariant } from '../types/product';
 import { ReviewSection } from '../components/review/ReviewSection';
+import { toLabel as skinTypeToLabel } from '../utils/skinTypeUtils';
 
 type DetailTab = 'description' | 'reviews';
 
@@ -599,15 +600,15 @@ export const ProductDetail: React.FC = () => {
                     Loại da phù hợp
                   </strong >
                   <div className="flex flex-wrap gap-2">
-                    {product.suitableSkinTypes.map((item) => (
-                      <span 
-                        key={item} 
-                        className="px-3 py-1.5 text-base font-medium text-gray-700 bg-white 
-                                  border border-solid border-gray-300 rounded-full shadow-sm"
-                      >
-                        {item}
-                      </span>
-                    ))}
+                          {product.suitableSkinTypes.map((item) => (
+                            <span
+                              key={item}
+                              className="px-3 py-1.5 text-base font-medium text-gray-700 bg-white 
+                                        border border-solid border-gray-300 rounded-full shadow-sm"
+                            >
+                              {skinTypeToLabel(item)}
+                            </span>
+                          ))}
                   </div>
                 </div>
               ) : null}

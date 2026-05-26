@@ -2,17 +2,21 @@ import React, { useMemo, useState } from 'react';
 import { keepPreviousData, useQuery } from '@tanstack/react-query';
 import { ChevronLeft, ChevronRight, Search, SlidersHorizontal, Star, X } from 'lucide-react';
 import { productApi } from '../api/productApi';
+import { toSlug as skinTypeToSlug } from '../utils/skinTypeUtils';
 import ProductCard from '../components/ProductCard';
 import type { Product } from '../types/product';
+import type { ProductCardResponse, CategorySummaryResponse, BrandSummaryResponse } from '../types/catalog';
 import type { PageResponse } from '../types/api';
 
-type ProductListItem = Product & {
-  price?: number;
-  averageRating?: number;
-  totalReviews?: number;
-  totalSold?: number;
-  suitableSkinTypes?: string[];
+type ProductListItem = ProductCardResponse;
+
+type SelectOption = {
+  id: string;
+  label: string;
 };
+
+const skinTypeOptions = ['Da dầu', 'Da khô', 'Da hỗn hợp', 'Da thường', 'Da nhạy cảm', 'Da mụn', 'Da lão hóa', 'Da mất độ đàn hồi', 'Mọi loại da'];
+const promotionOptions = ['Hàng mới', 'Bán chạy', 'Đang giảm giá'];
 
 export const ProductList: React.FC = () => {
   const [searchInput, setSearchInput] = useState('');
@@ -24,8 +28,7 @@ export const ProductList: React.FC = () => {
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
   const [selectedSkinTypes, setSelectedSkinTypes] = useState<string[]>([]);
   const [selectedRatings, setSelectedRatings] = useState<number[]>([]);
-  const [selectedAvailability, setSelectedAvailability] = useState<string[]>(['in-stock']);
-  const [selectedPromotions, setSelectedPromotions] = useState<string[]>(['best-seller']);
+  const [selectedPromotions, setSelectedPromotions] = useState<string[]>([]);
   const [selectedBrands, setSelectedBrands] = useState<string[]>([]);
 
   const [priceMin, setPriceMin] = useState(0);
@@ -33,6 +36,7 @@ export const ProductList: React.FC = () => {
   const [computedPriceMax, setComputedPriceMax] = useState(200);
   const [currentPage, setCurrentPage] = useState(1);
   const pageSize = 12;
+  const [showAllSkinTypes, setShowAllSkinTypes] = useState(false);
 
   // Lazy load filter lists only when user interacts with filter area or opens drawer
   const [shouldLoadFilters, setShouldLoadFilters] = useState(false);
@@ -46,19 +50,75 @@ export const ProductList: React.FC = () => {
 
   const isSearching = searchKeyword.trim().length > 0;
 
+  const filterParams = useMemo(() => {
+    const params: Record<string, unknown> = {
+      page: currentPage - 1,
+      size: pageSize,
+    };
+
+    if (searchKeyword.trim()) {
+      params.keyword = searchKeyword.trim();
+    }
+    if (selectedCategories.length > 0) {
+      params.categoryIds = selectedCategories;
+    }
+    if (selectedBrands.length > 0) {
+      params.brandIds = selectedBrands;
+    }
+    if (selectedSkinTypes.length > 0) {
+      params.skinTypes = selectedSkinTypes.map((s) => skinTypeToSlug(s));
+    }
+    if (priceMin > 0) {
+      params.minPrice = priceMin;
+    }
+    if (priceMax > 0) {
+      params.maxPrice = priceMax;
+    }
+    if (selectedRatings.length > 0) {
+      params.rating = Math.max(...selectedRatings);
+    }
+    if (selectedPromotions.length > 0) {
+      params.promotions = selectedPromotions;
+    }
+
+    return params;
+  }, [
+    currentPage,
+    pageSize,
+    searchKeyword,
+    selectedCategories,
+    selectedBrands,
+    selectedSkinTypes,
+    priceMin,
+    priceMax,
+    selectedRatings,
+    selectedPromotions,
+  ]);
+
   const { data: pageData, isLoading, error } = useQuery<PageResponse<ProductListItem>>({
-    queryKey: ['products', searchKeyword, currentPage, pageSize],
+    queryKey: ['products', filterParams],
     queryFn: async (): Promise<PageResponse<ProductListItem>> => {
-      const params = { page: currentPage - 1, size: pageSize };
-      if (isSearching) {
-        return productApi.searchProducts(searchKeyword.trim(), params) as unknown as PageResponse<ProductListItem>;
-      }
-      return productApi.getProducts(params) as unknown as PageResponse<ProductListItem>;
+      return productApi.filterProducts(filterParams) as unknown as PageResponse<ProductListItem>;
     },
     placeholderData: keepPreviousData,
   });
 
   const products = (pageData?.content ?? []) as ProductListItem[];
+  const cardProducts: Product[] = useMemo(
+    () =>
+      products.map((product) => ({
+        id: product.id,
+        name: product.name,
+        slug: product.slug,
+        averageRating: product.averageRating,
+        totalSold: product.totalSold,
+        minPrice: product.minPrice ?? undefined,
+        maxPrice: product.maxPrice ?? undefined,
+        isFeatured: product.isFeatured,
+        thumbnail: product.thumbnail,
+      })),
+    [products]
+  );
 
   // fetch summaries lazily via productApi
   const {
@@ -66,7 +126,7 @@ export const ProductList: React.FC = () => {
     isLoading: isLoadingCategories,
   } = useQuery({
     queryKey: ['categories', 'summary'],
-    queryFn: () => productApi.getCategoriesSummary().then((res: any) => res ?? []),
+    queryFn: () => productApi.getCategoriesSummary().then((res) => res ?? []),
     enabled: shouldLoadFilters,
   });
 
@@ -75,80 +135,34 @@ export const ProductList: React.FC = () => {
     isLoading: isLoadingBrands,
   } = useQuery({
     queryKey: ['brands', 'summary'],
-    queryFn: () => productApi.getBrandsSummary().then((res: any) => res ?? []),
+    queryFn: () => productApi.getBrandsSummary().then((res) => res ?? []),
     enabled: shouldLoadFilters,
   });
 
-  const categoryOptions = useMemo(() => {
-    if (!shouldLoadFilters) return [];
+  const categoryOptions: SelectOption[] = useMemo(() => {
+    if (!shouldLoadFilters || !Array.isArray(categoriesSummary)) return [];
+    return categoriesSummary.map((category: CategorySummaryResponse) => ({
+      id: category.id,
+      label: category.name,
+    }));
+  }, [categoriesSummary, shouldLoadFilters]);
 
-    if (Array.isArray(categoriesSummary) && categoriesSummary.length > 0) {
-      // Prefer summary endpoint response; try to map to name or title
-      return Array.from(new Set(categoriesSummary.map((c: any) => c.name ?? c.title ?? String(c))));
-    }
-    return Array.from(
-      new Set(products.map((p) => p.category?.name).filter((name): name is string => Boolean(name && name.trim())))
-    );
-  }, [categoriesSummary, products, shouldLoadFilters]);
+  const brandOptions: SelectOption[] = useMemo(() => {
+    if (!shouldLoadFilters || !Array.isArray(brandsSummary)) return [];
+    return brandsSummary.map((brand: BrandSummaryResponse) => ({
+      id: brand.id,
+      label: brand.name,
+    }));
+  }, [brandsSummary, shouldLoadFilters]);
 
-  const brandOptions = useMemo(() => {
-    if (!shouldLoadFilters) return [];
-
-    if (Array.isArray(brandsSummary) && brandsSummary.length > 0) {
-      return Array.from(new Set(brandsSummary.map((b: any) => b.name ?? b.title ?? String(b))));
-    }
-    return Array.from(new Set(products.map((p) => p.brand?.name).filter((name): name is string => Boolean(name && name.trim()))));
-  }, [brandsSummary, products, shouldLoadFilters]);
-
-  const skinTypeOptions = ['Normal', 'Oily', 'Dry', 'Combination', 'Sensitive'];
-  const promotionOptions = ['Hàng mới', 'Bán chạy', 'Đang giảm giá'];
-  const displayedProducts = useMemo(() => {
-    let list = products;
-
-    // keyword
-    if (searchKeyword.trim()) {
-      const keyword = searchKeyword.trim().toLowerCase();
-      list = list.filter((p) => p.name.toLowerCase().includes(keyword));
-    }
-
-    // categories filter
-    if (selectedCategories.length > 0) {
-      list = list.filter((p) => selectedCategories.includes(p.category?.name ?? ''));
-    }
-
-    // brands filter
-    if (selectedBrands.length > 0) {
-      list = list.filter((p) => selectedBrands.includes(p.brand?.name ?? ''));
-    }
-
-    // skin types (if available on product)
-    if (selectedSkinTypes.length > 0) {
-      list = list.filter((p) => {
-        const types = p.suitableSkinTypes ?? [];
-        return selectedSkinTypes.some((t) => types.includes(t));
-      });
-    }
-
-    // price range (min/max may come from product fields minPrice/maxPrice)
-    list = list.filter((p) => {
-      const min = p.minPrice ?? 0;
-      const max = p.maxPrice ?? 0;
-      return max >= priceMin && min <= priceMax;
-    });
-
-    // ratings
-    if (selectedRatings.length > 0) {
-      list = list.filter((p) => selectedRatings.includes(Math.round(p.averageRating ?? 0)));
-    }
-
-    return list;
-  }, [products, searchKeyword, selectedCategories, selectedBrands, selectedSkinTypes, priceMin, priceMax, selectedRatings]);
+  const categoryLabelById = useMemo(() => new Map(categoryOptions.map((option) => [option.id, option.label])), [categoryOptions]);
+  const brandLabelById = useMemo(() => new Map(brandOptions.map((option) => [option.id, option.label])), [brandOptions]);
 
   // compute global price bounds from products so default slider doesn't filter everything
   React.useEffect(() => {
     if (!products || products.length === 0) return;
-    const mins = products.map((p) => Number(p.minPrice ?? p.price ?? 0)).filter((v) => !Number.isNaN(v));
-    const maxs = products.map((p) => Number(p.maxPrice ?? p.price ?? 0)).filter((v) => !Number.isNaN(v));
+    const mins = products.map((p) => Number(p.minPrice ?? 0)).filter((v) => !Number.isNaN(v));
+    const maxs = products.map((p) => Number(p.maxPrice ?? 0)).filter((v) => !Number.isNaN(v));
     const globalMin = mins.length ? Math.min(...mins) : 0;
     const globalMax = maxs.length ? Math.max(...maxs) : 200;
     setComputedPriceMax(globalMax > 0 ? globalMax : 200);
@@ -162,13 +176,16 @@ export const ProductList: React.FC = () => {
 
   const totalPages = Math.max(1, pageData?.totalPages ?? 1);
   const safeCurrentPage = Math.min(currentPage, totalPages);
-  const paginatedProducts = displayedProducts;
-  const pageStart = displayedProducts.length === 0 ? 0 : (safeCurrentPage - 1) * pageSize + 1;
-  const pageEnd = Math.min((safeCurrentPage - 1) * pageSize + displayedProducts.length, pageData?.totalElements ?? displayedProducts.length);
+  const pageStart = products.length === 0 ? 0 : (pageData?.number ?? safeCurrentPage - 1) * (pageData?.size ?? pageSize) + 1;
+  const pageEnd = products.length === 0 ? 0 : pageStart + products.length - 1;
 
   React.useEffect(() => {
     setCurrentPage(1);
   }, [searchKeyword]);
+
+  React.useEffect(() => {
+    setCurrentPage(1);
+  }, [searchKeyword, selectedCategories, selectedBrands, selectedSkinTypes, selectedRatings, priceMin, priceMax, selectedPromotions]);
 
   // Scroll to top of product list when user navigates pages
   React.useEffect(() => {
@@ -214,7 +231,7 @@ export const ProductList: React.FC = () => {
     setSelectedBrands([]);
     setSelectedSkinTypes([]);
     setSelectedRatings([]);
-    setSelectedAvailability([]);
+    setSelectedPromotions([]);
     setSelectedPromotions([]);
     setPriceMin(0);
     setPriceMax(computedPriceMax);
@@ -225,7 +242,6 @@ export const ProductList: React.FC = () => {
   const removeBrand = (value: string) => setSelectedBrands((prev) => prev.filter((v) => v !== value));
   const removeSkinType = (value: string) => setSelectedSkinTypes((prev) => prev.filter((v) => v !== value));
   const removeRating = (value: number) => setSelectedRatings((prev) => prev.filter((v) => v !== value));
-  const removeAvailability = (value: string) => setSelectedAvailability((prev) => prev.filter((v) => v !== value));
   const removePromotion = (value: string) => setSelectedPromotions((prev) => prev.filter((v) => v !== value));
 
   const hasActiveFilters = React.useMemo(() => {
@@ -233,7 +249,6 @@ export const ProductList: React.FC = () => {
       isSearching ||
       priceMin !== 0 ||
       priceMax !== computedPriceMax ||
-      selectedAvailability.length > 0 ||
       selectedPromotions.length > 0 ||
       selectedCategories.length > 0 ||
       selectedBrands.length > 0 ||
@@ -245,7 +260,6 @@ export const ProductList: React.FC = () => {
     priceMin,
     priceMax,
     computedPriceMax,
-    selectedAvailability,
     selectedPromotions,
     selectedCategories,
     selectedBrands,
@@ -287,15 +301,15 @@ export const ProductList: React.FC = () => {
         {shouldLoadFilters && isLoadingCategories ? (
           <p className="text-xs text-gray-500 animate-pulse">Đang tải danh mục...</p>
         ) : categoryOptions.length > 0 ? (
-          categoryOptions.map((categoryName) => (
-            <label key={categoryName} className="flex items-center gap-2.5 text-sm text-gray-700 cursor-pointer select-none hover:text-gray-900 transition-colors">
+          categoryOptions.map((category) => (
+            <label key={category.id} className="flex items-center gap-2.5 text-sm text-gray-700 cursor-pointer select-none hover:text-gray-900 transition-colors">
               <input
                 type="checkbox"
-                checked={selectedCategories.includes(categoryName)}
-                onChange={() => toggleTextFilter(categoryName, setSelectedCategories)}
+                checked={selectedCategories.includes(category.id)}
+                onChange={() => toggleTextFilter(category.id, setSelectedCategories)}
                 className="w-4 h-4 rounded border-gray-300 text-[#D4AF37] focus:ring-[#D4AF37]/50 cursor-pointer"
               />
-              <span>{categoryName}</span>
+              <span>{category.label}</span>
             </label>
           ))
         ) : (
@@ -313,15 +327,15 @@ export const ProductList: React.FC = () => {
         {shouldLoadFilters && isLoadingBrands ? (
           <p className="text-xs text-gray-500 animate-pulse">Đang tải thương hiệu...</p>
         ) : brandOptions.length > 0 ? (
-          brandOptions.map((brandName) => (
-            <label key={brandName} className="flex items-center gap-2.5 text-sm text-gray-700 cursor-pointer select-none hover:text-gray-900 transition-colors">
+          brandOptions.map((brand) => (
+            <label key={brand.id} className="flex items-center gap-2.5 text-sm text-gray-700 cursor-pointer select-none hover:text-gray-900 transition-colors">
               <input
                 type="checkbox"
-                checked={selectedBrands.includes(brandName)}
-                onChange={() => toggleTextFilter(brandName, setSelectedBrands)}
+                checked={selectedBrands.includes(brand.id)}
+                onChange={() => toggleTextFilter(brand.id, setSelectedBrands)}
                 className="w-4 h-4 rounded border-gray-300 text-[#D4AF37] focus:ring-[#D4AF37]/50 cursor-pointer"
               />
-              <span>{brandName}</span>
+              <span>{brand.label}</span>
             </label>
           ))
         ) : (
@@ -336,7 +350,9 @@ export const ProductList: React.FC = () => {
     <div className="flex flex-col gap-3">
       <h3 className="text-sm font-bold text-gray-900 uppercase tracking-wider">Theo loại da</h3>
       <div className="flex flex-col gap-2.5">
-        {skinTypeOptions.map((skinType) => (
+        {(
+          showAllSkinTypes ? skinTypeOptions : skinTypeOptions.slice(0, 5)
+        ).map((skinType) => (
           <label key={skinType} className="flex items-center gap-2.5 text-sm text-gray-700 cursor-pointer select-none hover:text-gray-900 transition-colors">
             <input
               type="checkbox"
@@ -347,6 +363,15 @@ export const ProductList: React.FC = () => {
             <span>{skinType}</span>
           </label>
         ))}
+        {skinTypeOptions.length > 5 && (
+          <button
+            type="button"
+            onClick={() => setShowAllSkinTypes((s) => !s)}
+            className="text-sm text-gray-500 hover:text-gray-700 mt-1 self-start"
+          >
+            {showAllSkinTypes ? 'Thu gọn' : 'Xem thêm'}
+          </button>
+        )}
       </div>
     </div>
 
@@ -356,14 +381,14 @@ export const ProductList: React.FC = () => {
     <div className="flex flex-col gap-3">
       <h3 className="text-sm font-bold text-gray-900 uppercase tracking-wider">Giá</h3>
       <div className="flex flex-col gap-4">
-        <div className="flex items-center justify-between text-xs font-semibold text-gray-700 bg-gray-50 px-2.5 py-1.5 rounded-lg border border-gray-100">
-          <span>{formatCurrency(priceMin)}</span>
+        <div className="flex items-center justify-between text-xs font-semibold text-gray-700 bg-gray-50 px-3 py-2 rounded-lg border border-gray-100" style={{ marginBottom: 8, padding: '8px 12px' }}>
+          <span style={{ minWidth: 80 }}>{formatCurrency(priceMin)}</span>
           <span className="text-gray-300">|</span>
-          <span>{formatCurrency(priceMax)}</span>
+          <span style={{ minWidth: 80, textAlign: 'right' }}>{formatCurrency(priceMax)}</span>
         </div>
         
         {/* Khung chứa thanh trượt kép sử dụng Pointer Events */}
-        <div className="relative w-full h-2 bg-gray-100 rounded-full">
+        <div className="relative w-full h-2 bg-gray-100 rounded-full" style={{ paddingRight: 12, boxSizing: 'border-box', width: '100%' }}>
           {/* ĐƯỜNG NỐI MÀU VÀNG GIỮA MIN VÀ MAX */}
           <div 
             className="absolute h-2 bg-[#D4AF37] rounded-full z-10"
@@ -407,7 +432,7 @@ export const ProductList: React.FC = () => {
     <div className="flex flex-col gap-3">
       <h3 className="text-sm font-bold text-gray-900 uppercase tracking-wider">Đánh giá</h3>
       <div className="flex flex-col gap-1.5">
-        {[5, 4, 3, 2, 1].map((rating) => {
+        {[4, 3, 2, 1].map((rating) => {
           const isActive = selectedRatings.includes(rating);
           return (
             <button
@@ -430,64 +455,26 @@ export const ProductList: React.FC = () => {
                   />
                 ))}
               </span>
-              <span>{rating} sao</span>
+              <span>&gt;={rating} sao</span>
             </button>
           );
         })}
       </div>
     </div>
 
-    <hr className="border-gray-100" />
-
-    {/* 6. Theo khuyến mãi */}
-    <div className="flex flex-col gap-3">
-      <h3 className="text-sm font-bold text-gray-900 uppercase tracking-wider">Theo khuyến mãi</h3>
-      <div className="flex flex-col gap-2.5">
-        {promotionOptions.map((promotion) => (
-          <label key={promotion} className="flex items-center gap-2.5 text-sm text-gray-700 cursor-pointer select-none hover:text-gray-900 transition-colors">
-            <input
-              type="checkbox"
-              checked={selectedPromotions.includes(promotion)}
-              onChange={() => toggleTextFilter(promotion, setSelectedPromotions)}
-              className="w-4 h-4 rounded border-gray-300 text-[#D4AF37] focus:ring-[#D4AF37]/50 cursor-pointer"
-            />
-            <span>{promotion}</span>
-          </label>
-        ))}
-      </div>
-    </div>
   </div>
 );
 
   return (
     <section className="product-list-page">
       <div className="container">
-        <header className="product-list__header">
-          <h1>Tùy chọn lọc</h1>
-          <form className="product-list__search" onSubmit={onSubmitSearch}>
-            <Search size={18} aria-hidden />
-            <input
-              type="text"
-              value={searchInput}
-              onChange={(event) => setSearchInput(event.target.value)}
-              placeholder="Tìm theo tên sản phẩm"
-              aria-label="Tìm sản phẩm"
-            />
-            {searchKeyword && (
-              <button
-                type="button"
-                onClick={clearSearch}
-                aria-label="Xóa tìm kiếm"
-                title="Xóa tìm kiếm"
-              >
-                <X size={16} color="#ffffff"/>
-              </button>
-            )}
-            
-          </form>
+        <header className="flex items-center justify-between w-full gap-4 mb-6">
+          {/* Nút bấm Filter hiển thị trên Mobile. 
+            Nếu trên Desktop (lg) thì ẩn đi vì đã có Sidebar.
+          */}
           <button
             type="button"
-            className="product-list__mobile-filter-btn"
+            className="lg:hidden flex items-center gap-2 px-4 h-11 bg-white border border-solid border-gray-200 rounded-full text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
             onClick={() => {
               setShouldLoadFilters(true);
               setIsFilterDrawerOpen(true);
@@ -496,6 +483,43 @@ export const ProductList: React.FC = () => {
             <SlidersHorizontal size={16} />
             <span>Filters</span>
           </button>
+
+          {/* Thành phần trống đẩy Thanh Search về bên phải trên màn hình lớn.
+            Trên mobile nếu nút filter ẩn thì thanh search tự động giãn rộng 100%.
+          */}
+          <div className="hidden lg:block flex-1" />
+
+          {/* THANH TÌM KIẾM ĐÃ CẢI THIỆN */}
+          <form 
+            className="relative flex items-center w-full max-w-lg h-11 bg-[#FAF6F1] border border-solid border-[#CCDFE3] rounded-full px-4 gap-3 transition-all duration-200 focus-within:bg-white focus-within:border-[#2B6377] focus-within:shadow-[0_0_0_4px_rgba(43,99,119,0.08)]" 
+            onSubmit={onSubmitSearch}
+          >
+            {/* Icon kính lúp - Đổi màu nhẹ khi người dùng tập trung nhập liệu */}
+            <Search className="text-gray-400 transition-colors duration-200 group-focus-within:text-[#2B6377] shrink-0" size={18} aria-hidden />
+            
+            {/* Ô nhập liệu văn bản sạch sẽ, loại bỏ outline mặc định */}
+            <input
+              type="text"
+              value={searchInput}
+              onChange={(event) => setSearchInput(event.target.value)}
+              placeholder="Tìm theo tên sản phẩm..."
+              className="w-full h-full bg-transparent text-sm text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-0 border-none p-0"
+              aria-label="Tìm sản phẩm"
+            />
+            
+            {/* Nút xóa nhanh ký tự (Xuất hiện ngay khi người dùng bắt đầu gõ) */}
+            {searchInput && (
+              <button
+                type="button"
+                onClick={clearSearch}
+                className="flex items-center justify-center w-5 h-5 rounded-full bg-gray-200 hover:bg-gray-300 text-gray-500 hover:text-gray-700 transition-colors shrink-0"
+                aria-label="Xóa tìm kiếm"
+                title="Xóa tìm kiếm"
+              >
+                <X size={12} />
+              </button>
+            )}
+          </form>
         </header>
 
         <div className="product-list__active-filters">
@@ -541,8 +565,8 @@ export const ProductList: React.FC = () => {
 
           {selectedCategories.map((c) => (
             <span key={`cat-${c}`} className="chip">
-              {c}
-              <button type="button" className="chip__close" onClick={() => removeCategory(c)} aria-label={`Xóa ${c}`}>
+              {categoryLabelById.get(c) ?? c}
+              <button type="button" className="chip__close" onClick={() => removeCategory(c)} aria-label={`Xóa ${categoryLabelById.get(c) ?? c}`}>
                 <X size={12} />
               </button>
             </span>
@@ -550,8 +574,8 @@ export const ProductList: React.FC = () => {
 
           {selectedBrands.map((b) => (
             <span key={`brand-${b}`} className="chip">
-              {b}
-              <button type="button" className="chip__close" onClick={() => removeBrand(b)} aria-label={`Xóa ${b}`}>
+              {brandLabelById.get(b) ?? b}
+              <button type="button" className="chip__close" onClick={() => removeBrand(b)} aria-label={`Xóa ${brandLabelById.get(b) ?? b}`}>
                 <X size={12} />
               </button>
             </span>
@@ -576,14 +600,14 @@ export const ProductList: React.FC = () => {
           ))}
 
           {hasActiveFilters && (
-            <div className="product-list__active-filters-actions">
+            <div style={{ marginLeft: 'auto' }}>
               <button
                 type="button"
                 onClick={clearAllFilters}
-                className="inline-flex items-center gap-1.5 px-3 py-1 text-xs font-medium text-gray-500 bg-gray-100 hover:bg-red-50 hover:text-red-600 rounded-full border border-gray-200 hover:border-red-200 transition-all shadow-sm"
+                className="text-sm text-gray-500 hover:text-red-600 hover:underline"
+                aria-label="Xóa tất cả bộ lọc"
               >
-                <span>Xóa tất cả</span>
-                <X size={12} className="opacity-70" />
+                Xóa tất cả
               </button>
             </div>
           )}
@@ -591,7 +615,7 @@ export const ProductList: React.FC = () => {
 
         <div className="product-list__meta-row">
           <p>
-            Đang hiển thị {pageStart}-{pageEnd} / {displayedProducts.length} sản phẩm
+            Đang hiển thị {pageStart}-{pageEnd} / {pageData?.totalElements ?? 0} sản phẩm
           </p>
           <label className="product-list__sort">
             <span>Sắp xếp</span>
@@ -620,13 +644,13 @@ export const ProductList: React.FC = () => {
           </aside>
 
           <div className="product-list__grid">
-            {paginatedProducts.map((p) => (
-              <div key={p.id || p.productId} className="product-list__grid-item">
+            {cardProducts.map((p) => (
+              <div key={p.id} className="product-list__grid-item">
                 <ProductCard product={p} />
               </div>
             ))}
-            {!isLoading && displayedProducts.length === 0 && (
-              <div className="product-list__empty">Không có sản phẩm phù hợp với từ khóa đã tìm.</div>
+            {!isLoading && products.length === 0 && (
+              <div className="product-list__empty">Không có sản phẩm phù hợp.</div>
             )}
           </div>
         </div>
