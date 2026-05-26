@@ -3,6 +3,13 @@ import { resolveBaseUrl, serviceBase } from '../serviceBase';
 import type { PageResponse } from '../../types/api';
 import type { CatalogProduct, CatalogProductCreateRequest, CatalogProductDetail, ProductCardResponse, ProductStatusRequest } from '../../types/catalog';
 
+export interface ProductOverviewResponse {
+  totalProducts: number;
+  activeProducts: number;
+  featuredProducts: number;
+  outOfStockProducts: number;
+}
+
 export interface UpdateProductPayload {
   name?: string;
   description?: string;
@@ -34,6 +41,12 @@ export const productManagementApi = {
     });
   },
 
+  getProductOverview: () => {
+    return axiosClient.get<unknown, ProductOverviewResponse>(`${catalogProductsPath}/admin/overview`, {
+      baseURL: resolveBaseUrl(serviceBase.catalog),
+    });
+  },
+
   getBestSellingProducts: (params?: Record<string, unknown>) => {
     return axiosClient.get<unknown, PageResponse<CatalogProduct>>(`${catalogProductsPath}/best-selling`, {
       baseURL: resolveBaseUrl(serviceBase.catalog),
@@ -48,8 +61,8 @@ export const productManagementApi = {
     });
   },
 
-  updateProduct: (productId: string, payload: UpdateProductPayload) => {
-    return axiosClient.put<unknown, CatalogProduct>(`${catalogProductsPath}/${productId}`, payload, {
+  updateProduct: (productId: string, payload: CatalogProductCreateRequest) => {
+    return axiosClient.put<unknown, CatalogProductDetail>(`${catalogProductsPath}/${productId}`, payload, {
       baseURL: resolveBaseUrl(serviceBase.catalog),
     });
   },

@@ -7,13 +7,15 @@ import type { ProductCreateFormValues } from '../productCreate.schema';
 const inputClassName =
   'w-full rounded-xl border border-slate-200 bg-slate-100 px-3 py-2 text-sm text-slate-900 outline-none transition focus:border-amber-400 focus:ring-4 focus:ring-amber-100';
 
-const slugify = (value: string) =>
-  value
+const slugify = (value?: unknown) => {
+  const str = typeof value === 'string' ? value : String(value ?? '');
+  return str
     .toLowerCase()
     .normalize('NFD')
     .replace(/\p{Diacritic}/gu, '')
     .replace(/[^a-z0-9]+/g, '-')
     .replace(/^-+|-+$/g, '');
+};
 
 const compactToken = (value: string, fallback: string, length: number) => {
   const token = slugify(value).replace(/-/g, '').toUpperCase();

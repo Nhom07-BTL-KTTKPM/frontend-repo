@@ -21,6 +21,7 @@ import { ProductManagement } from './pages/admin/ProductManagement';
 import { UserManagement} from './pages/admin/UserManagement';
 import { OrderManagement } from './pages/admin/OrderManagement';
 import { ProductCreatePage } from './pages/admin/product-create/ProductCreatePage';
+import { ProductEditPage } from './pages/admin/product-edit/ProductEditPage';
 import { VoucherManagement } from './pages/admin/VoucherManagement';
 
 function App() {
@@ -93,6 +94,7 @@ function App() {
               <Route path="dashboard" element={<AdminDashboard />} />
               <Route path="products" element={<ProductManagement />} />
               <Route path="products/new" element={<ProductCreatePage />} />
+              <Route path="products/:productId/edit" element={<ProductEditPage />} />
               <Route path="orders" element={<OrderManagement />} />
               <Route path="vouchers" element={<VoucherManagement />} />
               <Route path="users" element={<UserManagement />} />
