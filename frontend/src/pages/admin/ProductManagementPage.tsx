@@ -2,7 +2,6 @@ import { useEffect, useMemo, useRef, useState, type FormEvent, type ChangeEvent,
 import { Link, useNavigate } from 'react-router-dom';
 import {
   BadgeCheck,
-  ChevronDown,
   Edit2,
   Eye,
   EyeOff,
@@ -23,7 +22,15 @@ import { toast } from 'sonner';
 import { productManagementApi } from '../../api/admin/productManagementApi';
 import { brandApi } from '../../api/brandApi';
 import { categoryApi } from '../../api/categoryApi';
-import type { BrandRequest, BrandResponse, BrandStatusRequest, CategoryResponse, CategoryStatusRequest } from '../../types/catalog';
+import type {
+  BrandRequest,
+  BrandResponse,
+  BrandStatusRequest,
+  BrandSummaryResponse,
+  CategoryResponse,
+  CategoryStatusRequest,
+  CategorySummaryResponse,
+} from '../../types/catalog';
 
 type ProductCardRow = {
   id: string;
@@ -219,18 +226,54 @@ const ProductStats = ({ products }: { products: ProductCardRow[] }) => {
   );
 };
 
+const buildVisiblePages = (totalPages: number, currentPage: number, maxVisible = 5) => {
+  if (totalPages <= maxVisible) {
+    return Array.from({ length: totalPages }, (_, index) => index);
+  }
+
+  const half = Math.floor(maxVisible / 2);
+  const start = Math.max(0, Math.min(currentPage - half, totalPages - maxVisible));
+
+  return Array.from({ length: maxVisible }, (_, index) => start + index);
+};
+
 const ProductsTab = ({
   products,
   loading,
   error,
+  currentPage,
+  totalPages,
+  totalElements,
+  brandOptions,
+  categoryOptions,
+  selectedBrandId,
+  selectedCategoryId,
+  selectedSort,
+  onBrandChange,
+  onCategoryChange,
+  onSortChange,
+  onPageChange,
   onToggleStatus,
 }: {
   products: ProductCardRow[];
   loading: boolean;
   error: string | null;
+  currentPage: number;
+  totalPages: number;
+  totalElements: number;
+  brandOptions: BrandSummaryResponse[];
+  categoryOptions: CategorySummaryResponse[];
+  selectedBrandId: string;
+  selectedCategoryId: string;
+  selectedSort: string;
+  onBrandChange: (value: string) => void;
+  onCategoryChange: (value: string) => void;
+  onSortChange: (value: string) => void;
+  onPageChange: (page: number) => void;
   onToggleStatus: (product: ProductCardRow) => void;
 }) => {
   const navigate = useNavigate();
+  const visiblePages = buildVisiblePages(totalPages, currentPage);
 
   return (
     <div className="grid gap-6">
@@ -266,56 +309,84 @@ const ProductsTab = ({
 
           <label className="flex cursor-pointer items-center justify-between gap-3 rounded-lg border border-slate-300 bg-white px-4 py-3 text-slate-600 transition hover:bg-slate-50">
             <span className="whitespace-nowrap text-sm">Danh mục</span>
-            <span className="flex items-center gap-1 text-slate-400">
-              <span className="text-sm font-semibold text-slate-900">Tất cả</span>
-              <ChevronDown size={16} />
-            </span>
+            <select
+              value={selectedCategoryId}
+              onChange={(event) => onCategoryChange(event.target.value)}
+                className="flex-1 bg-transparent text-sm font-semibold text-slate-900 outline-none cursor-pointer"
+            >
+              <option value="">Tất cả</option>
+              {categoryOptions.map((category) => (
+                <option key={category.id} value={category.id}>
+                  {category.name}
+                </option>
+              ))}
+            </select>
           </label>
 
           <label className="flex cursor-pointer items-center justify-between gap-3 rounded-lg border border-slate-300 bg-white px-4 py-3 text-slate-600 transition hover:bg-slate-50">
             <span className="whitespace-nowrap text-sm">Brand</span>
-            <span className="flex items-center gap-1 text-slate-400">
-              <span className="text-sm font-semibold text-slate-900">Tất cả</span>
-              <ChevronDown size={16} />
-            </span>
+            <select
+              value={selectedBrandId}
+              onChange={(event) => onBrandChange(event.target.value)}
+                className="flex-1 bg-transparent text-sm font-semibold text-slate-900 outline-none cursor-pointer"
+            >
+              <option value="">Tất cả</option>
+              {brandOptions.map((brand) => (
+                <option key={brand.id} value={brand.id}>
+                  {brand.name}
+                </option>
+              ))}
+            </select>
           </label>
 
           <label className="flex cursor-pointer items-center justify-between gap-3 rounded-lg border border-slate-300 bg-white px-4 py-3 text-slate-600 transition hover:bg-slate-50">
             <span className="whitespace-nowrap text-sm">Sắp xếp</span>
-            <span className="flex items-center gap-1 text-slate-400">
-              <span className="text-sm font-semibold text-slate-900">Mới nhất</span>
-              <ChevronDown size={16} />
-            </span>
+            <select
+              value={selectedSort}
+              onChange={(event) => onSortChange(event.target.value)}
+                className="flex-1 bg-transparent text-sm font-semibold text-slate-900 outline-none cursor-pointer"
+            >
+              <option value="createdAt,desc">Mới nhất</option>
+              <option value="createdAt,asc">Cũ nhất</option>
+              <option value="name,asc">Tên A-Z</option>
+              <option value="name,desc">Tên Z-A</option>
+            </select>
           </label>
         </div>
 
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <div className="flex items-center gap-2 text-sm font-bold text-slate-600">
-            <SlidersHorizontal size={16} />
-            Lọc nhanh
-          </div>
+        
 
-          <div className="flex flex-wrap gap-2">
-            {['Nổi bật', 'Còn hàng', 'Đang bán chạy', 'Giá tăng dần'].map((label) => (
+          <div className="flex flex-wrap items-center gap-2">
+            
+            {(selectedBrandId || selectedCategoryId) ? (
               <button
-                key={label}
                 type="button"
-                className={`rounded-full px-3 py-2 text-xs font-bold transition ${
-                  label === 'Nổi bật'
-                    ? 'bg-slate-900 text-white hover:bg-slate-800'
-                    : 'border border-slate-300 bg-white text-slate-700 hover:bg-slate-50'
-                }`}
+                onClick={() => {
+                  onBrandChange('');
+                  onCategoryChange('');
+                }}
+                className="rounded-full border border-slate-300 bg-white px-3 py-2 text-xs font-bold text-slate-700 transition hover:bg-slate-50"
               >
-                {label}
+                Xóa bộ lọc
               </button>
-            ))}
+            ) : null}
           </div>
         </div>
       </section>
 
+      <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-slate-200 bg-white px-4 py-3 text-sm text-slate-600 shadow-sm">
+        <p className="m-0">
+          Đang hiển thị {products.length} / {totalElements} sản phẩm
+        </p>
+        <p className="m-0">
+          Trang {totalPages > 0 ? currentPage + 1 : 0} / {totalPages}
+        </p>
+      </div>
+
       {loading ? (
         <section className="grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-4 2xl:grid-cols-5">
-            {Array.from({ length: 12 }).map((_, index) => (
+          {Array.from({ length: 12 }).map((_, index) => (
             <article key={index} className="overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm">
               <div className="aspect-video animate-pulse bg-gradient-to-r from-slate-200 via-slate-100 to-slate-200" />
               <div className="space-y-2 p-3">
@@ -420,6 +491,46 @@ const ProductsTab = ({
           })}
         </section>
       )}
+
+      {!loading && !error && totalPages > 1 ? (
+        <nav className="flex flex-wrap items-center justify-center gap-2 rounded-lg border border-slate-200 bg-white p-3 shadow-sm" aria-label="Product pagination">
+          <button
+            type="button"
+            className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-bold text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
+            onClick={() => onPageChange(Math.max(0, currentPage - 1))}
+            disabled={currentPage === 0}
+            aria-label="Trang trước"
+          >
+            &lt;
+          </button>
+
+          {visiblePages.map((page) => (
+            <button
+              key={page}
+              type="button"
+              className={`rounded-lg border px-3 py-2 text-sm font-bold transition ${
+                page === currentPage
+                  ? 'border-amber-500 bg-amber-500 text-white'
+                  : 'border-slate-300 bg-white text-slate-700 hover:bg-slate-50'
+              }`}
+              onClick={() => onPageChange(page)}
+              aria-current={page === currentPage ? 'page' : undefined}
+            >
+              {page + 1}
+            </button>
+          ))}
+
+          <button
+            type="button"
+            className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-bold text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
+            onClick={() => onPageChange(Math.min(totalPages - 1, currentPage + 1))}
+            disabled={currentPage >= totalPages - 1}
+            aria-label="Trang sau"
+          >
+            &gt;
+          </button>
+        </nav>
+      ) : null}
     </div>
   );
 };
@@ -878,6 +989,14 @@ export const ProductManagement = () => {
   const [products, setProducts] = useState<ProductCardRow[]>([]);
   const [productLoading, setProductLoading] = useState(true);
   const [productError, setProductError] = useState<string | null>(null);
+  const [productPage, setProductPage] = useState(0);
+  const [productTotalPages, setProductTotalPages] = useState(0);
+  const [productTotalElements, setProductTotalElements] = useState(0);
+  const [selectedBrandId, setSelectedBrandId] = useState('');
+  const [selectedCategoryId, setSelectedCategoryId] = useState('');
+  const [selectedSort, setSelectedSort] = useState('createdAt,desc');
+  const [brandSummaries, setBrandSummaries] = useState<BrandSummaryResponse[]>([]);
+  const [categorySummaries, setCategorySummaries] = useState<CategorySummaryResponse[]>([]);
 
   const [categories, setCategories] = useState<CategoryResponse[]>([]);
   const [categoryLoading, setCategoryLoading] = useState(false);
@@ -903,13 +1022,29 @@ export const ProductManagement = () => {
   const categoryFileInputRef = useRef<HTMLInputElement | null>(null);
   const [categoryUploading, setCategoryUploading] = useState(false);
 
-  const loadProducts = async () => {
+  const loadProducts = async (page = productPage, brandId = selectedBrandId, categoryId = selectedCategoryId, sort = selectedSort) => {
     try {
       setProductLoading(true);
       setProductError(null);
 
-      const response = await productManagementApi.getAllProducts({ page: 0, size: 20, sort: 'createdAt,desc' });
+      const params: Record<string, unknown> = {
+        page,
+        size: 12,
+        sort,
+      };
+
+      if (brandId) {
+        params.brandId = brandId;
+      }
+
+      if (categoryId) {
+        params.categoryId = categoryId;
+      }
+
+      const response = await productManagementApi.getAllProducts(params);
       setProducts((response.content || []) as ProductCardRow[]);
+      setProductTotalPages(response.totalPages || 0);
+      setProductTotalElements(response.totalElements || 0);
     } catch (requestError) {
       const message = requestError instanceof Error ? requestError.message : 'Không thể tải danh sách sản phẩm.';
       setProductError(message);
@@ -948,8 +1083,27 @@ export const ProductManagement = () => {
     }
   };
 
+  const loadBrandSummaries = async () => {
+    try {
+      const response = await brandApi.getBrandSummaries();
+      setBrandSummaries(response || []);
+    } catch (requestError) {
+      setBrandSummaries([]);
+    }
+  };
+
+  const loadCategorySummaries = async () => {
+    try {
+      const response = await categoryApi.getCategorySummaries();
+      setCategorySummaries(response || []);
+    } catch (requestError) {
+      setCategorySummaries([]);
+    }
+  };
+
   useEffect(() => {
-    void loadProducts();
+    void loadBrandSummaries();
+    void loadCategorySummaries();
   }, []);
 
   useEffect(() => {
@@ -960,6 +1114,10 @@ export const ProductManagement = () => {
       void loadBrands();
     }
   }, [activeTab, categories.length, brands.length, categoryLoading, brandLoading]);
+
+  useEffect(() => {
+    void loadProducts(productPage, selectedBrandId, selectedCategoryId, selectedSort);
+  }, [productPage, selectedBrandId, selectedCategoryId, selectedSort]);
 
   const openCreateCategory = () => {
     setCategoryPanelMode('create');
@@ -1227,6 +1385,25 @@ export const ProductManagement = () => {
   const openBrandFilePicker = () => brandFileInputRef.current?.click();
   const openCategoryFilePicker = () => categoryFileInputRef.current?.click();
 
+  const handleBrandFilterChange = (value: string) => {
+    setSelectedBrandId(value);
+    setProductPage(0);
+  };
+
+  const handleCategoryFilterChange = (value: string) => {
+    setSelectedCategoryId(value);
+    setProductPage(0);
+  };
+
+  const handleSortChange = (value: string) => {
+    setSelectedSort(value);
+    setProductPage(0);
+  };
+
+  const handlePageChange = (page: number) => {
+    setProductPage(page);
+  };
+
   const filteredCategories = useMemo(() => {
     const keyword = categorySearch.trim().toLowerCase();
     if (!keyword) {
@@ -1309,7 +1486,24 @@ export const ProductManagement = () => {
       </div>
 
       {activeTab === 'products' ? (
-        <ProductsTab products={products} loading={productLoading} error={productError} onToggleStatus={toggleProductStatus} />
+        <ProductsTab
+          products={products}
+          loading={productLoading}
+          error={productError}
+          currentPage={productPage}
+          totalPages={productTotalPages}
+          totalElements={productTotalElements}
+          brandOptions={brandSummaries}
+          categoryOptions={categorySummaries}
+          selectedBrandId={selectedBrandId}
+          selectedCategoryId={selectedCategoryId}
+          selectedSort={selectedSort}
+          onBrandChange={handleBrandFilterChange}
+          onCategoryChange={handleCategoryFilterChange}
+          onSortChange={handleSortChange}
+          onPageChange={handlePageChange}
+          onToggleStatus={toggleProductStatus}
+        />
       ) : null}
 
       {activeTab === 'categories' ? (
