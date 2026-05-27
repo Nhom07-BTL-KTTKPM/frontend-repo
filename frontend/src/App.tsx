@@ -43,8 +43,9 @@ function App() {
   }
 
   return (
-    <BrowserRouter>
-      <Routes>
+    <div className="font-[Arial]">
+      <BrowserRouter>
+        <Routes>
         {/* Nhóm Main Layout (có Header/Footer) */}
         <Route element={<MainLayout />}>
 
@@ -101,8 +102,9 @@ function App() {
               <Route path="profile" element={<Profile />} />
             </Route>
           </Route>
-      </Routes>
-    </BrowserRouter>
+        </Routes>
+      </BrowserRouter>
+    </div>
   );
 }
 

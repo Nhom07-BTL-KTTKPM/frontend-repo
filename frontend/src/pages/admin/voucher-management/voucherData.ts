@@ -14,11 +14,11 @@ export const voucherTypeLabels = {
   FREE_SHIPPING: 'FREE_SHIPPING',
 } as const;
 
-export const statusToneMap: Record<VoucherStatus, { label: string; dotClass: string; textClass: string }> = {
-  ACTIVE: { label: 'ACTIVE', dotClass: 'bg-[#137333]', textClass: 'text-[#1E1E1E]' },
-  UPCOMING: { label: 'UPCOMING', dotClass: 'bg-[#1A73E8]', textClass: 'text-[#1E1E1E]' },
-  EXPIRED: { label: 'EXPIRED', dotClass: 'bg-[#5F6368]', textClass: 'text-[#5F6368]' },
-  DISABLED: { label: 'DISABLED', dotClass: 'bg-[#C5221F]', textClass: 'text-[#C5221F]' },
+export const statusToneMap: Record<VoucherStatus, { label: string; badgeClass: string }> = {
+  ACTIVE: { label: 'Đang hoạt động', badgeClass: 'bg-[#BDEFC8] text-[#3D5665]' },
+  UPCOMING: { label: 'Sắp có hiệu lực', badgeClass: 'bg-[#DDE6FB] text-[#4A6077]' },
+  EXPIRED: { label: 'Hết hạn', badgeClass: 'bg-[#F8CBD8] text-[#5B5E73]' },
+  DISABLED: { label: 'Vô hiệu hóa', badgeClass: 'bg-[#BFD1F7] text-[#4A6077]' },
 };
 
 export const typeToneMap = {
