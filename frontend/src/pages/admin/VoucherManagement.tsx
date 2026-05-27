@@ -369,7 +369,7 @@ export const VoucherManagement = () => {
                 <th className="w-[8%] px-3 py-3 text-center">Số lượng</th>
                 <th className="w-[10%] px-3 py-3 text-center">Giới hạn/user</th>
                 <th className="w-[12%] px-4 py-3 text-left">Trạng thái</th>
-                <th className="w-[16%] px-4 py-3 text-left">Ngày bắt đầu - Ngày kết thúc</th>
+                <th className="w-[16%] px-4 py-3 text-left">Thời gian áp dụng</th>
                 <th className="w-[12%] px-4 py-3 text-left">Thao tác</th>
               </tr>
             </thead>
@@ -389,13 +389,13 @@ export const VoucherManagement = () => {
                     <td className="px-3 py-3 text-center align-top whitespace-nowrap">{voucher.quantity}</td>
                     <td className="px-3 py-3 text-center align-top whitespace-nowrap">{voucher.maxUsagePerUser ?? '--'}</td>
                     <td className="px-4 py-3 align-top">
-                      <span className={`inline-flex items-center gap-2 rounded-full border border-[#DADFE6] bg-white px-2.5 py-1 text-xs font-semibold ${tone.textClass}`}>
-                        <span className={`h-2 w-2 rounded-full ${tone.dotClass}`} />
+                        <span className={`inline-flex items-center justify-center rounded-lg px-1 py-1 text-xs font-semibold ${tone.badgeClass}`}>
                         {tone.label}
                       </span>
                     </td>
-                    <td className="px-4 py-3 align-top text-xs text-slate-600">
-                      {formatDateTable(voucher.startDate)} - {formatDateTable(voucher.endDate)}
+                    <td className="px-4 py-3 align-top text-xs">
+                      <p className="font-semibold text-[#0e6f38]">Từ: {formatDateTable(voucher.startDate)}</p>
+                      <p className="mt-1 font-semibold text-[#941c1a]">Đến: {formatDateTable(voucher.endDate)}</p>
                     </td>
                     <td className="px-4 py-3 align-top">
                       <div className="flex items-center gap-2">
@@ -420,13 +420,13 @@ export const VoucherManagement = () => {
                         <button
                           type="button"
                           onClick={() => toggleVoucherStatus(voucher)}
-                          className={`relative inline-flex h-7 w-12 items-center rounded-full border transition ${isEnabled ? 'border-[#16A34A] bg-[#22C55E]' : 'border-[#CBD5E1] bg-[#E2E8F0]'} ${isTogglePending ? 'cursor-wait opacity-70' : 'hover:brightness-95'}`}
+                          className={`relative inline-flex h-6 w-10 items-center rounded-full border transition ${isEnabled ? 'border-[#16A34A] bg-[#22C55E]' : 'border-[#CBD5E1] bg-[#E2E8F0]'} ${isTogglePending ? 'cursor-wait opacity-70' : 'hover:brightness-95'}`}
                           disabled={isTogglePending}
                           title={isEnabled ? 'Tắt voucher' : 'Bật lại voucher'}
                           aria-label={`${isEnabled ? 'Tắt' : 'Bật lại'} voucher ${voucher.code}`}
                         >
                           <span
-                            className={`inline-block h-5 w-5 transform rounded-full bg-white shadow-sm transition ${isEnabled ? 'translate-x-6' : 'translate-x-1'}`}
+                            className={`inline-block h-4 w-4 transform rounded-full bg-white shadow-sm transition ${isEnabled ? 'translate-x-5' : 'translate-x-1'}`}
                           />
                         </button>
                       </div>
