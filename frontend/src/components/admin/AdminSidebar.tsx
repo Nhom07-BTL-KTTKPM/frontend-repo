@@ -6,6 +6,7 @@ type AdminSidebarProps = {
   onToggleCollapsed: () => void;
   onLogout: () => void;
   isLogoutPending: boolean;
+  role?: string;
 };
 
 const linkStyle = ({ isActive }: { isActive: boolean }, collapsed: boolean) => ({
@@ -31,7 +32,9 @@ const navItems = [
   { to: '/admin/profile', label: 'Quản lý thông tin cá nhân', icon: Settings },
 ];
 
-export const AdminSidebar = ({ collapsed, onToggleCollapsed, onLogout, isLogoutPending }: AdminSidebarProps) => {
+export const AdminSidebar = ({ collapsed, onToggleCollapsed, onLogout, isLogoutPending, role }: AdminSidebarProps) => {
+  const visibleNavItems = role === 'ADMIN' ? navItems : navItems.filter((item) => item.to !== '/admin/vouchers');
+
   return (
     <aside
       style={{
@@ -78,7 +81,7 @@ export const AdminSidebar = ({ collapsed, onToggleCollapsed, onLogout, isLogoutP
       )}
 
       <nav style={{ display: 'grid', gap: '0.6rem' }}>
-        {navItems.map(({ to, label, icon: Icon }) => (
+        {visibleNavItems.map(({ to, label, icon: Icon }) => (
           <NavLink key={to} to={to} style={(state) => linkStyle(state, collapsed)} title={collapsed ? label : undefined}>
             <Icon size={18} />
             {!collapsed && label}
