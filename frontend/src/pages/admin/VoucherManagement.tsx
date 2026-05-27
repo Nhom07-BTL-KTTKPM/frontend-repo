@@ -1,6 +1,6 @@
 import { useMemo, useState, useEffect, type FormEvent, type ReactNode } from 'react';
 import { toast } from 'sonner';
-import { CalendarRange, Check, Copy, Eye, FileText, Filter, Gift, Hash, Pencil, Plus, Search, Ticket, TicketPercent, UserRound } from 'lucide-react';
+import { BadgeDollarSign, BadgePercent, CalendarRange, Check, Copy, Eye, FileText, Filter, Gift, Hash, Pencil, Plus, Search, Ticket, TicketPercent, Truck, UserRound } from 'lucide-react';
 import { VoucherFormModal } from './voucher-management/components/VoucherFormModal';
 import { emptyVoucherForm, initialVouchers, statusOptions, statusToneMap, voucherTypeLabels } from './voucher-management/voucherData';
 import type { ModalMode, StatusFilter, Voucher, VoucherFormState, VoucherStatus, VoucherType } from './voucher-management/types';
@@ -40,6 +40,18 @@ const formatCurrency = (value?: number | null) => {
 
   return `${new Intl.NumberFormat('vi-VN', { maximumFractionDigits: 0 }).format(value)} đ`;
 };
+
+const voucherTypeIconMap = {
+  PERCENT: BadgePercent,
+  AMOUNT: BadgeDollarSign,
+  FREE_SHIPPING: Truck,
+} as const;
+
+const voucherTypeLabelMap = {
+  PERCENT: 'Giảm theo phần trăm',
+  AMOUNT: 'Giảm theo số tiền',
+  FREE_SHIPPING: 'Miễn phí vận chuyển',
+} as const;
 
 const getDiscountLabel = (voucher: Voucher) => {
   if (voucher.type === 'PERCENT') {
@@ -403,7 +415,22 @@ export const VoucherManagement = () => {
                     <td className="px-4 py-3 align-top">
                       <div className="font-semibold text-[#1E1E1E]">{voucher.code}</div>
                     </td>
-                    <td className="px-4 py-3 align-top text-[#3A3224]">{voucherTypeLabels[voucher.type]}</td>
+                    <td className="px-4 py-3 align-top text-[#3A3224]">
+                      {(() => {
+                        const TypeIcon = voucherTypeIconMap[voucher.type];
+                        const label = voucherTypeLabelMap[voucher.type];
+
+                        return (
+                          <span
+                            title={label}
+                            aria-label={label}
+                            className="inline-flex h-8 w-8 items-center justify-center  text-[#3A3224]"
+                          >
+                            <TypeIcon size={16} />
+                          </span>
+                        );
+                      })()}
+                    </td>
                     <td className="px-4 py-3 align-top">{getDiscountLabel(voucher)}</td>
                     <td className="px-3 py-3 text-center align-top whitespace-nowrap">{voucher.quantity}</td>
                     <td className="px-3 py-3 text-center align-top whitespace-nowrap">{voucher.maxUsagePerUser ?? '--'}</td>
