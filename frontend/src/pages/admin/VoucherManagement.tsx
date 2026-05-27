@@ -1,14 +1,10 @@
 import { useMemo, useState, useEffect, type FormEvent, type ReactNode } from 'react';
 import { toast } from 'sonner';
-import { Eye, Filter, Pencil, Plus, Search, Ticket, ToggleLeft } from 'lucide-react';
+import { Eye, Filter, Pencil, Plus, Search, Ticket } from 'lucide-react';
 import { VoucherFormModal } from './voucher-management/components/VoucherFormModal';
 import { emptyVoucherForm, initialVouchers, statusOptions, statusToneMap, voucherTypeLabels } from './voucher-management/voucherData';
 import type { ModalMode, StatusFilter, Voucher, VoucherFormState, VoucherStatus, VoucherType } from './voucher-management/types';
 import { voucherApi } from '../../api/admin/voucherApi';
-
-type DeleteDialogState = {
-  voucherId: string;
-} | null;
 
 type DetailDialogState = {
   voucherId: string;
@@ -56,6 +52,22 @@ const getDiscountLabel = (voucher: Voucher) => {
   }
 
   return formatCurrency(voucher.discountValue);
+};
+
+const getStatusWhenEnable = (voucher: Voucher): VoucherStatus => {
+  const now = new Date();
+  const start = new Date(voucher.startDate);
+  const end = new Date(voucher.endDate);
+
+  if (!Number.isNaN(start.getTime()) && now < start) {
+    return 'UPCOMING';
+  }
+
+  if (!Number.isNaN(end.getTime()) && now > end) {
+    return 'EXPIRED';
+  }
+
+  return 'ACTIVE';
 };
 
 const generateVoucherId = () => `voucher-${Math.random().toString(36).slice(2, 10)}-${Date.now()}`;
@@ -156,8 +168,8 @@ export const VoucherManagement = () => {
   const [editingVoucherId, setEditingVoucherId] = useState<string | null>(null);
   const [formState, setFormState] = useState<VoucherFormState>(emptyVoucherForm());
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
-  const [deleteDialog, setDeleteDialog] = useState<DeleteDialogState>(null);
   const [detailDialog, setDetailDialog] = useState<DetailDialogState>(null);
+  const [pendingToggleVoucherId, setPendingToggleVoucherId] = useState<string | null>(null);
 
   const filteredVouchers = useMemo(() => {
     const query = searchTerm.trim().toLowerCase();
@@ -189,10 +201,6 @@ export const VoucherManagement = () => {
 
   const openDetailDialog = (voucher: Voucher) => {
     setDetailDialog({ voucherId: voucher.id });
-  };
-
-  const openDeleteDialog = (voucher: Voucher) => {
-    setDeleteDialog({ voucherId: voucher.id });
   };
 
   useEffect(() => {
@@ -253,20 +261,29 @@ export const VoucherManagement = () => {
     }
   };
 
-  const confirmDelete = () => {
-    if (!deleteDialog) {
+  const toggleVoucherStatus = (voucher: Voucher) => {
+    if (pendingToggleVoucherId === voucher.id) {
       return;
     }
 
+    const nextStatus: VoucherStatus = voucher.status === 'DISABLED' ? getStatusWhenEnable(voucher) : 'DISABLED';
+    setPendingToggleVoucherId(voucher.id);
+
     voucherApi
-      .changeStatus(deleteDialog.voucherId, 'DISABLED')
+      .changeStatus(voucher.id, nextStatus)
       .then((updated) => {
-        setVoucherRows((currentRows) => currentRows.map((voucher) => (voucher.id === deleteDialog.voucherId ? updated : voucher)));
-        setDeleteDialog(null);
-        toast.success('Đã vô hiệu hóa voucher.');
+        setVoucherRows((currentRows) => currentRows.map((row) => (row.id === voucher.id ? updated : row)));
+        if (nextStatus === 'DISABLED') {
+          toast.success('Đã vô hiệu hóa voucher.');
+        } else {
+          toast.success(`Đã bật lại voucher với trạng thái ${nextStatus}.`);
+        }
       })
       .catch(() => {
-        toast.error('Không thể vô hiệu hóa voucher');
+        toast.error('Không thể cập nhật trạng thái voucher');
+      })
+      .finally(() => {
+        setPendingToggleVoucherId(null);
       });
   };
 
@@ -359,6 +376,8 @@ export const VoucherManagement = () => {
             <tbody>
               {filteredVouchers.map((voucher) => {
                 const tone = statusToneMap[voucher.status];
+                const isEnabled = voucher.status !== 'DISABLED';
+                const isTogglePending = pendingToggleVoucherId === voucher.id;
 
                 return (
                   <tr key={voucher.id} className="border-t border-[#E7EBF0] text-[#1E1E1E] transition hover:bg-[#FAFCFF]">
@@ -400,13 +419,15 @@ export const VoucherManagement = () => {
                         </button>
                         <button
                           type="button"
-                          onClick={() => openDeleteDialog(voucher)}
-                          className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-[#D0D7E2] text-[#C5221F] transition hover:border-[#C5221F] hover:bg-[#FDECEC] disabled:cursor-not-allowed disabled:border-[#E5E7EB] disabled:text-slate-400"
-                          disabled={voucher.status === 'DISABLED'}
-                          title="Vô hiệu hóa"
-                          aria-label={`Vô hiệu hóa voucher ${voucher.code}`}
+                          onClick={() => toggleVoucherStatus(voucher)}
+                          className={`relative inline-flex h-7 w-12 items-center rounded-full border transition ${isEnabled ? 'border-[#16A34A] bg-[#22C55E]' : 'border-[#CBD5E1] bg-[#E2E8F0]'} ${isTogglePending ? 'cursor-wait opacity-70' : 'hover:brightness-95'}`}
+                          disabled={isTogglePending}
+                          title={isEnabled ? 'Tắt voucher' : 'Bật lại voucher'}
+                          aria-label={`${isEnabled ? 'Tắt' : 'Bật lại'} voucher ${voucher.code}`}
                         >
-                          <ToggleLeft size={16} />
+                          <span
+                            className={`inline-block h-5 w-5 transform rounded-full bg-white shadow-sm transition ${isEnabled ? 'translate-x-6' : 'translate-x-1'}`}
+                          />
                         </button>
                       </div>
                     </td>
@@ -484,34 +505,7 @@ export const VoucherManagement = () => {
         </ModalShell>
       ) : null}
 
-      {deleteDialog ? (
-        <ModalShell title="Vô hiệu hóa voucher" onClose={() => setDeleteDialog(null)} narrow>
-          <div className="space-y-5">
-            <p className="text-sm leading-6 text-slate-600">Voucher sẽ được chuyển sang trạng thái DISABLED trong dữ liệu mock hiện tại.</p>
 
-            <div className="rounded-2xl border border-[#E0D7CD] bg-[#FAF6F1] p-4 text-sm text-[#1E1E1E]">
-              Hành động này sẽ gọi API đổi trạng thái về DISABLED.
-            </div>
-
-            <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
-              <button
-                type="button"
-                onClick={() => setDeleteDialog(null)}
-                className="inline-flex items-center justify-center rounded-full border border-[#E0D7CD] bg-white px-5 py-3 text-sm font-semibold text-[#1E1E1E] transition hover:border-[#D4B785] hover:bg-[#FAF6F1]"
-              >
-                Hủy
-              </button>
-              <button
-                type="button"
-                onClick={confirmDelete}
-                className="inline-flex items-center justify-center rounded-full bg-[#1E1E1E] px-5 py-3 text-sm font-semibold text-[#FAF6F1] transition hover:bg-[#111111]"
-              >
-                Vô hiệu hóa
-              </button>
-            </div>
-          </div>
-        </ModalShell>
-      ) : null}
     </div>
   );
 };
