@@ -309,6 +309,10 @@ export const VoucherManagement = () => {
     return voucherRows.find((voucher) => voucher.id === detailDialog.voucherId) ?? null;
   }, [detailDialog, voucherRows]);
 
+  const canEditSelectedVoucher = selectedVoucher
+    ? selectedVoucher.status === 'ACTIVE' || selectedVoucher.status === 'UPCOMING'
+    : false;
+
   return (
     <div className="space-y-5 font-['Arial'] text-[#1E1E1E]">
       <section className="rounded-3xl border border-[#E0D7CD] bg-white p-5 shadow-sm lg:p-6">
@@ -549,6 +553,12 @@ export const VoucherManagement = () => {
               </div>
             </section>
 
+            {!canEditSelectedVoucher ? (
+              <div className="rounded-[18px] border border-[#F2C7C7] bg-[#FFF4F4] px-4 py-3 text-sm text-[#9A2C2C]">
+                Voucher ở trạng thái {statusToneMap[selectedVoucher.status].label.toLowerCase()} không thể chỉnh sửa.
+              </div>
+            ) : null}
+
             <div className="flex flex-col-reverse gap-3 pt-2 sm:flex-row sm:justify-end">
               <button
                 type="button"
@@ -557,14 +567,16 @@ export const VoucherManagement = () => {
               >
                 Đóng
               </button>
-              <button
-                type="button"
-                onClick={openEditFromDetail}
-                className="inline-flex h-12 items-center justify-center gap-2 rounded-xl bg-[#1E1E1E] px-5 text-sm font-semibold text-[#FAF6F1] transition hover:bg-[#111111]"
-              >
-                <Pencil size={16} />
-                Chỉnh sửa voucher
-              </button>
+              {canEditSelectedVoucher ? (
+                <button
+                  type="button"
+                  onClick={openEditFromDetail}
+                  className="inline-flex h-12 items-center justify-center gap-2 rounded-xl bg-[#1E1E1E] px-5 text-sm font-semibold text-[#FAF6F1] transition hover:bg-[#111111]"
+                >
+                  <Pencil size={16} />
+                  Chỉnh sửa voucher
+                </button>
+              ) : null}
             </div>
           </div>
         </ModalShell>

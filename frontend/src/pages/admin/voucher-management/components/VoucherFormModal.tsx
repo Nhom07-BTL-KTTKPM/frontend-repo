@@ -105,12 +105,56 @@ const typeSegmentClass = (active: boolean) =>
     ? 'border-[#D4B785] bg-[#1E1E1E] text-[#FAF6F1] shadow-[0_14px_30px_rgba(30,30,30,0.12)]'
     : 'border-[#E0D7CD] bg-white text-[#1E1E1E] hover:border-[#D4B785] hover:bg-[#FAF6F1]';
 
+const statusLabelMap: Record<Exclude<VoucherStatus, ''>, string> = {
+  ACTIVE: 'Đang hoạt động',
+  UPCOMING: 'Sắp có hiệu lực',
+  EXPIRED: 'Hết hạn',
+  DISABLED: 'Vô hiệu hóa',
+};
+
+const getVoucherEditPolicy = (modalMode: 'create' | 'edit' | null, status: VoucherStatus | '') => {
+  if (modalMode !== 'edit') {
+    return {
+      canEditAll: true,
+      canEditOnlyQuantityAndEndDate: false,
+      isLocked: false,
+      statusLabel: null,
+    };
+  }
+
+  if (status === 'UPCOMING') {
+    return {
+      canEditAll: true,
+      canEditOnlyQuantityAndEndDate: false,
+      isLocked: false,
+      statusLabel: statusLabelMap.UPCOMING,
+    };
+  }
+
+  if (status === 'ACTIVE') {
+    return {
+      canEditAll: false,
+      canEditOnlyQuantityAndEndDate: true,
+      isLocked: false,
+      statusLabel: statusLabelMap.ACTIVE,
+    };
+  }
+
+  return {
+    canEditAll: false,
+    canEditOnlyQuantityAndEndDate: false,
+    isLocked: true,
+    statusLabel: status ? statusLabelMap[status as Exclude<VoucherStatus, ''>] : null,
+  };
+};
+
 const Field = ({
   label,
   error,
   tooltip,
   icon,
   suffix,
+  disabled,
   children,
 }: {
   label: string;
@@ -118,10 +162,11 @@ const Field = ({
   tooltip?: FieldTooltip;
   icon?: FieldIcon;
   suffix?: ReactNode;
+  disabled?: boolean;
   children: ReactNode;
 }) => (
   <label className="block space-y-2">
-    <span className="inline-flex items-start gap-1 text-xs font-bold uppercase tracking-[0.2em] text-[#1E1E1E]">
+    <span className={`inline-flex items-start gap-1 text-xs font-bold uppercase tracking-[0.2em] ${disabled ? 'text-slate-400' : 'text-[#1E1E1E]'}`}>
       <span>{label}</span>
       {tooltip ? (
         <span className="group/icon relative inline-flex align-middle">
@@ -142,13 +187,13 @@ const Field = ({
     <div className="overflow-hidden rounded-2xl border border-[#E0D7CD] bg-[#FAF6F1] transition focus-within:border-[#D4B785]">
       <div className="flex items-stretch">
         {icon ? (
-          <div className="grid w-12 shrink-0 place-items-center border-r border-[#E8DDD1] text-[#8D7B69]">
+          <div className={`grid w-12 shrink-0 place-items-center border-r border-[#E8DDD1] ${disabled ? 'text-slate-300' : 'text-[#8D7B69]'}`}>
             {icon}
           </div>
         ) : null}
         <div className="min-w-0 flex-1">{children}</div>
         {suffix ? (
-          <div className="grid min-w-[44px] shrink-0 place-items-center border-l border-[#E8DDD1] bg-[#F1E9DE] px-3 text-sm font-semibold text-[#6B6258]">
+          <div className={`grid min-w-[44px] shrink-0 place-items-center border-l border-[#E8DDD1] px-3 text-sm font-semibold ${disabled ? 'bg-[#F7F7F7] text-slate-400' : 'bg-[#F1E9DE] text-[#6B6258]'}`}>
             {suffix}
           </div>
         ) : null}
@@ -163,18 +208,21 @@ const Segment = ({
   label,
   description,
   icon,
+  disabled,
   onClick,
 }: {
   active: boolean;
   label: string;
   description: string;
   icon: ReactNode;
+  disabled?: boolean;
   onClick: () => void;
 }) => (
   <button
     type="button"
     onClick={onClick}
-    className={`flex min-h-[96px] items-center gap-4 rounded-2xl border px-4 py-4 text-left transition ${typeSegmentClass(active)}`}
+    disabled={disabled}
+    className={`flex min-h-[96px] items-center gap-4 rounded-2xl border px-4 py-4 text-left transition ${typeSegmentClass(active)} ${disabled ? 'cursor-not-allowed opacity-60' : ''}`}
   >
     <span className={`grid h-14 w-14 shrink-0 place-items-center rounded-full ${active ? 'bg-white/12' : 'bg-[#F2EBE0]'} ${active ? 'text-current' : 'text-[#8D7B69]'}`}>
       {icon}
@@ -228,38 +276,55 @@ export const VoucherFormModal = ({
     typeValue === 'PERCENT'
       ? 'Nhập phần trăm giảm giá'
       : 'Nhập giá trị giảm giá';
+  const editPolicy = getVoucherEditPolicy(modalMode, formState.status);
+  const isCreateMode = modalMode === 'create';
+  const lockAllFields = editPolicy.isLocked;
+  const lockExceptQuantityAndEndDate = modalMode === 'edit' && editPolicy.canEditOnlyQuantityAndEndDate;
 
   return (
     <ModalShell title={title} onClose={onClose}>
       <form className="grid gap-4" onSubmit={onSubmit}>
+        {editPolicy.statusLabel ? (
+          <div className={`rounded-2xl border px-4 py-3 text-sm ${lockAllFields ? 'border-[#F2C7C7] bg-[#FFF4F4] text-[#9A2C2C]' : 'border-[#D9E7F6] bg-[#F3F8FE] text-[#214F7B]'}`}>
+            {lockAllFields
+              ? `Không thể chỉnh sửa thông tin voucher ở trạng thái ${editPolicy.statusLabel}.`
+              : editPolicy.canEditOnlyQuantityAndEndDate
+                ? `Chỉ cho phép thay đổi Số lượng và Ngày kết thúc đối với voucher ở trạng thái ${editPolicy.statusLabel}.`
+                : `Voucher ở trạng thái ${editPolicy.statusLabel}.`}
+          </div>
+        ) : null}
+
         <section className="rounded-[18px] border border-[#ECE5DB] bg-white p-4 shadow-[0_1px_0_rgba(30,30,30,0.02)]">
           <div className="grid gap-4 md:grid-cols-2">
-          <Field label="Code *" error={formErrors.code} tooltip={fieldTooltipMap.code}>
+          <Field label="Code *" error={formErrors.code} tooltip={fieldTooltipMap.code} disabled={!isCreateMode && !editPolicy.canEditAll}>
             <input
               value={formState.code}
               onChange={(event) => onChange({ code: event.target.value.toUpperCase() })}
-              className="h-12 w-full bg-transparent px-4 text-sm font-mono tracking-[0.12em] text-[#1E1E1E] outline-none"
+              disabled={!isCreateMode && !editPolicy.canEditAll}
+              className="h-12 w-full bg-transparent px-4 text-sm font-mono tracking-[0.12em] text-[#1E1E1E] outline-none disabled:cursor-not-allowed disabled:text-slate-400"
               placeholder="SUMMER10"
             />
           </Field>
 
-          <Field label="Tên voucher *" error={formErrors.name} tooltip={fieldTooltipMap.name}>
+          <Field label="Tên voucher *" error={formErrors.name} tooltip={fieldTooltipMap.name} disabled={!isCreateMode && !editPolicy.canEditAll}>
             <input
               value={formState.name}
               onChange={(event) => onChange({ name: event.target.value })}
-              className="h-12 w-full px-4 text-sm text-[#151515] outline-none"
+              disabled={!isCreateMode && !editPolicy.canEditAll}
+              className="h-12 w-full px-4 text-sm text-[#151515] outline-none disabled:cursor-not-allowed disabled:text-slate-400"
               placeholder="Giảm giá mùa hè 10%"
             />
           </Field>
           </div>
 
           <div className="mt-4">
-            <Field label="Mô tả" tooltip={fieldTooltipMap.description} >
+            <Field label="Mô tả" tooltip={fieldTooltipMap.description} disabled={!isCreateMode && !editPolicy.canEditAll}>
               <textarea
                 rows={3}
                 value={formState.description}
                 onChange={(event) => onChange({ description: event.target.value })}
-                className="min-h-[96px] w-full resize-none bg-transparent px-4 py-3 text-sm text-[#1E1E1E] outline-none"
+                disabled={!isCreateMode && !editPolicy.canEditAll}
+                className="min-h-[96px] w-full resize-none bg-transparent px-4 py-3 text-sm text-[#1E1E1E] outline-none disabled:cursor-not-allowed disabled:text-slate-400"
                 placeholder="Áp dụng cho đơn hàng từ 100.000đ"
               />
             </Field>
@@ -267,13 +332,14 @@ export const VoucherFormModal = ({
         </section>
 
         <section className="rounded-[18px] border border-[#ECE5DB] bg-white p-4 shadow-[0_1px_0_rgba(30,30,30,0.02)]">
-          <Field label="Loại voucher *" error={formErrors.type}>
+          <Field label="Loại voucher *" error={formErrors.type} disabled={!isCreateMode && !editPolicy.canEditAll}>
             <div className="grid gap-3 md:grid-cols-3">
               <Segment
                 active={typeValue === 'PERCENT'}
                 label={segmentMetaMap.PERCENT.title}
                 description={segmentMetaMap.PERCENT.description}
                 icon={segmentMetaMap.PERCENT.icon}
+                disabled={!isCreateMode && !editPolicy.canEditAll}
                 onClick={() => onChange({ type: 'PERCENT' })}
               />
               <Segment
@@ -281,6 +347,7 @@ export const VoucherFormModal = ({
                 label={segmentMetaMap.AMOUNT.title}
                 description={segmentMetaMap.AMOUNT.description}
                 icon={segmentMetaMap.AMOUNT.icon}
+                disabled={!isCreateMode && !editPolicy.canEditAll}
                 onClick={() => onChange({ type: 'AMOUNT' })}
               />
               <Segment
@@ -288,6 +355,7 @@ export const VoucherFormModal = ({
                 label={segmentMetaMap.FREE_SHIPPING.title}
                 description={segmentMetaMap.FREE_SHIPPING.description}
                 icon={segmentMetaMap.FREE_SHIPPING.icon}
+                disabled={!isCreateMode && !editPolicy.canEditAll}
                 onClick={() => onChange({ type: 'FREE_SHIPPING' })}
               />
             </div>
@@ -300,7 +368,7 @@ export const VoucherFormModal = ({
             label={`${discountValueLabel} *`}
             error={formErrors.discountValue}
             tooltip={fieldTooltipMap.discountValue}
-            
+            disabled={!isCreateMode && lockExceptQuantityAndEndDate}
             suffix={typeValue === 'PERCENT' ? '%' : typeValue === 'FREE_SHIPPING' ? 'đ' : 'đ'}
           >
             <input
@@ -308,7 +376,8 @@ export const VoucherFormModal = ({
               min="0"
               value={formState.discountValue}
               onChange={(event) => onChange({ discountValue: event.target.value })}
-              className="h-12 w-full bg-transparent px-4 text-sm text-[#1E1E1E] outline-none"
+              disabled={!isCreateMode && lockExceptQuantityAndEndDate}
+              className="h-12 w-full bg-transparent px-4 text-sm text-[#1E1E1E] outline-none disabled:cursor-not-allowed disabled:text-slate-400"
               placeholder="10"
             />
           </Field>
@@ -317,7 +386,7 @@ export const VoucherFormModal = ({
             label="Mức giảm tối đa"
             error={formErrors.maxDiscountAmount}
             tooltip={fieldTooltipMap.maxDiscountAmount}
-           
+            disabled={!isCreateMode && lockExceptQuantityAndEndDate}
             suffix="đ"
           >
             <input
@@ -325,7 +394,8 @@ export const VoucherFormModal = ({
               min="0"
               value={formState.maxDiscountAmount}
               onChange={(event) => onChange({ maxDiscountAmount: event.target.value })}
-              className="h-12 w-full bg-transparent px-4 text-sm text-[#1E1E1E] outline-none"
+              disabled={!isCreateMode && lockExceptQuantityAndEndDate}
+              className="h-12 w-full bg-transparent px-4 text-sm text-[#1E1E1E] outline-none disabled:cursor-not-allowed disabled:text-slate-400"
               placeholder="50000"
             />
           </Field>
@@ -334,7 +404,7 @@ export const VoucherFormModal = ({
             label="Đơn hàng tối thiểu *"
             error={formErrors.minOrderAmount}
             tooltip={fieldTooltipMap.minOrderAmount}
-            
+            disabled={!isCreateMode && lockExceptQuantityAndEndDate}
             suffix="đ"
           >
             <input
@@ -342,7 +412,8 @@ export const VoucherFormModal = ({
               min="0"
               value={formState.minOrderAmount}
               onChange={(event) => onChange({ minOrderAmount: event.target.value })}
-              className="h-12 w-full bg-transparent px-4 text-sm text-[#1E1E1E] outline-none"
+              disabled={!isCreateMode && lockExceptQuantityAndEndDate}
+              className="h-12 w-full bg-transparent px-4 text-sm text-[#1E1E1E] outline-none disabled:cursor-not-allowed disabled:text-slate-400"
               placeholder="100000"
             />
           </Field>
@@ -351,33 +422,36 @@ export const VoucherFormModal = ({
 
         <section className="rounded-[18px] border border-[#ECE5DB] bg-white p-4 shadow-[0_1px_0_rgba(30,30,30,0.02)]">
           <div className="grid gap-4 md:grid-cols-3">
-          <Field label="Số lượng *" error={formErrors.quantity} tooltip={fieldTooltipMap.quantity} >
+          <Field label="Số lượng *" error={formErrors.quantity} tooltip={fieldTooltipMap.quantity} disabled={!isCreateMode && lockAllFields}>
             <input
               type="number"
               min="1"
               value={formState.quantity}
               onChange={(event) => onChange({ quantity: event.target.value })}
-              className="h-12 w-full bg-transparent px-4 text-sm text-[#1E1E1E] outline-none"
+              disabled={!isCreateMode && lockAllFields}
+              className="h-12 w-full bg-transparent px-4 text-sm text-[#1E1E1E] outline-none disabled:cursor-not-allowed disabled:text-slate-400"
               placeholder="100"
             />
           </Field>
 
-          <Field label="Lượt dùng / user" error={formErrors.maxUsagePerUser} tooltip={fieldTooltipMap.maxUsagePerUser} >
+          <Field label="Lượt dùng / user" error={formErrors.maxUsagePerUser} tooltip={fieldTooltipMap.maxUsagePerUser} disabled={!isCreateMode && !editPolicy.canEditAll}>
             <input
               type="number"
               min="1"
               value={formState.maxUsagePerUser}
               onChange={(event) => onChange({ maxUsagePerUser: event.target.value })}
-              className="h-12 w-full bg-transparent px-4 text-sm text-[#1E1E1E] outline-none"
+              disabled={!isCreateMode && !editPolicy.canEditAll}
+              className="h-12 w-full bg-transparent px-4 text-sm text-[#1E1E1E] outline-none disabled:cursor-not-allowed disabled:text-slate-400"
               placeholder="1"
             />
           </Field>
 
-          <Field label="Trạng thái *" error={formErrors.status}>
+          <Field label="Trạng thái *" error={formErrors.status} disabled={!isCreateMode && !editPolicy.canEditAll}>
             <select
               value={formState.status}
               onChange={(event) => onChange({ status: event.target.value as VoucherStatus })}
-              className="h-12 w-full bg-transparent px-4 text-sm text-[#1E1E1E] outline-none"
+              disabled={!isCreateMode && !editPolicy.canEditAll}
+              className="h-12 w-full bg-transparent px-4 text-sm text-[#1E1E1E] outline-none disabled:cursor-not-allowed disabled:text-slate-400"
             >
               <option value="">Chọn trạng thái</option>
               <option value="ACTIVE">ACTIVE</option>
@@ -391,21 +465,23 @@ export const VoucherFormModal = ({
 
         <section className="rounded-[18px] border border-[#ECE5DB] bg-white p-4 shadow-[0_1px_0_rgba(30,30,30,0.02)]">
           <div className="grid gap-4 md:grid-cols-2">
-          <Field label="Ngày bắt đầu *" error={formErrors.startDate} tooltip={fieldTooltipMap.startDate} icon={fieldIconMap.startDate}>
+          <Field label="Ngày bắt đầu *" error={formErrors.startDate} tooltip={fieldTooltipMap.startDate} icon={fieldIconMap.startDate} disabled={!isCreateMode && !editPolicy.canEditAll}>
             <input
               type="datetime-local"
               value={formState.startDate}
               onChange={(event) => onChange({ startDate: event.target.value })}
-              className="h-12 w-full bg-transparent px-4 text-sm text-[#1E1E1E] outline-none"
+              disabled={!isCreateMode && !editPolicy.canEditAll}
+              className="h-12 w-full bg-transparent px-4 text-sm text-[#1E1E1E] outline-none disabled:cursor-not-allowed disabled:text-slate-400"
             />
           </Field>
 
-          <Field label="Ngày kết thúc *" error={formErrors.endDate} tooltip={fieldTooltipMap.endDate} icon={fieldIconMap.endDate}>
+          <Field label="Ngày kết thúc *" error={formErrors.endDate} tooltip={fieldTooltipMap.endDate} icon={fieldIconMap.endDate} disabled={lockAllFields}>
             <input
               type="datetime-local"
               value={formState.endDate}
               onChange={(event) => onChange({ endDate: event.target.value })}
-              className="h-12 w-full bg-transparent px-4 text-sm text-[#1E1E1E] outline-none"
+              disabled={lockAllFields}
+              className="h-12 w-full bg-transparent px-4 text-sm text-[#1E1E1E] outline-none disabled:cursor-not-allowed disabled:text-slate-400"
             />
           </Field>
           </div>
@@ -421,10 +497,11 @@ export const VoucherFormModal = ({
           </button>
           <button
             type="submit"
-            className="inline-flex h-12 items-center justify-center gap-2 rounded-xl bg-[#1E1E1E] px-6 text-sm font-semibold text-[#FAF6F1] transition hover:bg-[#111111]"
+            disabled={lockAllFields}
+            className="inline-flex h-12 items-center justify-center gap-2 rounded-xl bg-[#1E1E1E] px-6 text-sm font-semibold text-[#FAF6F1] transition hover:bg-[#111111] disabled:cursor-not-allowed disabled:bg-[#B9B9B9]"
           >
             <CheckCircle2 size={16} />
-            {modalMode === 'edit' ? 'Lưu thay đổi' : 'Tạo voucher'}
+            {modalMode === 'edit' ? (lockAllFields ? 'Không thể chỉnh sửa' : 'Lưu thay đổi') : 'Tạo voucher'}
           </button>
         </div>
       </form>
