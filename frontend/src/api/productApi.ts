@@ -99,4 +99,11 @@ export const productApi = {
   getBrandsSummary: () => {
     return axiosClient.get<unknown, BrandSummaryResponse[]>('/catalog/brands/summary');
   },
+
+  // GET /api/v1/catalog/products/best-selling
+  getBestSellingProducts: (params?: Record<string, unknown>) => {
+    return axiosClient.get<unknown, PageResponse<ProductCardResponse>>(`${catalogProductsPath}/best-selling`, {
+      params,
+    });
+  },
 };
