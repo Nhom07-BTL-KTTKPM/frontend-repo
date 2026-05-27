@@ -107,7 +107,6 @@ export const OrderLookup = () => {
                                 </button>
                             )}
                             {order.status !== 'PENDING' && !['CANCELLED', 'DELIVERED', 'REFUNDED'].includes(order.status) && (
-                            {!['CANCELLED', 'DELIVERED', 'REFUNDED'].includes(order.status) && (
                                 <span style={{ fontSize: '0.8rem', color: 'var(--color-gray-500)', fontStyle: 'italic', marginRight: '4px' }}>
                                     Liên hệ CSKH để hủy
                                 </span>
