@@ -8,7 +8,6 @@ import { MainLayout } from './components/layout/MainLayout';
 import { AdminLayout } from './components/layout/AdminLayout';
 import { GuestRoute } from './routes/GuestRoute';
 import { ProtectedRoute } from './routes/ProtectedRoute';
-import { EmployeeRoute } from './routes/EmployeeRoute';
 import { AdminRoute } from './routes/AdminRoute';
 
 // Pages
@@ -97,6 +96,7 @@ function App() {
               <Route path="products/new" element={<ProductCreatePage />} />
               <Route path="products/:productId/edit" element={<ProductEditPage />} />
               <Route path="orders" element={<OrderManagement />} />
+              <Route path="voucher" element={<VoucherManagement />} />
               <Route path="vouchers" element={<VoucherManagement />} />
               <Route path="users" element={<UserManagement />} />
               <Route path="profile" element={<Profile />} />
