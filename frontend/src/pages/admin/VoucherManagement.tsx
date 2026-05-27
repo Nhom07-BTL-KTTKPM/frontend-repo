@@ -1,6 +1,6 @@
 import { useMemo, useState, useEffect, type FormEvent, type ReactNode } from 'react';
 import { toast } from 'sonner';
-import { Eye, Filter, Pencil, Plus, Search, Ticket } from 'lucide-react';
+import { CalendarRange, Check, Copy, Eye, FileText, Filter, Gift, Hash, Pencil, Plus, Search, Ticket, TicketPercent, UserRound } from 'lucide-react';
 import { VoucherFormModal } from './voucher-management/components/VoucherFormModal';
 import { emptyVoucherForm, initialVouchers, statusOptions, statusToneMap, voucherTypeLabels } from './voucher-management/voucherData';
 import type { ModalMode, StatusFilter, Voucher, VoucherFormState, VoucherStatus, VoucherType } from './voucher-management/types';
@@ -68,6 +68,12 @@ const getStatusWhenEnable = (voucher: Voucher): VoucherStatus => {
   }
 
   return 'ACTIVE';
+};
+
+const copyTextToClipboard = async (value: string) => {
+  if (navigator.clipboard?.writeText) {
+    await navigator.clipboard.writeText(value);
+  }
 };
 
 const generateVoucherId = () => `voucher-${Math.random().toString(36).slice(2, 10)}-${Date.now()}`;
@@ -197,6 +203,15 @@ export const VoucherManagement = () => {
     setEditingVoucherId(voucher.id);
     setFormState(mapVoucherToForm(voucher));
     setFormErrors({});
+  };
+
+  const openEditFromDetail = () => {
+    if (!selectedVoucher) {
+      return;
+    }
+
+    setDetailDialog(null);
+    openEditModal(selectedVoucher);
   };
 
   const openDetailDialog = (voucher: Voucher) => {
@@ -410,15 +425,6 @@ export const VoucherManagement = () => {
                         </button>
                         <button
                           type="button"
-                          onClick={() => openEditModal(voucher)}
-                          className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-[#D0D7E2] text-[#1A73E8] transition hover:border-[#1A73E8] hover:bg-[#EAF3FF]"
-                          title="Sửa"
-                          aria-label={`Sửa voucher ${voucher.code}`}
-                        >
-                          <Pencil size={16} />
-                        </button>
-                        <button
-                          type="button"
                           onClick={() => toggleVoucherStatus(voucher)}
                           className={`relative inline-flex h-6 w-10 items-center rounded-full border transition ${isEnabled ? 'border-[#16A34A] bg-[#22C55E]' : 'border-[#CBD5E1] bg-[#E2E8F0]'} ${isTogglePending ? 'cursor-wait opacity-70' : 'hover:brightness-95'}`}
                           disabled={isTogglePending}
@@ -465,41 +471,100 @@ export const VoucherManagement = () => {
       ) : null}
 
       {detailDialog && selectedVoucher ? (
-        <ModalShell title="Chi tiết voucher" onClose={() => setDetailDialog(null)} narrow>
-          <div className="grid gap-3 text-sm text-[#1E1E1E] sm:grid-cols-2">
-            <div className="rounded-xl border border-[#E0D7CD] bg-[#FAF6F1] p-3">
-              <p className="text-xs uppercase text-slate-500">Mã voucher</p>
-              <p className="mt-1 font-semibold">{selectedVoucher.code}</p>
-            </div>
-            <div className="rounded-xl border border-[#E0D7CD] bg-[#FAF6F1] p-3">
-              <p className="text-xs uppercase text-slate-500">Loại</p>
-              <p className="mt-1 font-semibold">{voucherTypeLabels[selectedVoucher.type]}</p>
-            </div>
-            <div className="rounded-xl border border-[#E0D7CD] bg-[#FAF6F1] p-3">
-              <p className="text-xs uppercase text-slate-500">Giá trị giảm</p>
-              <p className="mt-1 font-semibold">{getDiscountLabel(selectedVoucher)}</p>
-            </div>
-            <div className="rounded-xl border border-[#E0D7CD] bg-[#FAF6F1] p-3">
-              <p className="text-xs uppercase text-slate-500">Trạng thái</p>
-              <p className="mt-1 font-semibold">{statusToneMap[selectedVoucher.status].label}</p>
-            </div>
-            <div className="rounded-xl border border-[#E0D7CD] bg-[#FAF6F1] p-3">
-              <p className="text-xs uppercase text-slate-500">Số lượng</p>
-              <p className="mt-1 font-semibold">{selectedVoucher.quantity}</p>
-            </div>
-            <div className="rounded-xl border border-[#E0D7CD] bg-[#FAF6F1] p-3">
-              <p className="text-xs uppercase text-slate-500">Giới hạn/user</p>
-              <p className="mt-1 font-semibold">{selectedVoucher.maxUsagePerUser ?? '--'}</p>
-            </div>
-            <div className="rounded-xl border border-[#E0D7CD] bg-[#FAF6F1] p-3 sm:col-span-2">
-              <p className="text-xs uppercase text-slate-500">Hiệu lực</p>
-              <p className="mt-1 font-semibold">
-                {formatDateTable(selectedVoucher.startDate)} - {formatDateTable(selectedVoucher.endDate)}
-              </p>
-            </div>
-            <div className="rounded-xl border border-[#E0D7CD] bg-[#FAF6F1] p-3 sm:col-span-2">
-              <p className="text-xs uppercase text-slate-500">Mô tả</p>
-              <p className="mt-1">{selectedVoucher.description || 'Chưa có mô tả'}</p>
+        <ModalShell title="Chi tiết voucher" onClose={() => setDetailDialog(null)}>
+          <div className="grid gap-4">
+            <section className="grid gap-4 rounded-[22px] border border-[#E8DED3] bg-[linear-gradient(135deg,#FFF7EC_0%,#FBF6EF_45%,#FFFFFF_100%)] p-5 lg:grid-cols-[1.35fr_0.9fr] lg:items-stretch">
+              <div className="flex items-center gap-4">
+                <div className="grid h-24 w-24 shrink-0 place-items-center rounded-2xl bg-[linear-gradient(135deg,#F6C66B_0%,#E8A94E_100%)] text-white shadow-[0_10px_24px_rgba(232,169,78,0.28)]">
+                  <TicketPercent size={46} />
+                </div>
+                <div className="min-w-0">
+                  <p className="text-xs font-semibold uppercase tracking-[0.22em] text-slate-800">Mã voucher</p>
+                  <div className="mt-1 flex items-center gap-2">
+                    <h3 className="text-4xl font-bold tracking-tight text-[#1E1E1E]">{selectedVoucher.code}</h3>
+                    <button
+                      type="button"
+                      onClick={async () => {
+                        try {
+                          await copyTextToClipboard(selectedVoucher.code);
+                          toast.success('Đã sao chép mã voucher.', { duration: 500 });
+                        } catch {
+                          toast.error('Không thể sao chép mã voucher.');
+                        }
+                      }}
+                      className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-[#E0D7CD] text-[#7A6A59] transition hover:border-[#D4B785] hover:bg-white"
+                      aria-label={`Sao chép mã voucher ${selectedVoucher.code}`}
+                      title="Sao chép mã"
+                    >
+                      <Copy size={14} />
+                    </button>
+                  </div>
+                  <p className="mt-2 text-sm text-[#6B6258]">{getDiscountLabel(selectedVoucher)}</p>
+                </div>
+              </div>
+
+              <div className="flex items-center rounded-[18px] border border-white/80 bg-white/85 p-4 shadow-[0_8px_22px_rgba(30,30,30,0.06)]">
+                <div className="grid h-14 w-14 shrink-0 place-items-center rounded-2xl bg-[#FAF6F1] text-[#8B7A68]">
+                  <Ticket size={22} />
+                </div>
+                <div className="ml-4 min-w-0">
+                  <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-800">Loại</p>
+                  <p className="mt-1 text-2xl font-bold text-[#1E1E1E]">{voucherTypeLabels[selectedVoucher.type]}</p>
+                </div>
+              </div>
+            </section>
+
+            <section className="grid gap-4 sm:grid-cols-3">
+              <DetailCard icon={<Gift size={22} />} title="Giá trị giảm" value={getDiscountLabel(selectedVoucher)} iconTone="violet" valueClassName="text-[#5E2EC0]" />
+              <DetailCard icon={<Hash size={22} />} title="Số lượng" value={String(selectedVoucher.quantity)} iconTone="blue" valueClassName="text-[#2A67D4]" />
+              <DetailCard icon={<UserRound size={22} />} title="Giới hạn / user" value={String(selectedVoucher.maxUsagePerUser ?? '--')} iconTone="green" valueClassName="text-[#12A76A]" />
+            </section>
+
+            <section className="grid gap-4 lg:grid-cols-2">
+              <DetailCard
+                icon={<Check size={22} />}
+                title="Trạng thái"
+                value={statusToneMap[selectedVoucher.status].label}
+                iconTone="rose"
+                valueClassName="inline-flex rounded-full bg-[#DCF4E1] px-3 py-1 text-sm font-semibold text-[#118A32]"
+              />
+              <DetailCard
+                icon={<CalendarRange size={22} />}
+                title="Hiệu lực"
+                value={`${formatDateTable(selectedVoucher.startDate)}  →  ${formatDateTable(selectedVoucher.endDate)}`}
+                iconTone="violet"
+                valueClassName="text-[#1E1E1E]"
+              />
+            </section>
+
+            <section className="rounded-[18px] border border-[#E8DED3] bg-white p-4 lg:p-5">
+              <div className="flex items-start gap-4">
+                <div className="grid h-14 w-14 shrink-0 place-items-center rounded-2xl bg-[#FFF2D9] text-[#D28B18]">
+                  <FileText size={22} />
+                </div>
+                <div className="min-w-0">
+                  <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-800">Mô tả</p>
+                  <p className="mt-2 text-sm leading-6 text-[#1E1E1E]">{selectedVoucher.description || 'Chưa có mô tả'}</p>
+                </div>
+              </div>
+            </section>
+
+            <div className="flex flex-col-reverse gap-3 pt-2 sm:flex-row sm:justify-end">
+              <button
+                type="button"
+                onClick={() => setDetailDialog(null)}
+                className="inline-flex h-12 items-center justify-center rounded-xl border border-[#E0D7CD] bg-white px-5 text-sm font-semibold text-[#1E1E1E] transition hover:border-[#D4B785] hover:bg-[#FAF6F1]"
+              >
+                Đóng
+              </button>
+              <button
+                type="button"
+                onClick={openEditFromDetail}
+                className="inline-flex h-12 items-center justify-center gap-2 rounded-xl bg-[#1E1E1E] px-5 text-sm font-semibold text-[#FAF6F1] transition hover:bg-[#111111]"
+              >
+                <Pencil size={16} />
+                Chỉnh sửa voucher
+              </button>
             </div>
           </div>
         </ModalShell>
@@ -529,3 +594,36 @@ const ModalShell = ({ title, children, onClose, narrow = false }: { title: strin
     </div>
   </div>
 );
+
+const DetailCard = ({
+  icon,
+  title,
+  value,
+  iconTone,
+  valueClassName,
+}: {
+  icon: ReactNode;
+  title: string;
+  value: ReactNode;
+  iconTone: 'violet' | 'blue' | 'green' | 'rose';
+  valueClassName?: string;
+}) => {
+  const iconToneClassMap = {
+    violet: 'bg-[#F1E9FF] text-[#6B2CD6]',
+    blue: 'bg-[#E9F0FF] text-[#2A67D4]',
+    green: 'bg-[#E7F7EF] text-[#12A76A]',
+    rose: 'bg-[#FCE9EA] text-[#EA4335]',
+  } as const;
+
+  return (
+    <div className="rounded-[22px] border border-[#E8DED3] bg-white p-4 shadow-[0_8px_22px_rgba(30,30,30,0.04)]">
+      <div className="flex items-center gap-4">
+        <div className={`grid h-14 w-14 shrink-0 place-items-center rounded-2xl ${iconToneClassMap[iconTone]}`}>{icon}</div>
+        <div className="min-w-0">
+          <p className="text-xs font-medium uppercase tracking-[0.16em] text-slate-800">{title}</p>
+          <div className={`mt-1 text-lg font-semibold leading-7 ${valueClassName ?? 'text-[#1E1E1E]'}`}>{value}</div>
+        </div>
+      </div>
+    </div>
+  );
+};
