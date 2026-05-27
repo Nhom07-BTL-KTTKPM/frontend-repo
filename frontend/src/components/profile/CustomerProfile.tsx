@@ -168,7 +168,6 @@ export const CustomerProfile = ({ user, customer, onSave, onEditAvatar }: Custom
           <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
             <ProfileRow icon={<Calendar size={16} color="#D4AF37" />} label="Ngày sinh" value={formatDate(user.dateOfBirth)} />
             <ProfileRow icon={<Calendar size={16} color="#D4AF37" />} label="Ngày tham gia" value={formatDate(user.createdAt)} />
-            <ProfileRow icon={<Sparkles size={16} color="#D4AF37" />} label="Điểm tích lũy" value={String(user.loyaltyPoints ?? 0)} />
           </div>
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>

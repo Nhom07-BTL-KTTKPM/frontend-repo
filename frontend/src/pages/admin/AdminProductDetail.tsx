@@ -1,16 +1,11 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Link, useLocation, useParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { Check, ChevronLeft, ChevronRight, Copy, Package, Star, Tag, ShoppingCart  } from 'lucide-react';
+import { ArrowLeft, Check, ChevronLeft, ChevronRight, Copy, Package, Star, Tag } from 'lucide-react';
 import { toast } from 'sonner';
-import { productApi } from '../api/productApi';
-import { cartApi } from '../api/cartApi';
-import { useAuthStore } from '../store/authStore';
-import { useCustomerId } from '../hooks/useCustomerId';
-import { useGuestCartStore } from '../store/guestCartStore';
-import type { Product, ProductImage, ProductVariant } from '../types/product';
-import { ReviewSection } from '../components/review/ReviewSection';
-import { toLabel as skinTypeToLabel } from '../utils/skinTypeUtils';
+import { productApi } from '../../api/productApi';
+import type { Product, ProductImage, ProductVariant } from '../../types/product';
+import { ReviewSection } from '../../components/review/ReviewSection';
+import { toLabel as skinTypeToLabel } from '../../utils/skinTypeUtils';
 
 type DetailTab = 'description' | 'reviews';
 
@@ -32,25 +27,23 @@ type RichProduct = Product & {
   brandLogoUrl?: string;
 };
 
-export const ProductDetail: React.FC = () => {
-  const { slug } = useParams<{ slug: string }>();
-  const location = useLocation();
+type AdminProductDetailProps = {
+  slug?: string;
+  productId?: string;
+  onBack?: () => void;
+};
+
+export const AdminProductDetail: React.FC<AdminProductDetailProps> = ({ slug, productId, onBack }) => {
   const [selectedVariant, setSelectedVariant] = useState<RichVariant | null>(null);
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
   const [activeTab, setActiveTab] = useState<DetailTab>('description');
-  const [isAdding, setIsAdding] = useState(false);
   const [isLinkCopied, setIsLinkCopied] = useState(false);
 
-  const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
-  const { customerId } = useCustomerId();
-  const addGuestItem = useGuestCartStore((s) => s.addItem);
-  const stateProductId = (location.state as { productId?: string } | null)?.productId;
-
   const { data, isLoading, error } = useQuery({
-    queryKey: ['product', slug, stateProductId],
+    queryKey: ['admin-product', slug, productId],
     queryFn: async () => {
-      if (stateProductId) {
-        return productApi.getProduct(stateProductId);
+      if (productId) {
+        return productApi.getProduct(productId);
       }
 
       if (!slug) {
@@ -73,7 +66,7 @@ export const ProductDetail: React.FC = () => {
       const resolvedId = bySlug?.id || bySlug?.productId;
       return resolvedId ? productApi.getProduct(resolvedId) : bySlug;
     },
-    enabled: !!slug || !!stateProductId,
+    enabled: !!slug || !!productId,
   });
 
   const product = data as RichProduct | null;
@@ -129,7 +122,7 @@ export const ProductDetail: React.FC = () => {
   const totalSold = product?.totalSold ?? 0;
   const mainImage = galleryImages[selectedImageIndex] || galleryImages[0] || null;
   const displayImageUrl = mainImage?.url || product?.thumbnail || '';
-  const shareUrl = typeof window !== 'undefined' ? window.location.href : '';
+  const shareUrl = typeof window !== 'undefined' ? window.location.origin + (slug ? `/product/${slug}` : '') : '';
 
   useEffect(() => {
     setSelectedVariant(null);
@@ -153,42 +146,41 @@ export const ProductDetail: React.FC = () => {
     return () => window.clearTimeout(timer);
   }, [isLinkCopied]);
 
-  if (isLoading) return <div style={{ padding: '4rem' }}>Đang tải...</div>;
-  if (error) return <div style={{ padding: '4rem', color: 'red' }}>Không thể tải chi tiết sản phẩm</div>;
-  if (!product) return <div style={{ padding: '4rem' }}>Sản phẩm không tồn tại</div>;
+  const backButton = onBack ? (
+    <button
+      type="button"
+      onClick={onBack}
+      className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm transition hover:border-slate-300 hover:bg-slate-50"
+    >
+      <ArrowLeft size={16} />
+      Quay lại danh sách
+    </button>
+  ) : null;
 
-  const handleAddToCart = async () => {
-    if (!activeVariant) return;
-
-    if (isAuthenticated && customerId) {
-      setIsAdding(true);
-      try {
-        await cartApi.addItem(customerId, {
-          productVariantId: activeVariant.id,
-          quantity: 1,
-          unitPrice: activeVariant.price,
-        });
-        toast.success('Đã thêm sản phẩm vào giỏ hàng');
-        window.dispatchEvent(new CustomEvent('cart:updated'));
-      } catch (err) {
-        const message = err instanceof Error ? err.message : 'Thêm vào giỏ hàng thất bại';
-        toast.error(message);
-      } finally {
-        setIsAdding(false);
-      }
-    } else {
-      addGuestItem({
-        productVariantId: activeVariant.id,
-        quantity: 1,
-        unitPrice: activeVariant.price,
-        variantName: activeVariant.variantName || '',
-        productName: product.name,
-        imageUrl: displayImageUrl,
-      });
-      toast.success('Đã thêm sản phẩm vào giỏ hàng');
-    }
-  };
-
+  if (isLoading) {
+    return (
+      <div style={{ padding: '1.5rem' }}>
+        {backButton}
+        <div style={{ padding: '4rem' }}>Đang tải...</div>
+      </div>
+    );
+  }
+  if (error) {
+    return (
+      <div style={{ padding: '1.5rem' }}>
+        {backButton}
+        <div style={{ padding: '4rem', color: 'red' }}>Không thể tải chi tiết sản phẩm</div>
+      </div>
+    );
+  }
+  if (!product) {
+    return (
+      <div style={{ padding: '1.5rem' }}>
+        {backButton}
+        <div style={{ padding: '4rem' }}>Sản phẩm không tồn tại</div>
+      </div>
+    );
+  }
   const handleCopyLink = async () => {
     if (!shareUrl) return;
 
@@ -201,23 +193,12 @@ export const ProductDetail: React.FC = () => {
     }
   };
 
-
-
-  const detailTags = [
-    categoryName,
-    brandName,
-    product.isFeatured ? 'Nổi bật' : null,
-    activeVariant?.variantName || null,
-    activeVariant?.stockQuantity && activeVariant.stockQuantity > 0 ? 'Còn hàng' : 'Hết hàng',
-  ].filter((value): value is string => Boolean(value));
-
   const renderStars = (rating: number) => {
     return (
       <>
-        {/* Định nghĩa Gradient để cắt đôi ngôi sao, chỉ cần khai báo 1 lần */}
         <svg width="0" height="0" style={{ position: 'absolute' }}>
           <defs>
-            <linearGradient id="half-star-gradient" x1="0%" y1="0%" x2="100%" y2="0%">
+            <linearGradient id="admin-half-star-gradient" x1="0%" y1="0%" x2="100%" y2="0%">
               <stop offset="50%" stopColor="currentColor" />
               <stop offset="50%" stopColor="transparent" stroke="currentColor" />
             </linearGradient>
@@ -229,11 +210,9 @@ export const ProductDetail: React.FC = () => {
           let fillValue = 'none';
 
           if (rating >= starValue) {
-            // Trường hợp sao đầy (Ví dụ: rating = 4.5, các sao 1, 2, 3, 4 sẽ đầy)
             fillValue = 'currentColor';
           } else if (rating > starValue - 1 && rating < starValue) {
-            // Trường hợp nửa sao (Ví dụ: rating = 4.5, sao thứ 5 sẽ rơi vào đây)
-            fillValue = 'url(#half-star-gradient)';
+            fillValue = 'url(#admin-half-star-gradient)';
           }
 
           return (
@@ -288,10 +267,7 @@ export const ProductDetail: React.FC = () => {
     const matchedIndex = galleryImages.findIndex((image) => image.url === variantImageUrl);
     if (matchedIndex >= 0) {
       setSelectedImageIndex(matchedIndex);
-      return;
     }
-
-    setSelectedImageIndex(galleryImages.length);
   };
 
   const handleThumbnailSelect = (index: number) => {
@@ -299,16 +275,9 @@ export const ProductDetail: React.FC = () => {
   };
 
   return (
-    <div style={{ minHeight: '100vh', padding: '2rem', background: 'linear-gradient(180deg, #f9f7f4 0%, #fffaf0 100%)' }}>
+    <div style={{ padding: '1.5rem', background: 'transparent' }}>
       <div style={{ maxWidth: 1280, margin: '0 auto' }}>
-        <div style={{ marginBottom: '1.5rem', fontSize: '14px', color: '#666' }}>
-          <Link to="/" style={{ color: '#D4AF37', textDecoration: 'none' }}>Trang chủ</Link>
-          {' / '}
-          <Link to="/products" style={{ color: '#D4AF37', textDecoration: 'none' }}>Sản phẩm</Link>
-          {' / '}
-          <span>{product.name}</span>
-        </div>
-
+        {backButton ? <div style={{ marginBottom: '1rem' }}>{backButton}</div> : null}
         <section
           style={{
             display: 'flex',
@@ -397,6 +366,8 @@ export const ProductDetail: React.FC = () => {
               )}
             </div>
 
+
+
             {galleryImages.length > 1 && (
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(74px, 1fr))', gap: '0.65rem', marginTop: '0.85rem', maxWidth: 380 }}>
                 {galleryImages.map((image, index) => (
@@ -463,8 +434,6 @@ export const ProductDetail: React.FC = () => {
               {product.description || 'Chưa có mô tả cho sản phẩm này.'}
             </p>
 
-           
-
             {product.variants && product.variants.length > 0 && (
               <div style={{ marginBottom: '1.5rem' }}>
                 <h3 style={{ margin: '0 0 0.85rem', fontSize: '0.95rem', fontWeight: 700, color: '#374151' }}>
@@ -497,44 +466,22 @@ export const ProductDetail: React.FC = () => {
                 </div>
               </div>
             )}
-              {activeVariant && (
-                <div className="flex items-center gap-2 text-gray-500 text-[0.95rem] my-2">
-                  <Package size={16} />
-                  {activeVariant.stockQuantity && activeVariant.stockQuantity > 0 ? (
-                    <span>Còn {activeVariant.stockQuantity} sản phẩm</span>
-                  ) : (
-                    <span className="text-red-600">Hết hàng</span>
-                  )}
-                </div>
-              )}
-            <div className="flex flex-wrap items-center gap-3 mb-4">
-              {/* Nút 1: Thêm vào giỏ hàng */}
-              <button
-                type="button"
-                onClick={handleAddToCart}
-                disabled={!activeVariant || (activeVariant.stockQuantity ?? 0) <= 0 || isAdding}
-                className="flex items-center justify-center gap-2 px-5 py-[0.95rem] min-w-[200px]
-                          bg-[#D4AF37] text-white text-base font-bold rounded-[14px] 
-                          shadow-[0_12px_24px_rgba(212,175,55,0.24)] transition-all duration-200
-                          cursor-pointer hover:bg-[#bfa032]
-                          disabled:cursor-not-allowed disabled:opacity-65 disabled:bg-[#D4AF37] disabled:shadow-none"
-              >
-                {isAdding ? (
-                  <span>Đang thêm...</span>
+            {activeVariant && (
+              <div className="flex items-center gap-2 text-gray-500 text-[0.95rem] my-2">
+                <Package size={16} />
+                {activeVariant.stockQuantity && activeVariant.stockQuantity > 0 ? (
+                  <span>Còn {activeVariant.stockQuantity} sản phẩm</span>
                 ) : (
-                  <>
-                    <ShoppingCart size={18} />
-                    <span>Thêm vào giỏ hàng</span>
-                  </>
+                  <span className="text-red-600">Hết hàng</span>
                 )}
-              </button>
-
-              {/* Nút 2: Sao chép liên kết */}
+              </div>
+            )}
+            <div className="flex flex-wrap items-center gap-3 mb-4">
               <button
                 type="button"
                 onClick={handleCopyLink}
                 className="flex items-center justify-center gap-2 px-5 py-[0.95rem]
-                          bg-white text-gray-700 text-base font-bold rounded-[14px] 
+                          bg-white text-gray-700 text-base font-bold rounded-[14px]
                           border border-solid border-gray-900 transition-all duration-200
                           cursor-pointer hover:border-gray-900 active:scale-[0.98]"
               >
@@ -551,10 +498,9 @@ export const ProductDetail: React.FC = () => {
                 )}
               </button>
             </div>
-
-            
           </div>
         </section>
+
 
         <section style={{ marginTop: '1.5rem', ...detailSectionStyle }}>
           <div style={{ display: 'flex', justifyContent: 'center', borderBottom: '1px solid rgba(0,0,0,0.06)', marginBottom: '1.5rem' }}>
@@ -598,31 +544,31 @@ export const ProductDetail: React.FC = () => {
                 <div>
                   <strong className="text-base block mb-2.5 text-gray-900 font-semibold">
                     Loại da phù hợp
-                  </strong >
+                  </strong>
                   <div className="flex flex-wrap gap-2">
-                          {product.suitableSkinTypes.map((item) => (
-                            <span
-                              key={item}
-                              className="px-3 py-1.5 text-base font-medium text-gray-700 bg-white 
-                                        border border-solid border-gray-300 rounded-full shadow-sm"
-                            >
-                              {skinTypeToLabel(item)}
-                            </span>
-                          ))}
+                    {product.suitableSkinTypes.map((item) => (
+                      <span
+                        key={item}
+                        className="px-3 py-1.5 text-base font-medium text-gray-700 bg-white
+                                  border border-solid border-gray-300 rounded-full shadow-sm"
+                      >
+                        {skinTypeToLabel(item)}
+                      </span>
+                    ))}
                   </div>
                 </div>
               ) : null}
 
               {Array.isArray(product.skinConcerns) && product.skinConcerns.length > 0 ? (
-              <div className="mt-4">
+                <div className="mt-4">
                   <strong className="text-base block mb-2.5 text-gray-900 font-semibold">
                     Dành cho da đang gặp vấn đề
                   </strong>
                   <div className="flex flex-wrap gap-2">
                     {product.skinConcerns.map((item) => (
-                      <span 
-                        key={item} 
-                        className="px-3 py-1.5 text-basư font-medium text-gray-700 bg-white 
+                      <span
+                        key={item}
+                        className="px-3 py-1.5 text-base font-medium text-gray-700 bg-white
                                   border border-solid border-gray-300 rounded-full shadow-sm"
                       >
                         {item}
@@ -643,4 +589,4 @@ export const ProductDetail: React.FC = () => {
   );
 };
 
-export default ProductDetail;
+export default AdminProductDetail;

@@ -58,6 +58,19 @@ export interface ProductStatusRequest {
   isActive: boolean;
 }
 
+export interface ProductCardResponse {
+  id: string;
+  name: string;
+  slug: string;
+  averageRating?: number;
+  totalSold?: number;
+  totalStock?: number;
+  minPrice?: number | null;
+  maxPrice?: number | null;
+  isFeatured?: boolean;
+  thumbnail?: string;
+}
+
 // Lightweight projections returned by /summary endpoints
 export interface BrandSummaryResponse {
   id: string;

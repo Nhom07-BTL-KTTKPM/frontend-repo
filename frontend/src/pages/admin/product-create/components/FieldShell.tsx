@@ -21,7 +21,7 @@ export const FieldShell = ({ label, hint, error, children, action }: FieldShellP
 
       {children}
 
-      {error ? <p className="m-0 text-xs font-medium text-rose-600">{error}</p> : null}
+      {error ? <p className="m-0 text-xs font-medium text-rose-600 pl-3">{error}</p> : null}
     </label>
   );
 };

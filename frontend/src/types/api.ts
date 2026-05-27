@@ -78,6 +78,7 @@ export interface UserProfileInfo {
   avatarUrl?: string;
   status?: string;
   provider?: string;
+  hasPassword?: boolean;
   emailVerified?: boolean;
   lastLoginAt?: string;
   createdAt?: string;
@@ -151,4 +152,10 @@ export interface AddressCreateRequest {
   district?: string;
   city?: string;
   isDefault?: boolean;
+}
+
+export interface WishItem {
+  id: string;
+  customerId: string;
+  productId: string;
 }

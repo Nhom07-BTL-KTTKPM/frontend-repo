@@ -11,6 +11,12 @@ import type { CatalogProduct, CatalogProductVariant } from '../types/catalog';
 import type { CartResponse } from '../types/cart';
 import { ShoppingBag } from 'lucide-react';
 
+type PendingRemoval = {
+    mode: 'guest' | 'customer';
+    itemId: string;
+    productName: string;
+} | null;
+
 const formatCurrency = (value?: number) => {
     if (value === null || value === undefined) {
         return '--';
@@ -35,6 +41,7 @@ export const Cart = () => {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [selectedItemIds, setSelectedItemIds] = useState<Set<string>>(new Set());
+    const [pendingRemoval, setPendingRemoval] = useState<PendingRemoval>(null);
 
     // Guest cart
     const guestItems = useGuestCartStore((s) => s.items);
@@ -176,6 +183,41 @@ export const Cart = () => {
             .reduce((sum, item) => sum + Number(item.unitPrice) * item.quantity, 0);
     }, [cart, selectedItemIds, isGuest, guestItems]);
 
+    const unselectItem = (itemId: string) => {
+        setSelectedItemIds(prev => {
+            if (!prev.has(itemId)) {
+                return prev;
+            }
+
+            const next = new Set(prev);
+            next.delete(itemId);
+            return next;
+        });
+    };
+
+    const handleGuestRemove = (itemId: string) => {
+        removeGuestItem(itemId);
+        unselectItem(itemId);
+    };
+
+    const handleGuestDecrease = (itemId: string, quantity: number, productName: string) => {
+        if (quantity <= 1) {
+            setPendingRemoval({ mode: 'guest', itemId, productName });
+            return;
+        }
+
+        updateGuestQuantity(itemId, quantity - 1);
+    };
+
+    const handleCustomerDecrease = (itemId: string, quantity: number, productName: string) => {
+        if (quantity <= 1) {
+            setPendingRemoval({ mode: 'customer', itemId, productName });
+            return;
+        }
+
+        void handleUpdateQty(itemId, quantity - 1);
+    };
+
     const handleUpdateQty = async (itemId: string, quantity: number) => {
         if (!customerId) {
             return;
@@ -197,11 +239,27 @@ export const Cart = () => {
         try {
             const res = await cartApi.removeItem(customerId, itemId);
             setCart(res);
+            unselectItem(itemId);
             window.dispatchEvent(new CustomEvent('cart:updated'));
         } catch (err) {
             const message = err instanceof Error ? err.message : 'Xoa san pham that bai';
             toast.error(message);
         }
+    };
+
+    const confirmPendingRemoval = async () => {
+        if (!pendingRemoval) {
+            return;
+        }
+
+        if (pendingRemoval.mode === 'guest') {
+            handleGuestRemove(pendingRemoval.itemId);
+            setPendingRemoval(null);
+            return;
+        }
+
+        await handleRemove(pendingRemoval.itemId);
+        setPendingRemoval(null);
     };
 
     const handleCheckout = () => {
@@ -222,9 +280,9 @@ export const Cart = () => {
         <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '2rem' }}>
             <div style={{ background: '#fff', borderRadius: '16px', padding: '1.5rem', boxShadow: '0 16px 40px rgba(17,24,39,0.08)' }}>
                 <div style={{ paddingBottom: '1rem', borderBottom: '1px solid rgba(0,0,0,0.1)', display: 'flex', alignItems: 'center', gap: '10px' }}>
-                    <input 
-                        type="checkbox" 
-                        checked={guestItems.length > 0 && selectedItemIds.size === guestItems.length} 
+                    <input
+                        type="checkbox"
+                        checked={guestItems.length > 0 && selectedItemIds.size === guestItems.length}
                         onChange={toggleAll}
                         style={{ width: '20px', height: '20px', accentColor: 'var(--color-gold)', cursor: 'pointer' }}
                     />
@@ -233,9 +291,9 @@ export const Cart = () => {
                 {guestItems.map((item) => (
                     <div key={item.productVariantId} style={{ display: 'flex', gap: '1rem', padding: '1rem 0', borderBottom: '1px solid rgba(0,0,0,0.05)', alignItems: 'flex-start' }}>
                         <div style={{ display: 'flex', gap: '1rem', alignItems: 'flex-start', flex: 1, minWidth: 0 }}>
-                            <input 
-                                type="checkbox" 
-                                checked={selectedItemIds.has(item.productVariantId)} 
+                            <input
+                                type="checkbox"
+                                checked={selectedItemIds.has(item.productVariantId)}
                                 onChange={() => toggleItem(item.productVariantId)}
                                 style={{ width: '20px', height: '20px', accentColor: 'var(--color-gold)', cursor: 'pointer', marginTop: '0.5rem', flexShrink: 0 }}
                             />
@@ -257,7 +315,7 @@ export const Cart = () => {
                         <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', flexShrink: 0 }}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
                                 <button
-                                    onClick={() => updateGuestQuantity(item.productVariantId, item.quantity - 1)}
+                                    onClick={() => handleGuestDecrease(item.productVariantId, item.quantity, item.productName)}
                                     style={{ width: '28px', height: '28px', borderRadius: '50%', border: '1px solid var(--color-gray-300)', cursor: 'pointer', background: 'none' }}
                                 >
                                     -
@@ -271,7 +329,7 @@ export const Cart = () => {
                                 </button>
                             </div>
                             <button
-                                onClick={() => removeGuestItem(item.productVariantId)}
+                                onClick={() => handleGuestRemove(item.productVariantId)}
                                 style={{ border: 'none', background: 'none', color: 'var(--color-error)', cursor: 'pointer', padding: '0 0.5rem', minWidth: '40px', textAlign: 'center' }}
                             >
                                 Xóa
@@ -307,31 +365,27 @@ export const Cart = () => {
 
     return (
         <div style={{ padding: '3.5rem 6vw' }}>
-            <h1 style={{ fontFamily: 'var(--font-display)', fontSize: '3rem', color: 'var(--color-gold)', marginBottom: '0.5rem' }}>Giỏ hàng</h1>
-            <p style={{ color: 'var(--color-gray-500)', marginBottom: '2rem' }}>Kiểm tra sản phẩm và số lượng trước khi đặt hàng.</p>
+            <h1 style={{ fontFamily: 'var(--font-display)', fontSize: '3rem', color: 'var(--color-gold)', marginBottom: '0.5rem', textAlign: 'center' }}>Giỏ hàng</h1>
 
             {/* Guest with items */}
             {showGuestCart && renderGuestCart()}
 
             {/* Guest with empty cart */}
             {isGuest && guestItems.length === 0 && (
-                <div style={{ 
-                    padding: '4rem 2rem', 
-                    borderRadius: '16px', 
-                    background: '#fff', 
-                    display: 'flex', 
-                    flexDirection: 'column', 
-                    alignItems: 'center', 
+                <div style={{
+                    padding: '4rem 2rem',
+                    borderRadius: '16px',
+                    background: '#fff',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
                     justifyContent: 'center',
-                    boxShadow: '0 16px 40px rgba(17,24,39,0.04)' 
+                    boxShadow: '0 16px 40px rgba(17,24,39,0.04)'
                 }}>
                     <div style={{ width: '80px', height: '80px', borderRadius: '50%', background: 'var(--color-cream)', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '1.5rem', color: 'var(--color-gold)' }}>
                         <ShoppingBag size={40} />
                     </div>
-                    <h2 style={{ fontFamily: 'var(--font-display)', fontSize: '1.5rem', color: 'var(--color-black)', marginBottom: '0.5rem' }}>Giỏ hàng của bạn đang trống</h2>
-                    <p style={{ color: 'var(--color-gray-500)', marginBottom: '2rem', textAlign: 'center', maxWidth: '400px' }}>
-                        Có vẻ như bạn chưa thêm bất kỳ sản phẩm nào vào giỏ hàng. Khám phá ngay các sản phẩm làm đẹp của chúng tôi!
-                    </p>
+                    <h2 style={{ fontFamily: 'serif', fontSize: '1.5rem', color: 'var(--color-black)', marginBottom: '0.5rem' }}>Chưa có sản phẩm trong giỏ hàng</h2>
                     <button className="btn btn--primary" style={{ padding: '12px 32px', background: 'var(--color-black)', border: 'none', borderRadius: '8px', color: 'white', cursor: 'pointer', fontWeight: 500, display: 'inline-flex' }} onClick={() => navigate('/products')}>
                         Khám phá sản phẩm
                     </button>
@@ -351,23 +405,20 @@ export const Cart = () => {
 
             {/* Authenticated customer empty cart */}
             {isAuthenticated && isCustomer && !loading && (!cart || cart?.items?.length === 0) && (
-                <div style={{ 
-                    padding: '4rem 2rem', 
-                    borderRadius: '16px', 
-                    background: '#fff', 
-                    display: 'flex', 
-                    flexDirection: 'column', 
-                    alignItems: 'center', 
+                <div style={{
+                    padding: '4rem 2rem',
+                    borderRadius: '16px',
+                    background: '#fff',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
                     justifyContent: 'center',
-                    boxShadow: '0 16px 40px rgba(17,24,39,0.04)' 
+                    boxShadow: '0 16px 40px rgba(17,24,39,0.04)'
                 }}>
                     <div style={{ width: '80px', height: '80px', borderRadius: '50%', background: 'var(--color-cream)', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '1.5rem', color: 'var(--color-gold)' }}>
                         <ShoppingBag size={40} />
                     </div>
-                    <h2 style={{ fontFamily: 'var(--font-display)', fontSize: '1.5rem', color: 'var(--color-black)', marginBottom: '0.5rem' }}>Giỏ hàng của bạn đang trống</h2>
-                    <p style={{ color: 'var(--color-gray-500)', marginBottom: '2rem', textAlign: 'center', maxWidth: '400px' }}>
-                        Có vẻ như bạn chưa thêm bất kỳ sản phẩm nào vào giỏ hàng. Khám phá ngay các sản phẩm làm đẹp của chúng tôi!
-                    </p>
+                    <h2 style={{ fontFamily: 'var(--font-display)', fontSize: '1.5rem', color: 'var(--color-black)', marginBottom: '0.5rem' }}>Chưa có sản phẩm trong giỏ hàng</h2>
                     <button className="btn btn--primary" style={{ padding: '12px 32px', background: 'var(--color-black)', border: 'none', borderRadius: '8px', color: 'white', cursor: 'pointer', fontWeight: 500, display: 'inline-flex' }} onClick={() => navigate('/products')}>
                         Khám phá sản phẩm
                     </button>
@@ -379,9 +430,9 @@ export const Cart = () => {
                 <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '2rem' }}>
                     <div style={{ background: '#fff', borderRadius: '16px', padding: '1.5rem', boxShadow: '0 16px 40px rgba(17,24,39,0.08)' }}>
                         <div style={{ paddingBottom: '1rem', borderBottom: '1px solid rgba(0,0,0,0.1)', display: 'flex', alignItems: 'center', gap: '10px' }}>
-                            <input 
-                                type="checkbox" 
-                                checked={cart.items.length > 0 && selectedItemIds.size === cart.items.length} 
+                            <input
+                                type="checkbox"
+                                checked={cart.items.length > 0 && selectedItemIds.size === cart.items.length}
                                 onChange={toggleAll}
                                 style={{ width: '20px', height: '20px', accentColor: 'var(--color-gold)', cursor: 'pointer' }}
                             />
@@ -394,53 +445,53 @@ export const Cart = () => {
                             const variantName = variant?.variantName || 'N/A';
 
                             return (
-                            <div key={item.id} style={{ display: 'flex', gap: '1rem', padding: '1rem 0', borderBottom: '1px solid rgba(0,0,0,0.05)', alignItems: 'flex-start' }}>
-                                <div style={{ display: 'flex', gap: '1rem', alignItems: 'flex-start', flex: 1, minWidth: 0 }}>
-                                    <input 
-                                        type="checkbox" 
-                                        checked={selectedItemIds.has(item.id)} 
-                                        onChange={() => toggleItem(item.id)}
-                                        style={{ width: '20px', height: '20px', accentColor: 'var(--color-gold)', cursor: 'pointer', marginTop: '0.5rem', flexShrink: 0 }}
-                                    />
-                                    <div style={{ width: '72px', height: '72px', borderRadius: '12px', background: 'var(--color-cream)', overflow: 'hidden', flexShrink: 0 }}>
-                                        {imageUrl ? (
-                                            <img src={imageUrl} alt={productName ?? 'Product'} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                                        ) : (
-                                            <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--color-gray-400)', fontSize: '0.75rem' }}>
-                                                Không có ảnh
-                                            </div>
-                                        )}
+                                <div key={item.id} style={{ display: 'flex', gap: '1rem', padding: '1rem 0', borderBottom: '1px solid rgba(0,0,0,0.05)', alignItems: 'flex-start' }}>
+                                    <div style={{ display: 'flex', gap: '1rem', alignItems: 'flex-start', flex: 1, minWidth: 0 }}>
+                                        <input
+                                            type="checkbox"
+                                            checked={selectedItemIds.has(item.id)}
+                                            onChange={() => toggleItem(item.id)}
+                                            style={{ width: '20px', height: '20px', accentColor: 'var(--color-gold)', cursor: 'pointer', marginTop: '0.5rem', flexShrink: 0 }}
+                                        />
+                                        <div style={{ width: '72px', height: '72px', borderRadius: '12px', background: 'var(--color-cream)', overflow: 'hidden', flexShrink: 0 }}>
+                                            {imageUrl ? (
+                                                <img src={imageUrl} alt={productName ?? 'Product'} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                            ) : (
+                                                <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--color-gray-400)', fontSize: '0.75rem' }}>
+                                                    Không có ảnh
+                                                </div>
+                                            )}
+                                        </div>
+                                        <div style={{ flex: 1, minWidth: 0 }}>
+                                            <p style={{ margin: 0, fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{productName ?? 'Sản phẩm'}</p>
+                                            <p style={{ margin: '0.35rem 0', color: 'var(--color-gray-500)', fontSize: '0.875rem' }}>{variantName}</p>
+                                            <p style={{ margin: '0.25rem 0', color: 'var(--color-gray-500)' }}>{formatCurrency(Number(item.unitPrice))}</p>
+                                        </div>
                                     </div>
-                                    <div style={{ flex: 1, minWidth: 0 }}>
-                                        <p style={{ margin: 0, fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{productName ?? 'Sản phẩm'}</p>
-                                        <p style={{ margin: '0.35rem 0', color: 'var(--color-gray-500)', fontSize: '0.875rem' }}>{variantName}</p>
-                                        <p style={{ margin: '0.25rem 0', color: 'var(--color-gray-500)' }}>{formatCurrency(Number(item.unitPrice))}</p>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', flexShrink: 0 }}>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                                            <button
+                                                onClick={() => handleCustomerDecrease(item.id, item.quantity, productName ?? 'San pham')}
+                                                style={{ width: '28px', height: '28px', borderRadius: '50%', border: '1px solid var(--color-gray-300)', cursor: 'pointer', background: 'none' }}
+                                            >
+                                                -
+                                            </button>
+                                            <span style={{ minWidth: '24px', textAlign: 'center' }}>{item.quantity}</span>
+                                            <button
+                                                onClick={() => handleUpdateQty(item.id, item.quantity + 1)}
+                                                style={{ width: '28px', height: '28px', borderRadius: '50%', border: '1px solid var(--color-gray-300)', cursor: 'pointer', background: 'none' }}
+                                            >
+                                                +
+                                            </button>
+                                        </div>
+                                        <button
+                                            onClick={() => handleRemove(item.id)}
+                                            style={{ border: 'none', background: 'none', color: 'var(--color-error)', cursor: 'pointer', padding: '0 0.5rem', minWidth: '40px', textAlign: 'center' }}
+                                        >
+                                            Xóa
+                                        </button>
                                     </div>
                                 </div>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', flexShrink: 0 }}>
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                                        <button
-                                            onClick={() => handleUpdateQty(item.id, item.quantity - 1)}
-                                            style={{ width: '28px', height: '28px', borderRadius: '50%', border: '1px solid var(--color-gray-300)', cursor: 'pointer', background: 'none' }}
-                                        >
-                                            -
-                                        </button>
-                                        <span style={{ minWidth: '24px', textAlign: 'center' }}>{item.quantity}</span>
-                                        <button
-                                            onClick={() => handleUpdateQty(item.id, item.quantity + 1)}
-                                            style={{ width: '28px', height: '28px', borderRadius: '50%', border: '1px solid var(--color-gray-300)', cursor: 'pointer', background: 'none' }}
-                                        >
-                                            +
-                                        </button>
-                                    </div>
-                                    <button
-                                        onClick={() => handleRemove(item.id)}
-                                        style={{ border: 'none', background: 'none', color: 'var(--color-error)', cursor: 'pointer', padding: '0 0.5rem', minWidth: '40px', textAlign: 'center' }}
-                                    >
-                                        Xóa
-                                    </button>
-                                </div>
-                            </div>
                             );
                         })}
                     </div>
@@ -462,6 +513,75 @@ export const Cart = () => {
                     </div>
                 </div>
             ) : null}
+            {pendingRemoval && (
+                <div
+                    role="dialog"
+                    aria-modal="true"
+                    aria-labelledby="remove-cart-item-title"
+                    style={{
+                        position: 'fixed',
+                        inset: 0,
+                        zIndex: 1000,
+                        background: 'rgba(17, 24, 39, 0.42)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        padding: '1rem',
+                    }}
+                    onClick={() => setPendingRemoval(null)}
+                >
+                    <div
+                        style={{
+                            width: '100%',
+                            maxWidth: '420px',
+                            background: '#fff',
+                            borderRadius: '12px',
+                            padding: '1.5rem',
+                            boxShadow: '0 24px 70px rgba(17,24,39,0.22)',
+                        }}
+                        onClick={(event) => event.stopPropagation()}
+                    >
+                        <h2 id="remove-cart-item-title" style={{ margin: 0, fontSize: '1.2rem', color: 'var(--color-black)' }}>
+                            Xác nhận xóa
+                        </h2>
+                        <p style={{ margin: '0.75rem 0 1.5rem', color: 'var(--color-gray-600)', lineHeight: 1.6 }}>
+                            Bạn có muốn xóa <strong>{pendingRemoval.productName}</strong> khỏi giỏ hàng không?
+                        </p>
+                        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem', flexWrap: 'wrap' }}>
+                            <button
+                                type="button"
+                                onClick={() => setPendingRemoval(null)}
+                                style={{
+                                    padding: '10px 16px',
+                                    borderRadius: '8px',
+                                    border: '1px solid var(--color-gray-300)',
+                                    background: '#fff',
+                                    color: 'var(--color-black)',
+                                    cursor: 'pointer',
+                                    fontWeight: 600,
+                                }}
+                            >
+                                Hủy
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => void confirmPendingRemoval()}
+                                style={{
+                                    padding: '10px 16px',
+                                    borderRadius: '8px',
+                                    border: 'none',
+                                    background: 'var(--color-error)',
+                                    color: '#fff',
+                                    cursor: 'pointer',
+                                    fontWeight: 600,
+                                }}
+                            >
+                                Vẫn xóa
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };

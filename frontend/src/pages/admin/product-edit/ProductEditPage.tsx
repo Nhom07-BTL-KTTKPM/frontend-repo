@@ -1,23 +1,24 @@
 import { useEffect, useMemo, useState } from 'react';
-import { ArrowLeft, CheckCircle2, Flame, Leaf } from 'lucide-react';
+import { ArrowLeft, CheckCircle2, Leaf } from 'lucide-react';
 import { Controller, FormProvider, useForm, useWatch, type SubmitHandler } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useParams } from 'react-router-dom';
 import { toast } from 'sonner';
-import { skinConcernSuggestions, skinTypeSuggestions } from './productCreate.constants';
-import { productCreateSchema, type ProductCreateFormValues } from './productCreate.schema';
-import { SectionCard } from './components/SectionCard';
-import { FieldShell } from './components/FieldShell';
-import { TagInput } from './components/TagInput';
-import { ProductVariantEditor } from './components/ProductVariantEditor';
-import { ProductImageEditor } from './components/ProductImageEditor';
-import { AutoGrowTextarea } from './components/AutoGrowTextarea';
+import { skinConcernSuggestions, skinTypeSuggestions } from '../product-create/productCreate.constants';
+import { productCreateSchema, type ProductCreateFormValues } from '../product-create/productCreate.schema';
+import { SectionCard } from '../product-create/components/SectionCard';
+import { FieldShell } from '../product-create/components/FieldShell';
+import { TagInput } from '../product-create/components/TagInput';
+import { ProductVariantEditor } from '../product-create/components/ProductVariantEditor';
+import { ProductImageEditor } from '../product-create/components/ProductImageEditor';
+import { AutoGrowTextarea } from '../product-create/components/AutoGrowTextarea';
 import { productManagementApi } from '../../../api/admin/productManagementApi';
 import { resolveMediaSourceUrl } from '../../../api/uploadApi';
 import type { CatalogProductCreateRequest } from '../../../types/catalog';
 import { brandApi } from '../../../api/brandApi';
 import { categoryApi } from '../../../api/categoryApi';
 import type { BrandSummaryResponse, CategorySummaryResponse } from '../../../types/catalog';
+import { productApi } from '../../../api/productApi';
 
 const inputClassName =
   'w-full h-11 box-border rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 outline-none transition focus:border-amber-400 focus:ring-4 focus:ring-amber-100';
@@ -84,8 +85,9 @@ const toOptionalNumber = (value: string) => {
   return Number.isFinite(parsed) ? parsed : undefined;
 };
 
-export const ProductCreatePage = () => {
+export const ProductEditPage = () => {
   const navigate = useNavigate();
+  const { productId } = useParams();
   const [isSlugManuallyEdited, setIsSlugManuallyEdited] = useState(false);
   const [categoryOptions, setCategoryOptions] = useState<CategorySummaryResponse[]>([]);
   const [brandOptions, setBrandOptions] = useState<BrandSummaryResponse[]>([]);
@@ -144,6 +146,63 @@ export const ProductCreatePage = () => {
     form.setValue('slug', autoSlug, { shouldDirty: false, shouldValidate: true });
   }, [form, isSlugManuallyEdited, watchedValues.name]);
 
+  useEffect(() => {
+    if (!productId) {
+      return;
+    }
+
+    let active = true;
+
+    const loadProduct = async () => {
+      try {
+        const product = await productApi.getProduct(productId);
+
+        if (!active) {
+          return;
+        }
+
+        const mapped = {
+          name: product.name || '',
+          slug: product.slug || '',
+          categoryId: (product.category && (product.category as any).id) || (product as any).categoryId || '',
+          brandId: (product.brand && (product.brand as any).id) || (product as any).brandId || '',
+          description: product.description || '',
+          ingredients: (product as any).ingredients || '',
+          usageInstructions: (product as any).usageInstructions || '',
+          suitableSkinTypes: (product as any).suitableSkinTypes || [],
+          skinConcerns: (product as any).skinConcerns || [],
+          isActive: typeof (product as any).isActive === 'boolean' ? (product as any).isActive : true,
+          isFeatured: typeof (product as any).isFeatured === 'boolean' ? (product as any).isFeatured : false,
+          variants: (product.variants || []).map((v) => ({
+            sku: v.sku || '',
+            variantName: v.variantName || '',
+            price: String(v.price ?? ''),
+            originalPrice: v.originalPrice !== undefined && v.originalPrice !== null ? String(v.originalPrice) : '',
+            stockQuantity: v.stockQuantity !== undefined && v.stockQuantity !== null ? String(v.stockQuantity) : '',
+            imageUrl: (v as any).imageUrl || '',
+            isActive: typeof (v as any).isActive === 'boolean' ? (v as any).isActive : true,
+          })),
+          images: (product.images || []).map((img: any, idx: number) => ({
+            url: img.url || '',
+            altText: img.altText || '',
+            displayOrder: String(typeof img.displayOrder === 'number' ? img.displayOrder : idx),
+            isPrimary: !!img.isPrimary,
+          })),
+        } as ProductCreateFormValues;
+
+        form.reset(mapped);
+      } catch (error) {
+        toast.error('Không thể tải sản phẩm để chỉnh sửa.');
+      }
+    };
+
+    void loadProduct();
+
+    return () => {
+      active = false;
+    };
+  }, [productId, form]);
+
   const selectedCategory = useMemo(
     () => categoryOptions.find((item) => item.id === watchedValues.categoryId),
     [categoryOptions, watchedValues.categoryId],
@@ -163,6 +222,11 @@ export const ProductCreatePage = () => {
   const primaryImage = watchedValues.images?.find((item) => item.isPrimary) || watchedValues.images?.[0];
 
   const onSubmit: SubmitHandler<ProductCreateFormValues> = async (values) => {
+    if (!productId) {
+      toast.error('Product id missing');
+      return;
+    }
+
     try {
       const [uploadedImages, uploadedVariants] = await Promise.all([
         Promise.all(
@@ -174,7 +238,7 @@ export const ProductCreatePage = () => {
               url: resolvedImage.url,
               publicId: resolvedImage.key,
               altText: image.altText?.trim() || undefined,
-              displayOrder: toNumber(image.displayOrder, index),
+              displayOrder: toNumber(String(image.displayOrder ?? index), index),
               isPrimary: image.isPrimary,
             };
           }),
@@ -215,12 +279,12 @@ export const ProductCreatePage = () => {
         isFeatured: values.isFeatured,
       };
 
-      await productManagementApi.createProduct(payload);
+      await productManagementApi.updateProduct(productId, payload);
 
-      toast.success('Đã thêm sản phẩm mới thành công.');
+      toast.success('Đã cập nhật sản phẩm thành công.');
       navigate('/admin/products');
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Không thể thêm sản phẩm. Vui lòng thử lại.';
+      const message = error instanceof Error ? error.message : 'Không thể cập nhật sản phẩm. Vui lòng thử lại.';
       toast.error(message);
     }
   };
@@ -252,11 +316,10 @@ export const ProductCreatePage = () => {
 
             <div>
               <h1 className="m-0 text-3xl font-bold text-slate-950" style={{ fontFamily: 'var(--font-display)' }}>
-                Thêm sản phẩm mới
+                Cập nhật sản phẩm
               </h1>
             </div>
           </div>
-
         </header>
 
         <div className="relative z-10 grid gap-6 lg:grid-cols-[minmax(0,1.35fr)_minmax(320px,0.8fr)]">
@@ -265,7 +328,7 @@ export const ProductCreatePage = () => {
               <div className="grid gap-5 md:grid-cols-2">
                 <div className="grid gap-5">
                   <FieldShell label="Tên sản phẩm" error={form.formState.errors.name?.message}>
-                    <input style={{ border: '1px solid #8691a2' }} {...form.register('name')} className={inputClassName} placeholder="Nhập tên sản phẩm mới" />
+                    <input {...form.register('name')} className={inputClassName} placeholder="Nhập tên sản phẩm mới" />
                   </FieldShell>
 
                   <FieldShell
@@ -300,7 +363,7 @@ export const ProductCreatePage = () => {
 
                 <div className="grid gap-5">
                   <FieldShell label="Danh mục" error={form.formState.errors.categoryId?.message}>
-                    <select style={{ border: '1px solid #8691a2' }} {...form.register('categoryId')} className={inputClassName} disabled={isCatalogOptionsLoading}>
+                    <select {...form.register('categoryId')} className={inputClassName} disabled={isCatalogOptionsLoading}>
                       <option value="">{isCatalogOptionsLoading ? 'Đang tải danh mục...' : 'Chọn danh mục từ hệ thống'}</option>
                       {categoryOptions.map((option) => (
                         <option key={option.id} value={option.id}>
@@ -311,7 +374,7 @@ export const ProductCreatePage = () => {
                   </FieldShell>
 
                   <FieldShell label="Thương hiệu" error={form.formState.errors.brandId?.message}>
-                    <select style={{ border: '1px solid #8691a2' }} {...form.register('brandId')} className={inputClassName} disabled={isCatalogOptionsLoading}>
+                    <select {...form.register('brandId')} className={inputClassName} disabled={isCatalogOptionsLoading}>
                       <option value="">{isCatalogOptionsLoading ? 'Đang tải thương hiệu...' : 'Chọn thương hiệu từ hệ thống'}</option>
                       {brandOptions.map((option) => (
                         <option key={option.id} value={option.id}>
@@ -325,9 +388,10 @@ export const ProductCreatePage = () => {
 
               <div className="mt-5 grid gap-4 sm:grid-cols-2">
                 <label className="inline-flex items-start gap-3 rounded-2xl border border-slate-200 bg-slate-50 p-4">
-                  <input  {...form.register('isActive')} type="checkbox" className="mt-1 h-4 w-4 rounded border-slate-300 text-emerald-600 focus:ring-emerald-500" />
+                  <input {...form.register('isActive')} type="checkbox" className="mt-1 h-4 w-4 rounded border-slate-300 text-emerald-600 focus:ring-emerald-500" />
                   <span>
                     <span className="block text-sm font-semibold text-slate-900">Đang kinh doanh</span>
+                    <span className="block text-xs text-slate-500">Hiển thị sản phẩm trên storefront.</span>
                   </span>
                 </label>
 
@@ -335,6 +399,7 @@ export const ProductCreatePage = () => {
                   <input {...form.register('isFeatured')} type="checkbox" className="mt-1 h-4 w-4 rounded border-slate-300 text-amber-600 focus:ring-amber-500" />
                   <span>
                     <span className="block text-sm font-semibold text-slate-900">Sản phẩm nổi bật</span>
+                    <span className="block text-xs text-slate-500">Ưu tiên hiển thị tại khu vực hero hoặc landing.</span>
                   </span>
                 </label>
               </div>
@@ -347,7 +412,7 @@ export const ProductCreatePage = () => {
                     control={form.control}
                     name="description"
                     render={({ field }) => (
-                      <AutoGrowTextarea  style={{ border: '1px solid #8691a2' }}
+                      <AutoGrowTextarea
                         {...field}
                         minHeight={140}
                         maxHeight={300}
@@ -363,7 +428,7 @@ export const ProductCreatePage = () => {
                     control={form.control}
                     name="ingredients"
                     render={({ field }) => (
-                      <AutoGrowTextarea  style={{ border: '1px solid #8691a2' }}
+                      <AutoGrowTextarea
                         {...field}
                         minHeight={120}
                         maxHeight={280}
@@ -376,11 +441,10 @@ export const ProductCreatePage = () => {
 
                 <FieldShell label="Hướng dẫn sử dụng" error={form.formState.errors.usageInstructions?.message}>
                   <Controller
-                  style={{ border: '1px solid #8691a2' }}
                     control={form.control}
-                    name="usageInstructions" 
+                    name="usageInstructions"
                     render={({ field }) => (
-                      <AutoGrowTextarea  style={{ border: '1px solid black' }}
+                      <AutoGrowTextarea
                         {...field}
                         minHeight={120}
                         maxHeight={280}
@@ -394,8 +458,8 @@ export const ProductCreatePage = () => {
             </SectionCard>
 
             <SectionCard title="Phân loại AI">
-              <div className="grid gap-5" >
-                <TagInput 
+              <div className="grid gap-5">
+                <TagInput
                   name="suitableSkinTypes"
                   label="Loại da phù hợp"
                   hint="Tối đa 8 mục, click chip để xoá"
@@ -413,10 +477,12 @@ export const ProductCreatePage = () => {
               </div>
             </SectionCard>
 
-            <ProductVariantEditor
-              brandSource={selectedBrand?.slug || selectedBrand?.name || ''}
-              lineSource={selectedCategory?.slug || selectedCategory?.name || ''}
-            />
+            <SectionCard title="Biến thể">
+              <ProductVariantEditor
+                brandSource={selectedBrand?.slug || selectedBrand?.name || ''}
+                lineSource={selectedCategory?.slug || selectedCategory?.name || ''}
+              />
+            </SectionCard>
           </div>
 
           <aside className="grid gap-6 lg:sticky lg:top-6 lg:self-start">
@@ -435,8 +501,6 @@ export const ProductCreatePage = () => {
                   <p className="m-0 mt-1 text-lg font-bold text-slate-900">{maxPrice !== null ? formatCurrency(String(maxPrice)) : 'Liên hệ'}</p>
                 </div>
               </div>
-
-              
             </SectionCard>
 
             <SectionCard title="Danh sách kiểm tra">
@@ -456,9 +520,6 @@ export const ProductCreatePage = () => {
                 ))}
               </div>
             </SectionCard>
-
-            
-
           </aside>
         </div>
 
@@ -485,7 +546,7 @@ export const ProductCreatePage = () => {
                 disabled={!form.formState.isValid || form.formState.isSubmitting}
                 className="rounded-2xl bg-gradient-to-r from-indigo-600 to-blue-600 px-6 py-3 text-sm font-bold text-white shadow-lg shadow-indigo-200 transition hover:shadow-xl disabled:cursor-not-allowed disabled:opacity-60"
               >
-                {form.formState.isSubmitting ? 'Đang lưu...' : 'Thêm sản phẩm'}
+                {form.formState.isSubmitting ? 'Đang lưu...' : 'Lưu thay đổi'}
               </button>
             </div>
           </div>

@@ -1,7 +1,14 @@
 import { axiosClient } from '../axiosClient';
 import { resolveBaseUrl, serviceBase } from '../serviceBase';
 import type { PageResponse } from '../../types/api';
-import type { CatalogProduct, CatalogProductCreateRequest, CatalogProductDetail, ProductStatusRequest } from '../../types/catalog';
+import type { CatalogProduct, CatalogProductCreateRequest, CatalogProductDetail, ProductCardResponse, ProductStatusRequest } from '../../types/catalog';
+
+export interface ProductOverviewResponse {
+  totalProducts: number;
+  activeProducts: number;
+  featuredProducts: number;
+  outOfStockProducts: number;
+}
 
 export interface UpdateProductPayload {
   name?: string;
@@ -28,9 +35,15 @@ export const productManagementApi = {
   },
 
   getAllProducts: (params?: Record<string, unknown>) => {
-    return axiosClient.get<unknown, PageResponse<CatalogProduct>>(`${catalogProductsPath}/admin`, {
+    return axiosClient.get<unknown, PageResponse<ProductCardResponse>>(`${catalogProductsPath}/admin`, {
       baseURL: resolveBaseUrl(serviceBase.catalog),
       params,
+    });
+  },
+
+  getProductOverview: () => {
+    return axiosClient.get<unknown, ProductOverviewResponse>(`${catalogProductsPath}/admin/overview`, {
+      baseURL: resolveBaseUrl(serviceBase.catalog),
     });
   },
 
@@ -48,20 +61,14 @@ export const productManagementApi = {
     });
   },
 
-  updateProduct: (productId: string, payload: UpdateProductPayload) => {
-    return axiosClient.put<unknown, CatalogProduct>(`${catalogProductsPath}/${productId}`, payload, {
+  updateProduct: (productId: string, payload: CatalogProductCreateRequest) => {
+    return axiosClient.put<unknown, CatalogProductDetail>(`${catalogProductsPath}/${productId}`, payload, {
       baseURL: resolveBaseUrl(serviceBase.catalog),
     });
   },
 
   changeProductStatus: (productId: string, payload: ProductStatusRequest) => {
     return axiosClient.patch<unknown, CatalogProduct>(`${catalogProductsPath}/${productId}/status`, payload, {
-      baseURL: resolveBaseUrl(serviceBase.catalog),
-    });
-  },
-
-  deleteProduct: (productId: string) => {
-    return axiosClient.delete<unknown, void>(`${catalogProductsPath}/${productId}`, {
       baseURL: resolveBaseUrl(serviceBase.catalog),
     });
   },

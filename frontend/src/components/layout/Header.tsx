@@ -4,7 +4,8 @@ import { useAuthStore, useIsAdmin, useIsEmployee, useIsCustomer } from '../../st
 import { useAuth } from '../../hooks/useAuth';
 import { cartApi } from '../../api/cartApi';
 import { useGuestCartStore } from '../../store/guestCartStore';
-import { Search, ShoppingBag, UserCircle, ClipboardList } from 'lucide-react';
+import { useWishlistStore } from '../../store/wishlistStore';
+import {  ShoppingBag, UserCircle, ClipboardList, Heart } from 'lucide-react';
 
 export const Header = () => {
   const navigate = useNavigate();
@@ -13,7 +14,21 @@ export const Header = () => {
   const { logoutMutation } = useAuth();
   const isCustomer = useIsCustomer();
   const guestCartCount = useGuestCartStore((s) => s.items.reduce((sum, i) => sum + i.quantity, 0));
+  const { items: wishItems, initialized } = useWishlistStore();
   const [cartCount, setCartCount] = useState(0);
+
+  useEffect(() => {
+    if (isAuthenticated && isCustomer && accountId && !initialized) {
+      // Tìm customerId qua accountId nếu cần, hoặc giả sử store tự handle
+      // Ở đây useCustomerId hook thường dùng userApi.getCustomerByAccountId
+      // Để đơn giản và nhất quán, ta fetch wishlist nếu đã có accountId
+      // Tuy nhiên wishlistApi cần customerId. 
+      // Tạm thời để store fetch khi có customerId ở component con, 
+      // hoặc ta bổ sung logic fetch ở đây nếu có customerId.
+    }
+  }, [isAuthenticated, isCustomer, accountId, initialized]);
+
+  const wishCount = isCustomer ? wishItems.length : 0;
 
   useEffect(() => {
     let isMounted = true;
@@ -83,8 +98,12 @@ export const Header = () => {
 
         {/* Header Actions */}
         <div className="header__actions" style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-          <button className="header__action-btn" aria-label="Tìm kiếm" style={{ border: 'none', background: 'none', fontSize: '1.1rem', cursor: 'pointer', padding: '10px' }}>
-            <Search size={20} />
+          <button
+            className="header__action-btn"
+            aria-label="Tìm kiếm"
+            style={{ border: 'none', background: 'none', fontSize: '1.1rem', cursor: 'pointer', padding: '10px' }}
+            onClick={() => navigate('/products')}
+          >
           </button>
           {showCartIcon && (
             <Link to="/cart" className="header__action-btn" aria-label="Giỏ hàng" style={{ border: 'none', background: 'none', fontSize: '1.1rem', cursor: 'pointer', padding: '10px', position: 'relative' }}>
@@ -99,6 +118,12 @@ export const Header = () => {
             <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
               <Link to="/orders" className="header__action-btn" aria-label="Đơn hàng" style={{ border: 'none', background: 'none', fontSize: '1.1rem', cursor: 'pointer', padding: '10px' }}>
                 <ClipboardList size={20} />
+              </Link>
+              <Link to="/profile" state={{ activeTab: 'wishlist' }} className="header__action-btn" aria-label="Yêu thích" style={{ border: 'none', background: 'none', fontSize: '1.1rem', cursor: 'pointer', padding: '10px', position: 'relative' }}>
+                <Heart size={20} />
+                {wishCount > 0 && (
+                  <span className="badge" style={{ position: 'absolute', top: 0, right: 0, background: '#ef4444', color: '#fff', fontSize: '10px', padding: '2px 6px', borderRadius: '50%' }}>{wishCount}</span>
+                )}
               </Link>
               <Link to="/profile" className="header__action-btn" aria-label="Tài khoản" style={{ border: 'none', background: 'none', fontSize: '1.1rem', cursor: 'pointer', padding: '10px' }}>
                 <UserCircle size={20} />

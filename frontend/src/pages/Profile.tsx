@@ -1,3 +1,5 @@
+
+import { useLocation } from 'react-router-dom';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Camera, Key, Mail, User, XCircle } from 'lucide-react';
@@ -7,6 +9,7 @@ import { uploadSingleMedia } from '../api/uploadApi';
 import { CustomerProfile } from '../components/profile/CustomerProfile.tsx';
 import { EmployeeProfile } from '../components/profile/EmployeeProfile';
 import { CustomerAddresses } from '../components/profile/CustomerAddresses';
+import { CustomerWishList } from '../components/profile/CustomerWishList';
 import { employeeApi } from '../api/employeeApi';
 import { userApi } from '../api/userApi';
 import { useAuth } from '../hooks/useAuth';
@@ -17,6 +20,7 @@ export const Profile = () => {
   const { requestChangePasswordMutation, confirmChangePasswordMutation } = useAuth();
   const queryClient = useQueryClient();
   const authUser = useAuthStore((state) => state.user);
+  const location = useLocation();
 
   const customerQuery = useQuery({
     queryKey: ['profile', 'customer', authUser?.accountId],
@@ -62,7 +66,13 @@ export const Profile = () => {
 
   const [isChangingPassword, setIsChangingPassword] = useState(false);
   const [otpRequested, setOtpRequested] = useState(false);
-  const [customerTab, setCustomerTab] = useState<'profile' | 'addresses'>('profile');
+  const [customerTab, setCustomerTab] = useState<'profile' | 'addresses' | 'wishlist'>((location.state as any)?.activeTab || 'profile');
+
+  useEffect(() => {
+    if ((location.state as any)?.activeTab) {
+      setCustomerTab((location.state as any).activeTab);
+    }
+  }, [location.state]);
   const [otp, setOtp] = useState('');
   const [oldPassword, setOldPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
@@ -152,7 +162,7 @@ export const Profile = () => {
       errors.otp = 'Mã OTP phải gồm 6 ký tự';
     }
 
-    if (!oldPassword) {
+    if (!isFirstPasswordSetup && !oldPassword) {
       errors.oldPassword = 'Vui lòng nhập mật khẩu hiện tại';
     }
 
@@ -175,9 +185,19 @@ export const Profile = () => {
 
     setFieldErrors({});
 
-    confirmChangePasswordMutation.mutate({ otp, oldPassword, newPassword }, {
+    const changePasswordRequest = isFirstPasswordSetup
+      ? { otp, newPassword }
+      : { otp, oldPassword, newPassword };
+
+    confirmChangePasswordMutation.mutate(changePasswordRequest, {
       onSuccess: () => {
-        toast.success('Đổi mật khẩu thành công!');
+        if (user) {
+          const updatedUser = { ...user, hasPassword: true };
+          queryClient.setQueryData(['auth', 'me'], updatedUser);
+          useAuthStore.getState().setUser(updatedUser);
+        }
+
+        toast.success(isFirstPasswordSetup ? 'Tạo mật khẩu thành công!' : 'Đổi mật khẩu thành công!');
         setIsChangingPassword(false);
         setOtpRequested(false);
         setOtp('');
@@ -281,6 +301,7 @@ export const Profile = () => {
   }
 
   const shouldShowPasswordCard = user.role !== 'CUSTOMER' || customerTab === 'profile';
+  const isFirstPasswordSetup = user.provider === 'GOOGLE' && !user.hasPassword;
 
   return (
     <div className="container" style={{ padding: '4rem 0', minHeight: '80vh' }}>
@@ -302,21 +323,29 @@ export const Profile = () => {
               <button onClick={() => setCustomerTab('addresses')} className={`btn ${customerTab === 'addresses' ? 'btn--primary' : ''}`} style={{ textAlign: 'left', justifyContent: 'flex-start' }}>
                 Địa chỉ
               </button>
+              <button onClick={() => setCustomerTab('wishlist')} className={`btn ${customerTab === 'wishlist' ? 'btn--primary' : ''}`} style={{ textAlign: 'left', justifyContent: 'flex-start' }}>
+                Danh sách yêu thích
+              </button>
             </div>
           </aside>
 
           <div>
-            {customerTab === 'profile' ? (
+
+            {customerTab === 'profile' && (
               <CustomerProfile user={user} customer={customerQuery.data!} onSave={handleCustomerProfileSave} onEditAvatar={handleOpenAvatarPicker} />
-            ) : (
+            )}
+            {customerTab === 'addresses' && (
               <CustomerAddresses customerId={customerQuery.data?.id} />
+            )}
+            {customerTab === 'wishlist' && (
+              <CustomerWishList customerId={customerQuery.data?.id} />
             )}
 
             {shouldShowPasswordCard ? (
               <div style={{ background: '#fff', borderRadius: '12px', boxShadow: '0 10px 25px rgba(0,0,0,0.05)', padding: '2rem' }}>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.5rem', gap: '1rem', flexWrap: 'wrap' }}>
                   <h3 style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '1.25rem', margin: 0, color: 'var(--color-gray-800)' }}>
-                    <Key size={20} color="var(--color-primary)" /> Đổi mật khẩu
+                    <Key size={20} color="var(--color-primary)" /> {isFirstPasswordSetup ? 'Tạo mật khẩu lần đầu' : 'Đổi mật khẩu'}
                   </h3>
                   {!isChangingPassword && (
                     <button
@@ -335,7 +364,7 @@ export const Profile = () => {
                         transition: 'all 0.3s ease'
                       }}
                     >
-                      THAY ĐỔI
+                      {isFirstPasswordSetup ? 'TẠO MẬT KHẨU' : 'THAY ĐỔI'}
                     </button>
                   )}
                 </div>
@@ -345,7 +374,11 @@ export const Profile = () => {
                     {!otpRequested ? (
                       <div>
                         <p style={{ color: 'var(--color-gray-600)', marginBottom: '1rem', fontSize: '0.95rem' }}>
-                          Để bảo mật, hệ thống sẽ gửi một mã OTP đến email <strong>{user.email}</strong>. Vui lòng nhấn nút bên dưới để nhận mã.
+                          {isFirstPasswordSetup ? (
+                            <>Tài khoản Google của bạn chưa có mật khẩu. Hệ thống sẽ gửi một mã OTP đến email <strong>{user.email}</strong> để bạn tạo mật khẩu lần đầu.</>
+                          ) : (
+                            <>Để bảo mật, hệ thống sẽ gửi một mã OTP đến email <strong>{user.email}</strong>. Vui lòng nhấn nút bên dưới để nhận mã.</>
+                          )}
                         </p>
                         <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
                           <button
@@ -389,17 +422,19 @@ export const Profile = () => {
                             setFieldErrors((prev) => ({ ...prev, otp: '' }));
                           }}
                         />
-                        <InputField
-                          label="Mật khẩu hiện tại"
-                          value={oldPassword}
-                          type="password"
-                          placeholder="••••••••"
-                          error={fieldErrors.oldPassword}
-                          onChange={(value) => {
-                            setOldPassword(value);
-                            setFieldErrors((prev) => ({ ...prev, oldPassword: '' }));
-                          }}
-                        />
+                        {!isFirstPasswordSetup ? (
+                          <InputField
+                            label="Mật khẩu hiện tại"
+                            value={oldPassword}
+                            type="password"
+                            placeholder="••••••••"
+                            error={fieldErrors.oldPassword}
+                            onChange={(value) => {
+                              setOldPassword(value);
+                              setFieldErrors((prev) => ({ ...prev, oldPassword: '' }));
+                            }}
+                          />
+                        ) : null}
                         <InputField
                           label="Mật khẩu mới"
                           value={newPassword}
@@ -425,7 +460,7 @@ export const Profile = () => {
                         <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
                           <button
                             type="submit"
-                            disabled={confirmChangePasswordMutation.isPending || !otp || !oldPassword || !newPassword}
+                            disabled={confirmChangePasswordMutation.isPending || !otp || !newPassword || (!isFirstPasswordSetup && !oldPassword)}
                             className="btn btn--primary"
                             style={{
                               padding: '10px 24px',
@@ -440,7 +475,7 @@ export const Profile = () => {
                               letterSpacing: '1px'
                             }}
                           >
-                            {confirmChangePasswordMutation.isPending ? 'Đang xử lý...' : 'Xác nhận đổi'}
+                            {confirmChangePasswordMutation.isPending ? 'Đang xử lý...' : (isFirstPasswordSetup ? 'Xác nhận tạo' : 'Xác nhận đổi')}
                           </button>
                           <button
                             type="button"
@@ -470,7 +505,7 @@ export const Profile = () => {
           <div style={{ background: '#fff', borderRadius: '12px', boxShadow: '0 10px 25px rgba(0,0,0,0.05)', padding: '2rem' }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.5rem', gap: '1rem', flexWrap: 'wrap' }}>
               <h3 style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '1.25rem', margin: 0, color: 'var(--color-gray-800)' }}>
-                <Key size={20} color="var(--color-primary)" /> Đổi mật khẩu
+                <Key size={20} color="var(--color-primary)" /> {isFirstPasswordSetup ? 'Tạo mật khẩu lần đầu' : 'Đổi mật khẩu'}
               </h3>
               {!isChangingPassword && (
                 <button
@@ -489,7 +524,7 @@ export const Profile = () => {
                     transition: 'all 0.3s ease'
                   }}
                 >
-                  THAY ĐỔI
+                  {isFirstPasswordSetup ? 'TẠO MẬT KHẨU' : 'THAY ĐỔI'}
                 </button>
               )}
             </div>
@@ -499,7 +534,11 @@ export const Profile = () => {
                 {!otpRequested ? (
                   <div>
                     <p style={{ color: 'var(--color-gray-600)', marginBottom: '1rem', fontSize: '0.95rem' }}>
-                      Để bảo mật, hệ thống sẽ gửi một mã OTP đến email <strong>{user.email}</strong>. Vui lòng nhấn nút bên dưới để nhận mã.
+                      {isFirstPasswordSetup ? (
+                        <>Tài khoản Google của bạn chưa có mật khẩu. Hệ thống sẽ gửi một mã OTP đến email <strong>{user.email}</strong> để bạn tạo mật khẩu lần đầu.</>
+                      ) : (
+                        <>Để bảo mật, hệ thống sẽ gửi một mã OTP đến email <strong>{user.email}</strong>. Vui lòng nhấn nút bên dưới để nhận mã.</>
+                      )}
                     </p>
                     <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
                       <button
@@ -543,17 +582,19 @@ export const Profile = () => {
                         setFieldErrors((prev) => ({ ...prev, otp: '' }));
                       }}
                     />
-                    <InputField
-                      label="Mật khẩu hiện tại"
-                      value={oldPassword}
-                      type="password"
-                      placeholder="••••••••"
-                      error={fieldErrors.oldPassword}
-                      onChange={(value) => {
-                        setOldPassword(value);
-                        setFieldErrors((prev) => ({ ...prev, oldPassword: '' }));
-                      }}
-                    />
+                    {!isFirstPasswordSetup ? (
+                      <InputField
+                        label="Mật khẩu hiện tại"
+                        value={oldPassword}
+                        type="password"
+                        placeholder="••••••••"
+                        error={fieldErrors.oldPassword}
+                        onChange={(value) => {
+                          setOldPassword(value);
+                          setFieldErrors((prev) => ({ ...prev, oldPassword: '' }));
+                        }}
+                      />
+                    ) : null}
                     <InputField
                       label="Mật khẩu mới"
                       value={newPassword}
@@ -579,12 +620,12 @@ export const Profile = () => {
                     <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
                       <button
                         type="submit"
-                        disabled={confirmChangePasswordMutation.isPending || !otp || !oldPassword || !newPassword}
+                        disabled={confirmChangePasswordMutation.isPending || !otp || !newPassword || (!isFirstPasswordSetup && !oldPassword)}
                         className="btn btn--primary"
                         style={{
                           padding: '10px 24px',
                           borderRadius: '12px',
-                          background: 'linear-gradient(135deg, #D4AF37, #B8860B)', // Nút vàng gradient
+                          background: 'linear-gradient(135deg, #D4AF37, #B8860B)',
                           color: '#fff',
                           border: 'none',
                           boxShadow: '0 4px 15px rgba(184, 134, 11, 0.3)',
@@ -594,7 +635,7 @@ export const Profile = () => {
                           letterSpacing: '1px'
                         }}
                       >
-                        {confirmChangePasswordMutation.isPending ? 'Đang xử lý...' : 'Xác nhận đổi'}
+                        {confirmChangePasswordMutation.isPending ? 'Đang xử lý...' : (isFirstPasswordSetup ? 'Xác nhận tạo' : 'Xác nhận đổi')}
                       </button>
                       <button
                         type="button"
