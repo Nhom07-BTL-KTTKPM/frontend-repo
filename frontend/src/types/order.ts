@@ -2,7 +2,6 @@ export type OrderStatus =
   | 'PENDING' 
   | 'CONFIRMED' 
   | 'PROCESSING' 
-  | 'SHIPPED' // Từ nhánh HEAD
   | 'SHIPPING' // Từ nhánh develop
   | 'DELIVERED' 
   | 'CANCELLED' 
