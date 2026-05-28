@@ -81,13 +81,20 @@ export const Header = () => {
 
         {/* Navigation */}
         <nav className="nav" style={{ display: 'flex', alignItems: 'center', gap: '2rem' }}>
-          <ul className="nav__list" style={{ display: 'flex', gap: '2rem', listStyle: 'none', margin: 0, padding: 0 }}>
+          <ul className="nav__list" style={{ display: 'flex', alignItems: 'center', gap: '2rem', listStyle: 'none', margin: 0, padding: 0 }}>
             <li className="nav__item">
               <Link to="/" className="nav__link">Trang chủ</Link>
             </li>
             <li className="nav__item">
               <Link to="/products" className="nav__link">Sản phẩm</Link>
             </li>
+            {isAuthenticated && isCustomer && (
+              <li className="nav__item">
+                <Link to="/recommendations" className="nav__link" style={{ color: 'var(--color-gold)', fontWeight: 'bold', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                  <span role="img" aria-label="sparkles">✨</span> Dành cho bạn
+                </Link>
+              </li>
+            )}
             {canAccessDashboard && (
               <li className="nav__item">
                 <Link to="/admin/dashboard" className="nav__link" style={{ color: 'var(--color-error)', fontWeight: 'bold' }}>Dashboard Nội Bộ</Link>

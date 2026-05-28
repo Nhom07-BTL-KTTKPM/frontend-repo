@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { ShoppingCart, Heart, Loader2, Star } from 'lucide-react';
+import { Heart, Loader2, Star } from 'lucide-react';
 import type { Product } from '../types/product';
 
 import { useCustomerId } from '../hooks/useCustomerId';
@@ -12,9 +12,10 @@ import { toast } from 'sonner';
 
 interface Props {
   product: Product;
+  source?: string;
 }
 
-export const ProductCard: React.FC<Props> = ({ product }) => {
+export const ProductCard: React.FC<Props> = ({ product, source }) => {
   const [isAdding, setIsAdding] = useState(false);
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
   const { customerId } = useCustomerId();
@@ -107,7 +108,7 @@ export const ProductCard: React.FC<Props> = ({ product }) => {
       flexDirection: 'column'
     }}>
       <Link
-        to={`/product/${product.slug || product.productId}`}
+        to={`/product/${product.slug || product.productId}${source ? `?source=${source}` : ''}`}
         state={{ productId: product.id || product.productId }}
         style={{ textDecoration: 'none', color: 'inherit', flex: 1, display: 'flex', flexDirection: 'column' }}
       >

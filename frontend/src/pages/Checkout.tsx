@@ -7,6 +7,7 @@ import { orderApi } from '../api/orderApi';
 import { paymentApi } from '../api/paymentApi';
 import { addressApi } from '../api/addressApi';
 import { userApi } from '../api/userApi';
+import { aiApi } from '../api/aiApi';
 import { useGuestCartStore, type GuestCartItem } from '../store/guestCartStore';
 import type { PaymentMethod, VoucherResponse, VoucherValidationResponse } from '../types/order';
 import type { CartResponse } from '../types/cart';
@@ -402,6 +403,26 @@ export const Checkout = () => {
                 }
             } catch (cartError) {
                 console.error('Failed to remove items from cart:', cartError);
+            }
+
+            // Track purchase behavior
+            try {
+                if (cart?.items) {
+                    const purchasedItems = cart.items.filter(item => selectedItemIds.includes(item.id));
+                    const uniqueProductIds = new Set(
+                        purchasedItems.map(item => variants[item.productVariantId]?.productId).filter(Boolean)
+                    );
+                    
+                    for (const pid of uniqueProductIds) {
+                        aiApi.trackBehavior({
+                            productId: pid,
+                            eventType: 'PURCHASE',
+                            source: 'CART'
+                        }).catch(e => console.error('Failed to track purchase', e));
+                    }
+                }
+            } catch (trackError) {
+                console.error('Failed to track purchase:', trackError);
             }
 
             window.dispatchEvent(new CustomEvent('cart:updated'));
