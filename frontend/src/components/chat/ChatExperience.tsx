@@ -6,17 +6,15 @@ import { useChatStore } from '../../store/chatStore';
 import { useChat } from '../../hooks/useChat';
 import { ChatComposer } from './ChatComposer';
 import { ChatThread } from './ChatThread';
-import { SuggestedProducts } from './SuggestedProducts';
+
 
 interface ChatExperienceProps {
   variant?: 'page' | 'widget';
-  showSuggested?: boolean;
   showHeader?: boolean;
 }
 
 export const ChatExperience = ({
   variant = 'page',
-  showSuggested = true,
   showHeader = true,
 }: ChatExperienceProps) => {
   const user = useAuthStore((state) => state.user);
@@ -32,16 +30,26 @@ export const ChatExperience = ({
 
   const activeMessages = messages.filter(Boolean);
 
-  const suggestedProducts = useMemo(() => {
-    for (let index = activeMessages.length - 1; index >= 0; index -= 1) {
-      const message = activeMessages[index];
-      if (message.role === 'ASSISTANT') {
-        return message.suggestedProducts ?? [];
-      }
-    }
-    return [];
-  }, [activeMessages]);
 
+  const suggestedQuestions = useMemo(() => {
+    if (activeMessages.length === 0) return [];
+    const lastMsg = activeMessages[activeMessages.length - 1];
+    if (lastMsg.role !== 'ASSISTANT') return [];
+    if (!lastMsg.suggestedProducts?.length) return [];
+    
+    const topProduct = lastMsg.suggestedProducts.reduce((prev, current) => {
+      return (prev.score ?? 0) > (current.score ?? 0) ? prev : current;
+    });
+
+    if (!topProduct) return [];
+
+    const name = topProduct.name;
+    return [
+      `${name} cách dùng ra sao?`,
+      `${name} giá thế nào?`,
+      `${name} có gì đặc biệt?`
+    ];
+  }, [activeMessages]);
 
   const lastSentMessageRef = useRef<string | null>(null);
 
@@ -97,9 +105,7 @@ export const ChatExperience = ({
   };
 
   const isWidget = variant === 'widget';
-  const gridClassName = showSuggested
-    ? 'grid gap-6 lg:grid-cols-[minmax(0,1fr)_300px]'
-    : 'grid gap-6';
+  const gridClassName = 'grid gap-6';
 
   return (
     <div className="relative flex h-full flex-col gap-4">
@@ -129,18 +135,28 @@ export const ChatExperience = ({
           <div className="rounded-2xl border border-[#f0e8dc] bg-white/70 px-4 py-2 text-[11px] text-[#888]">
             Nội dung tư vấn mang tính tham khảo, không thay thế tư vấn chuyên môn.
           </div>
+          
+          {suggestedQuestions.length > 0 && !sendMessageMutation.isPending && (
+            <div className="flex flex-wrap gap-2">
+              {suggestedQuestions.map((q, i) => (
+                <button
+                  key={i}
+                  type="button"
+                  onClick={() => handleSend(q)}
+                  className="rounded-full border border-[#c9a96e] bg-[#faf6f0] px-3 py-1.5 text-xs text-[#6b5438] transition-colors hover:bg-[#c9a96e] hover:text-white"
+                >
+                  {q}
+                </button>
+              ))}
+            </div>
+          )}
+
           <ChatComposer
             onSend={handleSend}
             disabled={!customerId}
             isSending={sendMessageMutation.isPending}
           />
         </div>
-
-        {showSuggested && (
-          <div className="min-h-0 h-full">
-            <SuggestedProducts products={suggestedProducts} />
-          </div>
-        )}
       </div>
 
       {sendMessageMutation.isPending && (

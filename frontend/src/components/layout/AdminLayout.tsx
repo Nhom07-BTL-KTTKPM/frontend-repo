@@ -1,14 +1,23 @@
 import { useState } from 'react';
+import { useLocation } from 'react-router-dom';
 import { Outlet, useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../../store/authStore';
 import { useAuth } from '../../hooks/useAuth';
 import { AdminSidebar } from '../admin/AdminSidebar';
+import { AdminNotFound } from '../../pages/admin/AdminNotFound';
 
 export const AdminLayout = () => {
   const user = useAuthStore((state) => state.user);
+  const role = user?.role?.toUpperCase() ?? '';
   const navigate = useNavigate();
+  const location = useLocation();
   const { logoutMutation } = useAuth();
   const [collapsed, setCollapsed] = useState(false);
+  const restrictedVoucherPaths = ['/admin/vouchers', '/admin/voucher'];
+
+  if (role !== 'ADMIN' && restrictedVoucherPaths.includes(location.pathname)) {
+    return <AdminNotFound />;
+  }
 
   const handleLogout = () => {
     logoutMutation.mutate(undefined, {
@@ -33,6 +42,7 @@ export const AdminLayout = () => {
         onToggleCollapsed={() => setCollapsed((value) => !value)}
         onLogout={handleLogout}
         isLogoutPending={logoutMutation.isPending}
+        role={role}
       />
 
       <div style={{ display: 'flex', flexDirection: 'column', minWidth: 0 }}>

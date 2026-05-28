@@ -1,5 +1,7 @@
 import type { ChatMessage } from '../../types/ai';
 
+import { SuggestedProducts } from './SuggestedProducts';
+
 interface ChatMessageProps {
   message: ChatMessage;
 }
@@ -45,6 +47,7 @@ export const ChatMessage = ({ message }: ChatMessageProps) => {
   };
 
   const assistantReply = !isUser ? parseAssistantReply(message.content) : null;
+  const hasProducts = message.suggestedProducts && message.suggestedProducts.length > 0;
 
   return (
     <div className={`flex ${isUser ? 'justify-end' : 'justify-start'}`}>
@@ -62,21 +65,27 @@ export const ChatMessage = ({ message }: ChatMessageProps) => {
                 {assistantReply.body}
               </p>
             )}
-            <div className="rounded-2xl border border-[#f0e8dc] bg-[#faf6f0] px-4 py-3">
-              <p className="text-[11px] uppercase tracking-[0.3em] text-[#a68b5b]">Gợi ý từ Lumiere</p>
-              {assistantReply.listItems.length > 0 && (
-                <ol className="mt-2 list-decimal space-y-1 pl-4 text-sm text-[#2d2d2d]">
-                  {assistantReply.listItems.map((item, index) => (
-                    <li key={`${item}-${index}`} className="leading-relaxed">
-                      {item}
-                    </li>
-                  ))}
-                </ol>
-              )}
-            </div>
+            {!hasProducts && (
+              <div className="rounded-2xl border border-[#f0e8dc] bg-[#faf6f0] px-4 py-3">
+                <p className="text-[11px] uppercase tracking-[0.3em] text-[#a68b5b]">Gợi ý từ Lumiere</p>
+                {assistantReply.listItems.length > 0 && (
+                  <ol className="mt-2 list-decimal space-y-1 pl-4 text-sm text-[#2d2d2d]">
+                    {assistantReply.listItems.map((item, index) => (
+                      <li key={`${item}-${index}`} className="leading-relaxed">
+                        {item}
+                      </li>
+                    ))}
+                  </ol>
+                )}
+              </div>
+            )}
           </div>
         ) : (
           <p className="whitespace-pre-wrap leading-relaxed">{message.content}</p>
+        )}
+        
+        {hasProducts && !isUser && (
+          <SuggestedProducts products={message.suggestedProducts!} variant="inline" />
         )}
         <p className={`mt-2 text-[10px] uppercase tracking-[0.2em] ${isUser ? 'text-white/70' : 'text-[#888]'}`}>
           {message.createdAt ? new Date(message.createdAt).toLocaleTimeString() : 'Just now'}

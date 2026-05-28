@@ -9,6 +9,7 @@ export interface SuggestedProduct {
   productUrl?: string;
   reason?: string;
   score?: number;
+  slug?: string;
 }
 
 export interface ChatMessage {
@@ -49,4 +50,41 @@ export interface SendChatResponse {
   sessionId: string;
   reply: string;
   suggestedProducts?: SuggestedProduct[];
+}
+
+export type ProductViewSource = 
+  | 'HOME'
+  | 'CATEGORY_LIST'
+  | 'SEARCH'
+  | 'RECOMMENDATION_ENGINE'
+  | 'AI_CHAT'
+  | 'CART'
+  | 'ORDER_HISTORY'
+  | 'DIRECT';
+
+export type BehaviorEventType = 'VIEW' | 'ADD_TO_CART' | 'PURCHASE' | 'RECOMMENDATION_CLICK';
+
+export interface ViewLogRequest {
+  productId: string;
+  source?: ProductViewSource;
+  customerId?: string;
+  durationSeconds?: number;
+}
+
+export interface BehaviorEventRequest {
+  productId: string;
+  eventType: BehaviorEventType;
+  source?: ProductViewSource;
+  customerId?: string;
+}
+
+export interface RecommendationResponse {
+  id: string;
+  customerId: string;
+  productId: string;
+  score: number;
+  reason?: string;
+  type?: string;
+  isClicked: boolean;
+  product?: SuggestedProduct; // Or CatalogProductResponse
 }

@@ -5,6 +5,9 @@ import type {
   ChatMessageListResponse,
   SendChatRequest,
   SendChatResponse,
+  ViewLogRequest,
+  BehaviorEventRequest,
+  RecommendationResponse
 } from '../types/ai';
 
 export const aiApi = {
@@ -22,5 +25,19 @@ export const aiApi = {
 
   sendMessage: (data: SendChatRequest) => {
     return axiosClient.post<unknown, ApiResponse<SendChatResponse>>('/ai/chat', data);
+  },
+
+  trackView: (data: ViewLogRequest) => {
+    return axiosClient.post<unknown, ApiResponse<unknown>>('/ai/view-log', data);
+  },
+
+  trackBehavior: (data: BehaviorEventRequest) => {
+    return axiosClient.post<unknown, ApiResponse<unknown>>('/ai/behavior', data);
+  },
+
+  getRecommendations: (limit?: number) => {
+    return axiosClient.get<unknown, ApiResponse<RecommendationResponse[]>>('/ai/recommendations', {
+      params: limit !== undefined ? { limit } : undefined
+    });
   },
 };

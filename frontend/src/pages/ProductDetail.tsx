@@ -11,6 +11,8 @@ import { useGuestCartStore } from '../store/guestCartStore';
 import type { Product, ProductImage, ProductVariant } from '../types/product';
 import { ReviewSection } from '../components/review/ReviewSection';
 import { toLabel as skinTypeToLabel } from '../utils/skinTypeUtils';
+import { aiApi } from '../api/aiApi';
+import type { ProductViewSource } from '../types/ai';
 
 type DetailTab = 'description' | 'reviews';
 
@@ -139,6 +141,31 @@ export const ProductDetail: React.FC = () => {
   }, [product?.id]);
 
   useEffect(() => {
+    // 10s View Tracking Logic
+    if (!isAuthenticated || !customerId || !actualProductId) return;
+
+    const queryParams = new URLSearchParams(location.search);
+    const sourceStr = queryParams.get('source');
+    
+    // Chỉ track nếu từ HOME hoặc CATEGORY_LIST
+    if (sourceStr !== 'HOME' && sourceStr !== 'CATEGORY_LIST') {
+      return;
+    }
+
+    const source = sourceStr as ProductViewSource;
+
+    const timer = setTimeout(() => {
+      aiApi.trackView({
+        productId: actualProductId,
+        source: source,
+        durationSeconds: 10
+      }).catch(err => console.error('Failed to track view', err));
+    }, 10000);
+
+    return () => clearTimeout(timer);
+  }, [actualProductId, isAuthenticated, customerId, location.search]);
+
+  useEffect(() => {
     if (selectedImageIndex >= galleryImages.length) {
       setSelectedImageIndex(0);
     }
@@ -170,6 +197,17 @@ export const ProductDetail: React.FC = () => {
         });
         toast.success('Đã thêm sản phẩm vào giỏ hàng');
         window.dispatchEvent(new CustomEvent('cart:updated'));
+        
+        // Track add to cart behavior
+        if (actualProductId) {
+          const queryParams = new URLSearchParams(location.search);
+          const source = (queryParams.get('source') as ProductViewSource) || 'DIRECT';
+          aiApi.trackBehavior({
+            productId: actualProductId,
+            eventType: 'ADD_TO_CART',
+            source
+          }).catch(err => console.error('Failed to track behavior', err));
+        }
       } catch (err) {
         const message = err instanceof Error ? err.message : 'Thêm vào giỏ hàng thất bại';
         toast.error(message);

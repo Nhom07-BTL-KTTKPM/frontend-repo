@@ -10,6 +10,7 @@ import type { Product, ProductVariant } from '../../types/product';
 
 interface SuggestedProductsProps {
   products: SuggestedProduct[];
+  variant?: 'sidebar' | 'inline';
 }
 
 const formatCurrency = (value?: number) => {
@@ -44,7 +45,7 @@ const resolveDefaultVariant = (product?: Product): ProductVariant | null => {
   return inStock ?? product.variants[0];
 };
 
-export const SuggestedProducts = ({ products }: SuggestedProductsProps) => {
+export const SuggestedProducts = ({ products, variant = 'sidebar' }: SuggestedProductsProps) => {
   const navigate = useNavigate();
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
   const { customerId } = useCustomerId();
@@ -217,6 +218,7 @@ export const SuggestedProducts = ({ products }: SuggestedProductsProps) => {
   };
 
   if (!products.length) {
+    if (variant === 'inline') return null;
     return (
       <div className="rounded-3xl border border-dashed border-[#c9a96e]/40 bg-white/80 p-6 text-sm text-[#888]">
         Sản phẩm gợi ý sẽ hiển thị khi AI đưa ra đề xuất.
@@ -225,12 +227,14 @@ export const SuggestedProducts = ({ products }: SuggestedProductsProps) => {
   }
 
   return (
-    <div className="flex h-full flex-col rounded-3xl border border-[#f1e7d8] bg-white/95 p-5 shadow-[0_20px_50px_-35px_rgba(0,0,0,0.3)]">
-      <div className="mb-3">
-        <p className="text-[10px] uppercase tracking-[0.35em] text-[#b08b56]">Tuyển chọn</p>
-        <h3 className="text-xl font-semibold text-[#1a1a1a]">Sản phẩm gợi ý</h3>
-      </div>
-      <div className="min-h-0 flex-1 space-y-3 overflow-y-auto pr-2">
+    <div className={variant === 'sidebar' ? "flex h-full flex-col rounded-3xl border border-[#f1e7d8] bg-white/95 p-5 shadow-[0_20px_50px_-35px_rgba(0,0,0,0.3)]" : "flex flex-col mt-3"}>
+      {variant === 'sidebar' && (
+        <div className="mb-3">
+          <p className="text-[10px] uppercase tracking-[0.35em] text-[#b08b56]">Tuyển chọn</p>
+          <h3 className="text-xl font-semibold text-[#1a1a1a]">Sản phẩm gợi ý</h3>
+        </div>
+      )}
+      <div className={variant === 'sidebar' ? "min-h-0 flex-1 space-y-3 overflow-y-auto pr-2" : "space-y-3"}>
         {products.map((product, index) => {
           const productId = product.productId || product.id;
           const detail = productId ? productDetails[productId] : undefined;
@@ -301,20 +305,6 @@ export const SuggestedProducts = ({ products }: SuggestedProductsProps) => {
                   Xem chi tiết
                 </button>
               </div>
-
-              {product.score !== undefined && (
-                <div className="flex items-center gap-2">
-                  <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-[#e8d5a8]/30">
-                    <div
-                      className="h-full rounded-full bg-gradient-to-r from-[#c9a96e] to-[#a68b5b]"
-                      style={{ width: `${Math.max(0, Math.min(100, product.score * 100))}%` }}
-                    />
-                  </div>
-                  <span className="text-[10px] font-medium text-[#8a7a63]">
-                    {Math.round(product.score * 100)}% {product.score >= 0.7 ? 'phù hợp' : 'cân nhắc'}
-                  </span>
-                </div>
-              )}
             </div>
           );
         })}

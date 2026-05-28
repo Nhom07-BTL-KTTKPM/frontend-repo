@@ -11,6 +11,7 @@ import {
   ChevronRight,
 } from 'lucide-react';
 import { productManagementApi } from '../../api/admin/productManagementApi';
+import { AdminProductDetail } from './AdminProductDetail';
 import { orderApi } from '../../api/orderApi';
 import { useAuthStore } from '../../store/authStore';
 import type { OrderStatus } from '../../types/order';
@@ -286,6 +287,7 @@ export const Dashboard = () => {
   const currentUser = useAuthStore((state) => state.user);
   const currentRole = currentUser?.role?.toUpperCase() ?? '';
   const currentEmployeeName = currentUser?.fullName?.trim() || currentUser?.email || 'UNKNOWN';
+  const [selectedProduct, setSelectedProduct] = useState<{ slug: string; productId: string } | null>(null);
 
   const [period, setPeriod] = useState<PeriodKey>('30d');
   const [customFrom, setCustomFrom] = useState('');
@@ -451,6 +453,16 @@ export const Dashboard = () => {
     );
   }
 
+  if (selectedProduct) {
+    return (
+      <AdminProductDetail
+        slug={selectedProduct.slug}
+        productId={selectedProduct.productId}
+        onBack={() => setSelectedProduct(null)}
+      />
+    );
+  }
+
   return (
     <div className="space-y-6 p-1 pb-12 text-slate-600 antialiased">
       {/* Thanh công cụ lọc dữ liệu */}
@@ -555,13 +567,18 @@ export const Dashboard = () => {
       <section className="grid gap-6 xl:grid-cols-2">
         {/* Top bán chạy */}
         <article className="rounded-2xl border border-slate-200/80 bg-white p-5 shadow-sm">
-          <SectionTitle title="Sản phẩm bán chạy nhất" subtitle="Báo cáo số lượng tiêu thụ kéo từ dịch vụ danh mục sản phẩm chính." />
+          <SectionTitle title="Sản phẩm bán chạy nhất"/>
           <div className="mt-5 space-y-3.5">
             {topProducts.slice(0, 5).map((product) => {
               const percent = `${Math.max(((product.sold ?? 0) / maxProductSold) * 100, 8)}%`;
 
               return (
-                <div key={product.id} className="group/item relative overflow-hidden rounded-xl border border-slate-100 bg-slate-50/30 p-3.5 transition-all hover:bg-slate-50 hover:border-slate-200">
+                <button
+                  key={product.id}
+                  type="button"
+                  onClick={() => setSelectedProduct({ slug: product.slug, productId: product.id })}
+                  className="group/item relative w-full overflow-hidden rounded-xl border border-slate-100 bg-slate-50/30 p-3.5 text-left transition-all hover:border-slate-200 hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-amber-400/40"
+                >
                   <div className="flex items-start justify-between gap-4 relative z-10">
                     <div className="min-w-0">
                       <p className="text-sm font-bold text-slate-900 truncate group-hover/item:text-orange-700 transition-colors">{product.name}</p>
@@ -587,7 +604,7 @@ export const Dashboard = () => {
                     </span>
                     <span>{product.totalReviews ?? 0} lượt review</span>
                   </div>
-                </div>
+                </button>
               );
             })}
             {topProducts.length === 0 && <p className="text-xs text-slate-400 text-center py-6">Chưa có dữ liệu sản phẩm.</p>}
@@ -596,10 +613,15 @@ export const Dashboard = () => {
 
         {/* Top đánh giá cao */}
         <article className="rounded-2xl border border-slate-200/80 bg-white p-5 shadow-sm">
-          <SectionTitle title="Bộ sưu tập đánh giá tích cực" subtitle="Danh sách định hướng chiến lược đẩy mạnh truyền thông & chiến dịch." />
+          <SectionTitle title="Sản phẩm được đánh giá cao"/>
           <div className="mt-5 space-y-3">
             {topRatedProducts.slice(0, 5).map((product) => (
-              <div key={product.id} className="flex items-center justify-between rounded-xl border border-slate-100 bg-slate-50/30 p-3.5 transition-all hover:bg-slate-50 hover:border-slate-200">
+              <button
+                key={product.id}
+                type="button"
+                onClick={() => setSelectedProduct({ slug: product.slug, productId: product.id })}
+                className="flex w-full items-center justify-between rounded-xl border border-slate-100 bg-slate-50/30 p-3.5 text-left transition-all hover:border-slate-200 hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-amber-400/40"
+              >
                 <div className="min-w-0 pr-2">
                   <p className="text-sm font-bold text-slate-900 truncate">{product.name}</p>
                   <p className="mt-0.5 text-xs text-slate-400 font-medium">{product.brandName || 'Nhãn hàng nội địa'} · <span className="text-slate-500 font-semibold">{formatCurrency(product.minPrice ?? product.maxPrice)}</span></p>
@@ -612,7 +634,7 @@ export const Dashboard = () => {
                   </span>
                   <ChevronRight size={14} className="text-slate-300" />
                 </div>
-              </div>
+              </button>
             ))}
             {topRatedProducts.length === 0 && <p className="text-xs text-slate-400 text-center py-6">Chưa có dữ liệu đánh giá.</p>}
           </div>

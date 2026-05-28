@@ -15,6 +15,7 @@ export { Chat } from './Chat';
 export { VerifyEmail } from './VerifyEmail';
 export { ForgotPassword } from './ForgotPassword';
 export { ResetPassword } from './ResetPassword';
+export { RecommendationsPage } from './RecommendationsPage';
 
 // Component giả lập chưa được tách file
 export const Payment = () => {
