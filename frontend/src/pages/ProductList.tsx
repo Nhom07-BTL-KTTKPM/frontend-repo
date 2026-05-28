@@ -15,15 +15,24 @@ type SelectOption = {
   label: string;
 };
 
+type SortBy = 'default' | 'name-asc' | 'name-desc' | 'price-asc' | 'price-desc';
+
+const sortParamByOption: Record<SortBy, string | undefined> = {
+  default: undefined,
+  'name-asc': 'name,asc',
+  'name-desc': 'name,desc',
+  'price-asc': 'minPrice,asc',
+  'price-desc': 'minPrice,desc',
+};
+
 const skinTypeOptions = ['Da dầu', 'Da khô', 'Da hỗn hợp', 'Da thường', 'Da nhạy cảm', 'Da mụn', 'Da lão hóa', 'Da mất độ đàn hồi', 'Mọi loại da'];
-const promotionOptions = ['Hàng mới', 'Bán chạy', 'Đang giảm giá'];
 
 export const ProductList: React.FC = () => {
   const [searchInput, setSearchInput] = useState('');
   const [searchKeyword, setSearchKeyword] = useState('');
 
   const [isFilterDrawerOpen, setIsFilterDrawerOpen] = useState(false);
-  const [sortBy, setSortBy] = useState('default');
+  const [sortBy, setSortBy] = useState<SortBy>('default');
 
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
   const [selectedSkinTypes, setSelectedSkinTypes] = useState<string[]>([]);
@@ -55,6 +64,11 @@ export const ProductList: React.FC = () => {
       page: currentPage - 1,
       size: pageSize,
     };
+
+    const sortParam = sortParamByOption[sortBy];
+    if (sortParam) {
+      params.sort = sortParam;
+    }
 
     if (searchKeyword.trim()) {
       params.keyword = searchKeyword.trim();
@@ -93,6 +107,7 @@ export const ProductList: React.FC = () => {
     priceMax,
     selectedRatings,
     selectedPromotions,
+    sortBy,
   ]);
 
   const { data: pageData, isLoading, error } = useQuery<PageResponse<ProductListItem>>({
@@ -185,7 +200,7 @@ export const ProductList: React.FC = () => {
 
   React.useEffect(() => {
     setCurrentPage(1);
-  }, [searchKeyword, selectedCategories, selectedBrands, selectedSkinTypes, selectedRatings, priceMin, priceMax, selectedPromotions]);
+  }, [searchKeyword, selectedCategories, selectedBrands, selectedSkinTypes, selectedRatings, priceMin, priceMax, selectedPromotions, sortBy]);
 
   // Scroll to top of product list when user navigates pages
   React.useEffect(() => {
@@ -231,7 +246,6 @@ export const ProductList: React.FC = () => {
     setSelectedBrands([]);
     setSelectedSkinTypes([]);
     setSelectedRatings([]);
-    setSelectedPromotions([]);
     setSelectedPromotions([]);
     setPriceMin(0);
     setPriceMax(computedPriceMax);
@@ -621,10 +635,10 @@ export const ProductList: React.FC = () => {
           </p>
           <label className="product-list__sort">
             <span>Sắp xếp</span>
-            <select value={sortBy} onChange={(event) => setSortBy(event.target.value)}>
+            <select value={sortBy} onChange={(event) => setSortBy(event.target.value as SortBy)}>
               <option value="default">Mặc định</option>
-              <option value="popular">Phổ biến</option>
-              <option value="newest">Mới nhất</option>
+              <option value="name-asc">Tên: A-Z</option>
+              <option value="name-desc">Tên: Z-A</option>
               <option value="price-asc">Giá: Thấp đến cao</option>
               <option value="price-desc">Giá: Cao đến thấp</option>
             </select>
