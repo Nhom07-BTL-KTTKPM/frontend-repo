@@ -25,6 +25,57 @@ export const ReviewForm: React.FC<ReviewFormProps> = ({ productId, orderItemId, 
   const [isUploading, setIsUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const getFriendlyErrorMessage = (err: any, fallback: string) => {
+    const status = err?.response?.status ?? err?.status;
+    const rawMessage = err?.response?.data?.message ?? err?.message;
+
+    if (status === 400) {
+      if (typeof rawMessage === 'string' && rawMessage.toLowerCase().includes('product variant not found')) {
+        return 'Không tìm thấy sản phẩm để đánh giá. Vui lòng thử lại.';
+      }
+
+      return 'Dữ liệu gửi lên không hợp lệ. Vui lòng kiểm tra và thử lại.';
+    }
+
+    if (status === 401 || status === 403) {
+      return 'Bạn không có quyền thực hiện thao tác này.';
+    }
+
+    if (status === 404) {
+      return 'Không tìm thấy tài nguyên cần thiết. Vui lòng thử lại sau.';
+    }
+
+    if (status === 409) {
+      return 'Đánh giá đã tồn tại hoặc dữ liệu xung đột. Vui lòng kiểm tra lại.';
+    }
+
+    if (status === 413) {
+      return 'Tệp tải lên quá lớn. Vui lòng chọn tệp nhỏ hơn.';
+    }
+
+    if (status === 415) {
+      return 'Định dạng tệp không hỗ trợ. Vui lòng chọn ảnh hợp lệ.';
+    }
+
+    if (status === 422) {
+      return 'Dữ liệu không hợp lệ. Vui lòng kiểm tra các trường bắt buộc.';
+    }
+
+    if (status === 429) {
+      return 'Bạn đang thao tác quá nhiều. Vui lòng thử lại sau ít phút.';
+    }
+
+    if (status >= 500) {
+      return 'Hệ thống đang gặp sự cố. Vui lòng thử lại sau.';
+    }
+
+    if (err?.code === 'ERR_NETWORK') {
+      return 'Không thể kết nối máy chủ. Vui lòng kiểm tra mạng và thử lại.';
+    }
+
+    return fallback;
+  };
+
   const createReviewMutation = useMutation({
     mutationFn: (request: ReviewRequest) => reviewApi.createReview(request),
     onSuccess: () => {
@@ -32,7 +83,7 @@ export const ReviewForm: React.FC<ReviewFormProps> = ({ productId, orderItemId, 
       if (onSuccess) onSuccess();
     },
     onError: (err: any) => {
-      setError(err.message || 'Có lỗi xảy ra khi gửi đánh giá');
+      setError(getFriendlyErrorMessage(err, 'Có lỗi xảy ra khi gửi đánh giá.'));
     }
   });
 
@@ -43,7 +94,7 @@ export const ReviewForm: React.FC<ReviewFormProps> = ({ productId, orderItemId, 
       if (onSuccess) onSuccess();
     },
     onError: (err: any) => {
-      setError(err.message || 'Có lỗi xảy ra khi cập nhật đánh giá');
+      setError(getFriendlyErrorMessage(err, 'Có lỗi xảy ra khi cập nhật đánh giá.'));
     }
   });
 
@@ -65,7 +116,7 @@ export const ReviewForm: React.FC<ReviewFormProps> = ({ productId, orderItemId, 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!customerId) {
-      setError('Không tìm thấy thông tin khách hàng để đánh giá');
+      setError('Không tìm thấy thông tin khách hàng để đánh giá.');
       return;
     }
 
@@ -97,7 +148,7 @@ export const ReviewForm: React.FC<ReviewFormProps> = ({ productId, orderItemId, 
         await createReviewMutation.mutateAsync(request);
       }
     } catch (err: any) {
-      setError(err.message || 'Lỗi khi upload ảnh');
+      setError(getFriendlyErrorMessage(err, 'Lỗi khi tải ảnh lên.'));
     } finally {
       setIsUploading(false);
     }
