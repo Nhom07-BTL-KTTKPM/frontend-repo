@@ -14,7 +14,7 @@ import { AdminRoute } from './routes/AdminRoute';
 import { Login } from './pages/Login';
 import { Register } from './pages/Register';
 import { Profile } from './pages/Profile';
-import { Home, ProductList, ProductDetail, Cart, Checkout, OrderHistory, OrderDetail, OrderSuccess, OrderFailed, Payment, VerifyEmail, ForgotPassword, ResetPassword, CategoryDetailPage, BrandDetailPage, Chat, OrderLookup } from './pages';
+import { Home, ProductList, ProductDetail, Cart, Checkout, OrderHistory, OrderDetail, OrderSuccess, OrderFailed, Payment, VerifyEmail, ForgotPassword, ResetPassword, CategoryDetailPage, BrandDetailPage, Chat, OrderLookup, RecommendationsPage } from './pages';
 import { Dashboard as AdminDashboard } from './pages/admin/Dashboard';
 import { ProductManagement } from './pages/admin/ProductManagement';
 import { UserManagement} from './pages/admin/UserManagement';
@@ -79,7 +79,7 @@ function App() {
             <Route path="/ai-chat" element={<Chat />} />
             <Route path="/orders" element={<OrderHistory />} />
             <Route path="/orders/:orderId" element={<OrderDetail />} />
-            <Route path="/orders" element={<OrderHistory />} />
+            <Route path="/recommendations" element={<RecommendationsPage />} />
           </Route>
 
           {/* Employee/Admin Routes */}

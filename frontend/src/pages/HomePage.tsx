@@ -269,7 +269,7 @@ export const HomePage: React.FC = () => {
                 return (
                   <article key={product.id} className="best-sellers__card">
                     <Link
-                      to={`/product/${product.slug}`}
+                      to={`/product/${product.slug}?source=HOME`}
                       state={{ productId: product.id }}
                       className="best-sellers__link"
                     >
