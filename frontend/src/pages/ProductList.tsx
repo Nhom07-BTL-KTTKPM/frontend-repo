@@ -648,7 +648,7 @@ export const ProductList: React.FC = () => {
           <div className="product-list__grid">
             {cardProducts.map((p) => (
               <div key={p.id} className="product-list__grid-item">
-                <ProductCard product={p} />
+                <ProductCard product={p} source="CATEGORY_LIST" />
               </div>
             ))}
             {!isLoading && products.length === 0 && (

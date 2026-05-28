@@ -8,14 +8,13 @@ import { MainLayout } from './components/layout/MainLayout';
 import { AdminLayout } from './components/layout/AdminLayout';
 import { GuestRoute } from './routes/GuestRoute';
 import { ProtectedRoute } from './routes/ProtectedRoute';
-import { EmployeeRoute } from './routes/EmployeeRoute';
 import { AdminRoute } from './routes/AdminRoute';
 
 // Pages
 import { Login } from './pages/Login';
 import { Register } from './pages/Register';
 import { Profile } from './pages/Profile';
-import { Home, ProductList, ProductDetail, Cart, Checkout, OrderHistory, OrderDetail, OrderSuccess, OrderFailed, Payment, VerifyEmail, ForgotPassword, ResetPassword, CategoryDetailPage, BrandDetailPage, Chat, OrderLookup } from './pages';
+import { Home, ProductList, ProductDetail, Cart, Checkout, OrderHistory, OrderDetail, OrderSuccess, OrderFailed, Payment, VerifyEmail, ForgotPassword, ResetPassword, CategoryDetailPage, BrandDetailPage, Chat, OrderLookup, RecommendationsPage } from './pages';
 import { Dashboard as AdminDashboard } from './pages/admin/Dashboard';
 import { ProductManagement } from './pages/admin/ProductManagement';
 import { UserManagement} from './pages/admin/UserManagement';
@@ -43,8 +42,9 @@ function App() {
   }
 
   return (
-    <BrowserRouter>
-      <Routes>
+    <div className="font-[Arial]">
+      <BrowserRouter>
+        <Routes>
         {/* Nhóm Main Layout (có Header/Footer) */}
         <Route element={<MainLayout />}>
 
@@ -79,7 +79,7 @@ function App() {
             <Route path="/ai-chat" element={<Chat />} />
             <Route path="/orders" element={<OrderHistory />} />
             <Route path="/orders/:orderId" element={<OrderDetail />} />
-            <Route path="/orders" element={<OrderHistory />} />
+            <Route path="/recommendations" element={<RecommendationsPage />} />
           </Route>
 
           {/* Employee/Admin Routes */}
@@ -96,13 +96,15 @@ function App() {
               <Route path="products/new" element={<ProductCreatePage />} />
               <Route path="products/:productId/edit" element={<ProductEditPage />} />
               <Route path="orders" element={<OrderManagement />} />
+              <Route path="voucher" element={<VoucherManagement />} />
               <Route path="vouchers" element={<VoucherManagement />} />
               <Route path="users" element={<UserManagement />} />
               <Route path="profile" element={<Profile />} />
             </Route>
           </Route>
-      </Routes>
-    </BrowserRouter>
+        </Routes>
+      </BrowserRouter>
+    </div>
   );
 }
 
