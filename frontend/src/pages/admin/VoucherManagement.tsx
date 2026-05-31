@@ -107,6 +107,17 @@ const copyTextToClipboard = async (value: string) => {
 
 const generateVoucherId = () => `voucher-${Math.random().toString(36).slice(2, 10)}-${Date.now()}`;
 
+const parseDateTimeLocal = (value: string) => {
+  const timestamp = new Date(value).getTime();
+  return Number.isNaN(timestamp) ? null : timestamp;
+};
+
+const getRoundedNowForDateTimeLocal = () => {
+  const now = new Date();
+  now.setSeconds(0, 0);
+  return now.getTime();
+};
+
 const parseFormErrors = (form: VoucherFormState) => {
   const errors: Record<string, string> = {};
 
@@ -156,8 +167,17 @@ const parseFormErrors = (form: VoucherFormState) => {
     errors.endDate = 'Vui lòng chọn ngày kết thúc';
   }
 
-  if (form.startDate && form.endDate && new Date(form.endDate) <= new Date(form.startDate)) {
-    errors.endDate = 'Ngày kết thúc phải lớn hơn ngày bắt đầu';
+  const startDateTime = form.startDate ? parseDateTimeLocal(form.startDate) : null;
+  const endDateTime = form.endDate ? parseDateTimeLocal(form.endDate) : null;
+  const nowDateTime = getRoundedNowForDateTimeLocal();
+  const minimumEndDateTime = startDateTime === null ? null : startDateTime + 10 * 60 * 1000;
+
+  if (startDateTime !== null && startDateTime < nowDateTime) {
+    errors.startDate = 'Ngày bắt đầu không được ở trong quá khứ';
+  }
+
+  if (startDateTime !== null && endDateTime !== null && endDateTime <= minimumEndDateTime) {
+    errors.endDate = 'Ngày kết thúc phải sau ngày bắt đầu ít nhất 10 phút';
   }
 
   return errors;

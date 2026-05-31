@@ -1,5 +1,5 @@
 import { CalendarRange, CheckCircle2, FileText, Hash, Info, Percent, Ticket, Truck, UserRound, WalletCards, X } from 'lucide-react';
-import React, { useState, type FormEvent, type ReactNode } from 'react';
+import { useState, type FormEvent, type ReactNode } from 'react';
 import type { VoucherFormState, VoucherStatus } from '../types';
 
 type FieldTooltip = {
@@ -80,6 +80,31 @@ const fieldIconMap: Record<string, FieldIcon> = {
   maxUsagePerUser: <UserRound size={16} />,
   startDate: <CalendarRange size={16} />,
   endDate: <CalendarRange size={16} />,
+};
+
+const parseDateTimeLocal = (value: string) => {
+  const timestamp = new Date(value).getTime();
+  return Number.isNaN(timestamp) ? null : timestamp;
+};
+
+const formatDateTimeLocal = (date: Date) => {
+  const pad = (input: number) => String(input).padStart(2, '0');
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
+};
+
+const getNowForDateTimeLocal = () => {
+  const now = new Date();
+  now.setSeconds(0, 0);
+  return formatDateTimeLocal(now);
+};
+
+const addMinutesForDateTimeLocal = (value: string, minutes: number) => {
+  const timestamp = parseDateTimeLocal(value);
+  if (timestamp === null) {
+    return '';
+  }
+
+  return formatDateTimeLocal(new Date(timestamp + minutes * 60 * 1000));
 };
 
 const segmentMetaMap: Record<'PERCENT' | 'AMOUNT' | 'FREE_SHIPPING', SegmentMeta> = {
@@ -320,13 +345,26 @@ export const VoucherFormModal = ({
         return undefined;
       }
       case 'startDate':
-        return value ? undefined : 'Vui lòng chọn ngày bắt đầu.';
+        if (!value) return 'Vui lòng chọn ngày bắt đầu.';
+        {
+          const startDateTime = parseDateTimeLocal(value);
+          const nowDateTime = parseDateTimeLocal(getNowForDateTimeLocal());
+          if (startDateTime === null) return 'Ngày bắt đầu không hợp lệ.';
+          if (nowDateTime !== null && startDateTime < nowDateTime) return 'Ngày bắt đầu không được ở trong quá khứ.';
+        }
+        return undefined;
       case 'endDate':
         if (!value) return 'Vui lòng chọn ngày kết thúc.';
+        {
+          const endDateTime = parseDateTimeLocal(value);
+          if (endDateTime === null) return 'Ngày kết thúc không hợp lệ.';
+        }
         if (formState.startDate && value) {
-          const s = new Date(formState.startDate).getTime();
-          const e = new Date(value).getTime();
-          if (!isNaN(s) && !isNaN(e) && e <= s) return 'Ngày kết thúc phải sau ngày bắt đầu.';
+          const startDateTime = parseDateTimeLocal(formState.startDate);
+          const endDateTime = parseDateTimeLocal(value);
+          if (startDateTime !== null && endDateTime !== null && endDateTime <= startDateTime + 10 * 60 * 1000) {
+            return 'Ngày kết thúc phải sau ngày bắt đầu ít nhất 10 phút.';
+          }
         }
         return undefined;
       case 'status':
@@ -583,6 +621,7 @@ export const VoucherFormModal = ({
           <Field label="Ngày bắt đầu *" error={showErrorFor('startDate')} tooltip={fieldTooltipMap.startDate} icon={fieldIconMap.startDate} disabled={!isCreateMode && !editPolicy.canEditAll}>
             <input
               type="datetime-local"
+              min={getNowForDateTimeLocal()}
               value={formState.startDate}
               onChange={(event) => onChange({ startDate: event.target.value })}
               onBlur={() => setTouchedFields((s) => ({ ...s, startDate: true }))}
@@ -594,6 +633,7 @@ export const VoucherFormModal = ({
           <Field label="Ngày kết thúc *" error={showErrorFor('endDate')} tooltip={fieldTooltipMap.endDate} icon={fieldIconMap.endDate} disabled={lockAllFields}>
             <input
               type="datetime-local"
+              min={formState.startDate ? addMinutesForDateTimeLocal(formState.startDate, 10) : undefined}
               value={formState.endDate}
               onChange={(event) => onChange({ endDate: event.target.value })}
               onBlur={() => setTouchedFields((s) => ({ ...s, endDate: true }))}
