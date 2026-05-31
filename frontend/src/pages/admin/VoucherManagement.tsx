@@ -11,13 +11,30 @@ type DetailDialogState = {
 } | null;
 
 const formatDateTimeInput = (value: string) => {
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) {
+  if (!value) {
     return '';
   }
 
-  const pad = (input: number) => String(input).padStart(2, '0');
-  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
+  const hasTimezone = /(?:Z|[+-]\d{2}:?\d{2})$/.test(value);
+  if (hasTimezone) {
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) {
+      return '';
+    }
+
+    const pad = (input: number) => String(input).padStart(2, '0');
+    return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
+  }
+
+  return value.slice(0, 16);
+};
+
+const serializeDateTimeLocal = (value: string) => {
+  if (!value) {
+    return value;
+  }
+
+  return value.length === 16 ? `${value}:00` : value.slice(0, 19);
 };
 
 const formatDateTable = (value: string) => {
@@ -158,8 +175,8 @@ const createVoucherFromForm = (form: VoucherFormState, id?: string): Voucher => 
   quantity: Number(form.quantity),
   maxUsagePerUser: form.maxUsagePerUser.trim() === '' ? null : Number(form.maxUsagePerUser),
   status: form.status as VoucherStatus,
-  startDate: new Date(form.startDate).toISOString(),
-  endDate: new Date(form.endDate).toISOString(),
+  startDate: serializeDateTimeLocal(form.startDate),
+  endDate: serializeDateTimeLocal(form.endDate),
   createdAt: new Date().toISOString(),
 });
 
