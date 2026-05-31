@@ -115,7 +115,7 @@ export const OrderDetail = () => {
 
     return (
         <div style={{ padding: '4rem 2rem', maxWidth: '1000px', margin: '0 auto', minHeight: '60vh' }}>
-            <h1 style={{ fontFamily: 'var(--font-display)', fontSize: '2.5rem', color: 'var(--color-gold)', marginBottom: '2rem' }}>Chi tiết đơn hàng</h1>
+            <h1 style={{ fontFamily: 'serif', fontSize: '2.5rem', color: 'var(--color-gold)', marginBottom: '2rem', textAlign: 'center' }}>Chi tiết đơn hàng</h1>
 
             <div style={{ background: '#fff', borderRadius: '12px', padding: '1.5rem', boxShadow: '0 4px 15px rgba(0,0,0,0.05)', border: '1px solid #f0f0f0', marginBottom: '1.5rem' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #f0f0f0', paddingBottom: '1rem', marginBottom: '1rem' }}>
@@ -218,7 +218,7 @@ export const OrderDetail = () => {
                     <div style={{ fontSize: '0.9rem', color: 'var(--color-gray-500)' }}>
                         <p style={{ margin: '0 0 6px 0' }}>Tạm tính: <strong>{formatCurrency(order.subtotal)}</strong></p>
                         <p style={{ margin: '0 0 6px 0' }}>Giảm giá: <strong>-{formatCurrency(order.discountAmount)}</strong></p>
-                        <p style={{ margin: 0 }}>Phí vận chuyển: <strong>{formatCurrency(0)}</strong></p>
+                        <p style={{ margin: 0 }}>Phí vận chuyển: <strong>{formatCurrency(order.shippingFee)}</strong></p>
                     </div>
                     <div style={{ textAlign: 'right' }}>
                         <span style={{ fontSize: '0.9rem', color: 'var(--color-gray-500)', marginRight: '10px' }}>Tổng thanh toán:</span>
