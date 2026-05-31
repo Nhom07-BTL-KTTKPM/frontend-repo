@@ -34,7 +34,7 @@ export const Cart = () => {
     const navigate = useNavigate();
     const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
     const isCustomer = useIsCustomer();
-    const { customerId, loading: customerLoading } = useCustomerId();
+    const { customerId, loading: customerLoading, error: customerError, isRateLimited, retryInMs, retry } = useCustomerId();
     const [cart, setCart] = useState<CartResponse | null>(null);
     const [variantMap, setVariantMap] = useState<Record<string, CatalogProductVariant>>({});
     const [productMap, setProductMap] = useState<Record<string, CatalogProduct>>({});
@@ -77,9 +77,25 @@ export const Cart = () => {
         }
     };
 
+    const [rateLimitCountdown, setRateLimitCountdown] = useState(0);
+
+    useEffect(() => {
+        if (!isRateLimited) {
+            setRateLimitCountdown(0);
+            return;
+        }
+
+        setRateLimitCountdown(Math.ceil(retryInMs / 1000));
+        const timer = window.setInterval(() => {
+            setRateLimitCountdown((prev) => (prev <= 1 ? 0 : prev - 1));
+        }, 1000);
+
+        return () => window.clearInterval(timer);
+    }, [isRateLimited, retryInMs]);
+
     // Fetch cart for authenticated customer
     useEffect(() => {
-        if (isGuest || !isCustomer) return;
+        if (isGuest || !isCustomer || isRateLimited) return;
         let isMounted = true;
 
         const fetchCart = async () => {
@@ -117,29 +133,34 @@ export const Cart = () => {
         return () => {
             isMounted = false;
         };
-    }, [customerId, isGuest, isCustomer]);
+    }, [customerId, isGuest, isCustomer, isRateLimited]);
 
-    // Fetch variant/product details for authenticated cart
+    // Fetch variant/product details for cart items (guest + authenticated)
     useEffect(() => {
-        if (isGuest) return;
         let isMounted = true;
 
         const loadDetails = async () => {
-            if (!cart?.items?.length) {
+            const sourceItems = isGuest ? guestItems : cart?.items;
+            if (!sourceItems?.length) {
                 setVariantMap({});
+                setProductMap({});
                 return;
             }
 
+            const variantIds = sourceItems.map((item) => item.productVariantId);
+
             try {
                 const variantResults = await Promise.all(
-                    cart.items.map((item) => catalogApi.getVariantById(item.productVariantId))
+                    variantIds.map((variantId) => catalogApi.getVariantById(variantId))
                 );
                 if (!isMounted) {
                     return;
                 }
 
                 const variantLookup = variantResults.reduce<Record<string, CatalogProductVariant>>((acc, variant) => {
-                    acc[variant.id] = variant;
+                    if (variant?.id) {
+                        acc[variant.id] = variant;
+                    }
                     return acc;
                 }, {});
 
@@ -167,7 +188,7 @@ export const Cart = () => {
         return () => {
             isMounted = false;
         };
-    }, [cart, isGuest]);
+    }, [cart, guestItems, isGuest]);
 
     const subtotal = useMemo(() => {
         if (isGuest) {
@@ -297,20 +318,52 @@ export const Cart = () => {
                                 onChange={() => toggleItem(item.productVariantId)}
                                 style={{ width: '20px', height: '20px', accentColor: 'var(--color-gold)', cursor: 'pointer', marginTop: '0.5rem', flexShrink: 0 }}
                             />
-                            <div style={{ width: '72px', height: '72px', borderRadius: '12px', background: 'var(--color-cream)', overflow: 'hidden', flexShrink: 0 }}>
-                                {item.imageUrl ? (
-                                    <img src={item.imageUrl} alt={item.productName} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                                ) : (
-                                    <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--color-gray-400)', fontSize: '0.75rem' }}>
-                                        Không có ảnh
-                                    </div>
-                                )}
-                            </div>
-                            <div style={{ flex: 1, minWidth: 0 }}>
-                                <p style={{ margin: 0, fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{item.productName}</p>
-                                <p style={{ margin: '0.35rem 0', color: 'var(--color-gray-500)', fontSize: '0.875rem' }}>{item.variantName}</p>
-                                <p style={{ margin: '0.25rem 0', color: 'var(--color-gray-500)' }}>{formatCurrency(item.unitPrice)}</p>
-                            </div>
+                            {(() => {
+                                const variant = variantMap[item.productVariantId];
+                                const productId = variant?.productId;
+                                const productData = productId ? productMap[productId] : undefined;
+                                const productSlug = productData?.slug;
+                                const productImageUrl = productData
+                                    ? ((productData as { thumbnail?: string }).thumbnail || productData.images?.[0]?.url)
+                                    : undefined;
+                                const resolvedImageUrl = item.imageUrl || productImageUrl;
+                                const productLink = productId
+                                    ? { to: `/product/${productSlug || productId}`, state: { productId } }
+                                    : null;
+
+                                const content = (
+                                    <>
+                                        <div style={{ width: '72px', height: '72px', borderRadius: '12px', background: 'var(--color-cream)', overflow: 'hidden', flexShrink: 0 }}>
+                                            {resolvedImageUrl ? (
+                                                <img src={resolvedImageUrl} alt={item.productName} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                            ) : (
+                                                <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--color-gray-400)', fontSize: '0.75rem' }}>
+                                                    Không có ảnh
+                                                </div>
+                                            )}
+                                        </div>
+                                        <div style={{ flex: 1, minWidth: 0 }}>
+                                            <p style={{ margin: 0, fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{item.productName}</p>
+                                            <p style={{ margin: '0.35rem 0', color: 'var(--color-gray-500)', fontSize: '0.875rem' }}>{item.variantName}</p>
+                                            <p style={{ margin: '0.25rem 0', color: 'var(--color-gray-500)' }}>{formatCurrency(item.unitPrice)}</p>
+                                        </div>
+                                    </>
+                                );
+
+                                if (!productLink) {
+                                    return <div style={{ display: 'flex', gap: '1rem', alignItems: 'flex-start', flex: 1, minWidth: 0 }}>{content}</div>;
+                                }
+
+                                return (
+                                    <Link
+                                        to={productLink.to}
+                                        state={productLink.state}
+                                        style={{ display: 'flex', gap: '1rem', alignItems: 'flex-start', flex: 1, minWidth: 0, textDecoration: 'none', color: 'inherit' }}
+                                    >
+                                        {content}
+                                    </Link>
+                                );
+                            })()}
                         </div>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', flexShrink: 0 }}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
@@ -399,31 +452,115 @@ export const Cart = () => {
                 </div>
             )}
 
-            {/* Authenticated customer loading */}
-            {isAuthenticated && isCustomer && (customerLoading || loading) && <p>Đang tải giỏ hàng...</p>}
-            {isAuthenticated && isCustomer && error && <p style={{ color: 'var(--color-error)' }}>{error}</p>}
+            {/* Authenticated customer states - mutually exclusive rendering */}
+            {isAuthenticated && isCustomer && (() => {
+                const hasError = isRateLimited || customerError === 'rate_limited';
+                const isLoading = !hasError && (customerLoading || loading);
+                const isEmpty = !hasError && !isLoading && (!cart || cart?.items?.length === 0);
 
-            {/* Authenticated customer empty cart */}
-            {isAuthenticated && isCustomer && !loading && (!cart || cart?.items?.length === 0) && (
-                <div style={{
-                    padding: '4rem 2rem',
-                    borderRadius: '16px',
-                    background: '#fff',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    boxShadow: '0 16px 40px rgba(17,24,39,0.04)'
-                }}>
-                    <div style={{ width: '80px', height: '80px', borderRadius: '50%', background: 'var(--color-cream)', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '1.5rem', color: 'var(--color-gold)' }}>
-                        <ShoppingBag size={40} />
-                    </div>
-                    <h2 style={{ fontFamily: 'var(--font-display)', fontSize: '1.5rem', color: 'var(--color-black)', marginBottom: '0.5rem' }}>Chưa có sản phẩm trong giỏ hàng</h2>
-                    <button className="btn btn--primary" style={{ padding: '12px 32px', background: 'var(--color-black)', border: 'none', borderRadius: '8px', color: 'white', cursor: 'pointer', fontWeight: 500, display: 'inline-flex' }} onClick={() => navigate('/products')}>
-                        Khám phá sản phẩm
-                    </button>
-                </div>
-            )}
+                // Error block: countdown → button sáng khi hết
+                if (hasError) {
+                    return (
+                        <div style={{
+                            padding: '3.5rem 2rem',
+                            textAlign: 'center',
+                            background: 'linear-gradient(135deg, #fffbf0 0%, #fef3e2 100%)',
+                            border: '1px solid #f0d9a8',
+                            borderRadius: '16px',
+                            marginBottom: '2rem',
+                            boxShadow: '0 8px 32px rgba(201, 169, 110, 0.12)',
+                        }}>
+                            <div style={{
+                                width: '72px', height: '72px', borderRadius: '50%',
+                                background: 'linear-gradient(135deg, #fef3c7, #fde68a)',
+                                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                margin: '0 auto 1.25rem', fontSize: '2rem',
+                                boxShadow: '0 4px 16px rgba(217, 119, 6, 0.15)',
+                                animation: rateLimitCountdown > 0 ? 'pulse 2s ease-in-out infinite' : 'none',
+                            }}>
+                                {rateLimitCountdown > 0 ? '⏳' : '✅'}
+                            </div>
+
+                            <div style={{ fontSize: '1.15rem', fontWeight: 700, color: '#92400e', marginBottom: '0.75rem', fontFamily: 'serif' }}>
+                                {rateLimitCountdown > 0 ? 'Thao tác quá nhiều' : 'Sẵn sàng tải lại'}
+                            </div>
+
+                            <div style={{ color: '#a16207', marginBottom: '1.5rem', fontSize: '0.95rem' }}>
+                                {rateLimitCountdown > 0
+                                    ? <>Vui lòng thử lại sau </>
+                                    : 'Bạn có thể tải lại giỏ hàng ngay bây giờ'}
+                            </div>
+
+                            {rateLimitCountdown > 0 && (
+                                <div style={{ width: '200px', height: '4px', borderRadius: '4px', background: '#f0d9a8', margin: '0 auto 1.5rem', overflow: 'hidden' }}>
+                                    <div style={{
+                                        height: '100%', borderRadius: '4px',
+                                        background: 'linear-gradient(90deg, #d97706, #f59e0b)',
+                                        transition: 'width 1s linear',
+                                        width: `${Math.max(0, (rateLimitCountdown / Math.ceil(retryInMs / 1000)) * 100)}%`,
+                                    }} />
+                                </div>
+                            )}
+
+                            <button
+                                onClick={retry}
+                                disabled={rateLimitCountdown > 0 || customerLoading || loading}
+                                style={{
+                                    padding: '0.7rem 2rem', borderRadius: '10px', border: 'none',
+                                    background: (rateLimitCountdown > 0 || customerLoading || loading)
+                                        ? '#e5d6c2'
+                                        : 'linear-gradient(135deg, var(--color-gold), var(--color-gold-dark, #b8860b))',
+                                    color: (rateLimitCountdown > 0 || customerLoading || loading) ? '#a16207' : '#fff',
+                                    cursor: (rateLimitCountdown > 0 || customerLoading || loading) ? 'not-allowed' : 'pointer',
+                                    fontWeight: 600, fontSize: '0.95rem',
+                                    transition: 'all 0.3s ease',
+                                    transform: (rateLimitCountdown === 0 && !customerLoading && !loading) ? 'scale(1)' : 'scale(0.95)',
+                                    boxShadow: (rateLimitCountdown === 0 && !customerLoading && !loading) ? '0 4px 16px rgba(201, 169, 110, 0.35)' : 'none',
+                                }}
+                            >
+                                {(customerLoading || loading) ? 'Đang tải...' : rateLimitCountdown > 0 ? `Chờ ${rateLimitCountdown}s...` : 'Tải lại giỏ hàng'}
+                            </button>
+
+                            <style>{`
+                                @keyframes pulse { 0%, 100% { transform: scale(1); opacity: 1; } 50% { transform: scale(1.05); opacity: 0.85; } }
+                            `}</style>
+                        </div>
+                    );
+                }
+
+                // Loading state
+                if (isLoading) {
+                    return (
+                        <div style={{ padding: '3rem 2rem', textAlign: 'center', borderRadius: '16px', background: '#fff', boxShadow: '0 16px 40px rgba(17,24,39,0.04)' }}>
+                            <div style={{
+                                width: '48px', height: '48px',
+                                border: '3px solid var(--color-cream)', borderTop: '3px solid var(--color-gold)',
+                                borderRadius: '50%', margin: '0 auto 1rem',
+                                animation: 'spin 1s linear infinite',
+                            }} />
+                            <p style={{ color: 'var(--color-gray-500)', fontSize: '0.95rem' }}>Đang tải giỏ hàng...</p>
+                            <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+                        </div>
+                    );
+                }
+
+                // Empty cart
+                if (isEmpty) {
+                    return (
+                        <div style={{ padding: '4rem 2rem', borderRadius: '16px', background: '#fff', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', boxShadow: '0 16px 40px rgba(17,24,39,0.04)' }}>
+                            <div style={{ width: '80px', height: '80px', borderRadius: '50%', background: 'var(--color-cream)', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '1.5rem', color: 'var(--color-gold)' }}>
+                                <ShoppingBag size={40} />
+                            </div>
+                            <h2 style={{ fontFamily: 'var(--font-display)', fontSize: '1.5rem', color: 'var(--color-black)', marginBottom: '0.5rem' }}>Chưa có sản phẩm trong giỏ hàng</h2>
+                            <button className="btn btn--primary" style={{ padding: '12px 32px', background: 'var(--color-black)', border: 'none', borderRadius: '8px', color: 'white', cursor: 'pointer', fontWeight: 500, display: 'inline-flex' }} onClick={() => navigate('/products')}>
+                                Khám phá sản phẩm
+                            </button>
+                        </div>
+                    );
+                }
+
+                return null;
+            })()}
 
             {/* Authenticated customer cart with items */}
             {isAuthenticated && isCustomer && cart?.items?.length ? (
@@ -440,9 +577,18 @@ export const Cart = () => {
                         </div>
                         {cart.items.map((item) => {
                             const variant = variantMap[item.productVariantId];
-                            const productName = variant ? productMap[variant.productId]?.name : undefined;
-                            const imageUrl = variant?.imageUrl;
+                            const productData = variant ? productMap[variant.productId] : undefined;
+                            const productName = productData?.name;
+                            const productImageUrl = productData
+                                ? ((productData as { thumbnail?: string }).thumbnail || productData.images?.[0]?.url)
+                                : undefined;
+                            const imageUrl = variant?.imageUrl || productImageUrl;
                             const variantName = variant?.variantName || 'N/A';
+                            const productId = variant?.productId;
+                            const productSlug = productData?.slug;
+                            const productLink = productId
+                                ? { to: `/product/${productSlug || productId}`, state: { productId } }
+                                : null;
 
                             return (
                                 <div key={item.id} style={{ display: 'flex', gap: '1rem', padding: '1rem 0', borderBottom: '1px solid rgba(0,0,0,0.05)', alignItems: 'flex-start' }}>
@@ -453,20 +599,45 @@ export const Cart = () => {
                                             onChange={() => toggleItem(item.id)}
                                             style={{ width: '20px', height: '20px', accentColor: 'var(--color-gold)', cursor: 'pointer', marginTop: '0.5rem', flexShrink: 0 }}
                                         />
-                                        <div style={{ width: '72px', height: '72px', borderRadius: '12px', background: 'var(--color-cream)', overflow: 'hidden', flexShrink: 0 }}>
-                                            {imageUrl ? (
-                                                <img src={imageUrl} alt={productName ?? 'Product'} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                                            ) : (
-                                                <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--color-gray-400)', fontSize: '0.75rem' }}>
-                                                    Không có ảnh
+                                        {productLink ? (
+                                            <Link
+                                                to={productLink.to}
+                                                state={productLink.state}
+                                                style={{ display: 'flex', gap: '1rem', alignItems: 'flex-start', flex: 1, minWidth: 0, textDecoration: 'none', color: 'inherit' }}
+                                            >
+                                                <div style={{ width: '72px', height: '72px', borderRadius: '12px', background: 'var(--color-cream)', overflow: 'hidden', flexShrink: 0 }}>
+                                                    {imageUrl ? (
+                                                        <img src={imageUrl} alt={productName ?? 'Product'} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                                    ) : (
+                                                        <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--color-gray-400)', fontSize: '0.75rem' }}>
+                                                            Không có ảnh
+                                                        </div>
+                                                    )}
                                                 </div>
-                                            )}
-                                        </div>
-                                        <div style={{ flex: 1, minWidth: 0 }}>
-                                            <p style={{ margin: 0, fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{productName ?? 'Sản phẩm'}</p>
-                                            <p style={{ margin: '0.35rem 0', color: 'var(--color-gray-500)', fontSize: '0.875rem' }}>{variantName}</p>
-                                            <p style={{ margin: '0.25rem 0', color: 'var(--color-gray-500)' }}>{formatCurrency(Number(item.unitPrice))}</p>
-                                        </div>
+                                                <div style={{ flex: 1, minWidth: 0 }}>
+                                                    <p style={{ margin: 0, fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{productName ?? 'Sản phẩm'}</p>
+                                                    <p style={{ margin: '0.35rem 0', color: 'var(--color-gray-500)', fontSize: '0.875rem' }}>{variantName}</p>
+                                                    <p style={{ margin: '0.25rem 0', color: 'var(--color-gray-500)' }}>{formatCurrency(Number(item.unitPrice))}</p>
+                                                </div>
+                                            </Link>
+                                        ) : (
+                                            <>
+                                                <div style={{ width: '72px', height: '72px', borderRadius: '12px', background: 'var(--color-cream)', overflow: 'hidden', flexShrink: 0 }}>
+                                                    {imageUrl ? (
+                                                        <img src={imageUrl} alt={productName ?? 'Product'} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                                    ) : (
+                                                        <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--color-gray-400)', fontSize: '0.75rem' }}>
+                                                            Không có ảnh
+                                                        </div>
+                                                    )}
+                                                </div>
+                                                <div style={{ flex: 1, minWidth: 0 }}>
+                                                    <p style={{ margin: 0, fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{productName ?? 'Sản phẩm'}</p>
+                                                    <p style={{ margin: '0.35rem 0', color: 'var(--color-gray-500)', fontSize: '0.875rem' }}>{variantName}</p>
+                                                    <p style={{ margin: '0.25rem 0', color: 'var(--color-gray-500)' }}>{formatCurrency(Number(item.unitPrice))}</p>
+                                                </div>
+                                            </>
+                                        )}
                                     </div>
                                     <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', flexShrink: 0 }}>
                                         <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>

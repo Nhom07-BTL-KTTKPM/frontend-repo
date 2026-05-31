@@ -20,6 +20,7 @@ export interface ReviewRequest {
   imageUrls: string[];
 }
 
+
 export interface PageResponse<T> {
   content: T[];
   pageable: {

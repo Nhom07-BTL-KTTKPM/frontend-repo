@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuthStore } from '../store/authStore';
 import { orderApi } from '../api/orderApi';
+import { catalogApi } from '../api/catalogApi';
 import { userApi } from '../api/userApi';
 import { reviewApi } from '../api/reviewApi';
 import type { OrderResponse, OrderStatus, PaymentStatus } from '../types/order';
@@ -79,6 +80,7 @@ export const OrderHistory = () => {
     const [activeTab, setActiveTab] = useState('ALL');
     const [expandedOrderIds, setExpandedOrderIds] = useState<string[]>([]);
     const [currentPage, setCurrentPage] = useState(1);
+    const [variantProductMap, setVariantProductMap] = useState<Record<string, string>>({});
 
     const toggleExpandOrder = (orderId: string) => {
         setExpandedOrderIds(prev => 
@@ -123,6 +125,38 @@ export const OrderHistory = () => {
 
         fetchOrders();
     }, [user]);
+
+    useEffect(() => {
+        const loadVariantProducts = async () => {
+            const variantIds = Array.from(new Set(
+                orderList
+                    .flatMap(order => order.items || [])
+                    .filter(item => !item.productId && item.productVariantId)
+                    .map(item => item.productVariantId)
+            ));
+
+            if (variantIds.length === 0) {
+                return;
+            }
+
+            try {
+                const variants = await Promise.all(
+                    variantIds.map(variantId => catalogApi.getVariantById(variantId))
+                );
+                const nextMap = variants.reduce<Record<string, string>>((acc, variant) => {
+                    if (variant?.id && variant?.productId) {
+                        acc[variant.id] = variant.productId;
+                    }
+                    return acc;
+                }, {});
+                setVariantProductMap(prev => ({ ...prev, ...nextMap }));
+            } catch {
+                // Ignore lookup errors
+            }
+        };
+
+        loadVariantProducts();
+    }, [orderList]);
 
     const confirmCancelOrder = async (reason: string) => {
         if (!cancelingOrderId) return;
@@ -275,56 +309,87 @@ export const OrderHistory = () => {
                                     
                                     return (
                                         <>
-                                            {itemsToShow?.map(item => (
-                                                <div key={item.id} style={{ display: 'flex', gap: '15px', alignItems: 'center' }}>
-                                                    {item.imageUrl ? (
-                                                        <img src={item.imageUrl} alt={item.productName} style={{ width: '60px', height: '60px', objectFit: 'cover', borderRadius: '6px' }} />
-                                                    ) : (
-                                                        <div style={{ width: '60px', height: '60px', background: '#ddd', borderRadius: '6px' }}></div>
-                                                    )}
-                                                    <div style={{ flex: 1 }}>
-                                                        <h4 style={{ margin: 0, fontSize: '0.95rem' }}>{item.productName}</h4>
-                                                        {item.variantName && <p style={{ margin: '2px 0', fontSize: '0.8rem', color: 'var(--color-gray-500)' }}>Phân loại: {item.variantName}</p>}
-                                                        <p style={{ margin: 0, fontSize: '0.85rem' }}>x{item.quantity}</p>
-                                                    </div>
-                                                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '8px' }}>
-                                                        <div style={{ fontWeight: 500 }}>
-                                                            {formatCurrency(item.totalPrice)}
-                                                        </div>
-                                                        {/* Merge nút Đánh giá từ HEAD */}
-                                                        {order.status === 'DELIVERED' && (() => {
-                                                            const review = customerReviews.find(r => r.orderItemId === item.id);
-                                                            const isReviewed = !!review;
-                                                            const isEdited = review?.isEdited === true;
+                                            {itemsToShow?.map(item => {
+                                                const resolvedProductId = item.productId || variantProductMap[item.productVariantId];
+                                                const productLink = resolvedProductId
+                                                    ? {
+                                                        to: `/product/${resolvedProductId}`,
+                                                        state: { productId: resolvedProductId },
+                                                    }
+                                                    : null;
 
-                                                            if (isReviewed && isEdited) {
+                                                return (
+                                                    <div key={item.id} style={{ display: 'flex', gap: '15px', alignItems: 'center' }}>
+                                                        {productLink ? (
+                                                            <Link
+                                                                to={productLink.to}
+                                                                state={productLink.state}
+                                                                style={{ display: 'flex', gap: '15px', alignItems: 'center', flex: 1, textDecoration: 'none', color: 'inherit' }}
+                                                            >
+                                                                {item.imageUrl ? (
+                                                                    <img src={item.imageUrl} alt={item.productName} style={{ width: '60px', height: '60px', objectFit: 'cover', borderRadius: '6px' }} />
+                                                                ) : (
+                                                                    <div style={{ width: '60px', height: '60px', background: '#ddd', borderRadius: '6px' }}></div>
+                                                                )}
+                                                                <div style={{ flex: 1 }}>
+                                                                    <h4 style={{ margin: 0, fontSize: '0.95rem' }}>{item.productName}</h4>
+                                                                    {item.variantName && <p style={{ margin: '2px 0', fontSize: '0.8rem', color: 'var(--color-gray-500)' }}>Phân loại: {item.variantName}</p>}
+                                                                    <p style={{ margin: 0, fontSize: '0.85rem' }}>x{item.quantity}</p>
+                                                                </div>
+                                                            </Link>
+                                                        ) : (
+                                                            <>
+                                                                {item.imageUrl ? (
+                                                                    <img src={item.imageUrl} alt={item.productName} style={{ width: '60px', height: '60px', objectFit: 'cover', borderRadius: '6px' }} />
+                                                                ) : (
+                                                                    <div style={{ width: '60px', height: '60px', background: '#ddd', borderRadius: '6px' }}></div>
+                                                                )}
+                                                                <div style={{ flex: 1 }}>
+                                                                    <h4 style={{ margin: 0, fontSize: '0.95rem' }}>{item.productName}</h4>
+                                                                    {item.variantName && <p style={{ margin: '2px 0', fontSize: '0.8rem', color: 'var(--color-gray-500)' }}>Phân loại: {item.variantName}</p>}
+                                                                    <p style={{ margin: 0, fontSize: '0.85rem' }}>x{item.quantity}</p>
+                                                                </div>
+                                                            </>
+                                                        )}
+                                                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '8px' }}>
+                                                            <div style={{ fontWeight: 500 }}>
+                                                                {formatCurrency(item.totalPrice)}
+                                                            </div>
+                                                            {/* Merge nút Đánh giá từ HEAD */}
+                                                            {order.status === 'DELIVERED' && (() => {
+                                                                const review = customerReviews.find(r => r.orderItemId === item.id);
+                                                                const isReviewed = !!review;
+                                                                const isEdited = review?.isEdited === true;
+
+                                                                if (isReviewed && isEdited) {
+                                                                    return (
+                                                                        <button 
+                                                                            style={{ padding: '6px 12px', borderRadius: '6px', background: 'var(--color-gray-300)', color: '#fff', border: 'none', cursor: 'not-allowed', fontSize: '0.85rem' }}
+                                                                            disabled
+                                                                        >
+                                                                            Đã đánh giá
+                                                                        </button>
+                                                                    );
+                                                                }
+
                                                                 return (
                                                                     <button 
-                                                                        style={{ padding: '6px 12px', borderRadius: '6px', background: 'var(--color-gray-300)', color: '#fff', border: 'none', cursor: 'not-allowed', fontSize: '0.85rem' }}
-                                                                        disabled
+                                                                        style={{ padding: '6px 12px', borderRadius: '6px', background: isReviewed ? '#3b82f6' : 'var(--color-gold)', color: '#fff', border: 'none', cursor: 'pointer', fontSize: '0.85rem' }}
+                                                                        onClick={() => setReviewingItem({ 
+                                                                            productId: resolvedProductId || (item as any).productVariantId || '', 
+                                                                            orderItemId: item.id,
+                                                                            customerId: customerId,
+                                                                            existingReview: review
+                                                                        })}
                                                                     >
-                                                                        Đã đánh giá
+                                                                        {isReviewed ? 'Chỉnh sửa' : 'Đánh giá'}
                                                                     </button>
                                                                 );
-                                                            }
-
-                                                            return (
-                                                                <button 
-                                                                    style={{ padding: '6px 12px', borderRadius: '6px', background: isReviewed ? '#3b82f6' : 'var(--color-gold)', color: '#fff', border: 'none', cursor: 'pointer', fontSize: '0.85rem' }}
-                                                                    onClick={() => setReviewingItem({ 
-                                                                        productId: (item as any).productId || (item as any).productVariantId || '', 
-                                                                        orderItemId: item.id,
-                                                                        customerId: customerId,
-                                                                        existingReview: review
-                                                                    })}
-                                                                >
-                                                                    {isReviewed ? 'Chỉnh sửa' : 'Đánh giá'}
-                                                                </button>
-                                                            );
-                                                        })()}
+                                                            })()}
+                                                        </div>
                                                     </div>
-                                                </div>
-                                            ))}
+                                                );
+                                            })}
                                             
                                             {order.items && order.items.length > 2 && (
                                                 <div style={{ textAlign: 'center', marginTop: '0.5rem', borderTop: '1px solid #f0f0f0', paddingTop: '1rem' }}>
