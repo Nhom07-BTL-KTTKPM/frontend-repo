@@ -50,6 +50,16 @@ const formatDateTable = (value: string) => {
   }).format(date);
 };
 
+const formatDateTimeDetail = (value: string) => {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return '--';
+  }
+
+  const pad = (input: number) => String(input).padStart(2, '0');
+  return `${pad(date.getHours())}:${pad(date.getMinutes())} ${pad(date.getDate())}/${pad(date.getMonth() + 1)}/${date.getFullYear()}`;
+};
+
 const formatCurrency = (value?: number | null) => {
   if (value === null || value === undefined) {
     return '--';
@@ -594,12 +604,17 @@ export const VoucherManagement = () => {
                 title="Trạng thái"
                 value={statusToneMap[selectedVoucher.status].label}
                 iconTone="rose"
-                valueClassName="inline-flex rounded-full bg-[#DCF4E1] px-3 py-1 text-sm font-semibold text-[#118A32]"
+                valueClassName={`inline-flex rounded-full px-3 py-1 font-semibold ${statusToneMap[selectedVoucher.status].badgeClass}`}
               />
               <DetailCard
                 icon={<CalendarRange size={22} />}
                 title="Hiệu lực"
-                value={`${formatDateTable(selectedVoucher.startDate)}  →  ${formatDateTable(selectedVoucher.endDate)}`}
+                value={(
+                  <div className="space-y-1 text-base  leading-6 text-[#1E1E1E]">
+                    <div>Bắt đầu: {formatDateTimeDetail(selectedVoucher.startDate)}</div>
+                    <div>Kết thúc: {formatDateTimeDetail(selectedVoucher.endDate)}</div>
+                  </div>
+                )}
                 iconTone="violet"
                 valueClassName="text-[#1E1E1E]"
               />
@@ -610,9 +625,16 @@ export const VoucherManagement = () => {
                 <div className="grid h-14 w-14 shrink-0 place-items-center rounded-2xl bg-[#FFF2D9] text-[#D28B18]">
                   <FileText size={22} />
                 </div>
-                <div className="min-w-0">
-                  <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-800">Mô tả</p>
-                  <p className="mt-2 text-sm leading-6 text-[#1E1E1E]">{selectedVoucher.description || 'Chưa có mô tả'}</p>
+                <div className="flex-1 min-w-0 space-y-0.5">
+                  {/* TIÊU ĐỀ: Hạ tông màu xuống xám nhẹ text-slate-400 để giảm độ cạnh tranh thị giác */}
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-400">
+                    Mô tả
+                  </p>
+                  
+                  {/* NỘI DUNG: Dùng text-sm với font-medium/semibold, màu text-slate-900 giúp đoạn mô tả sắc nét, dễ đọc */}
+                  <p className={`text-base font-medium leading-6 ${selectedVoucher.description ? 'text-slate-900' : 'italic text-slate-400'}`}>
+                    {selectedVoucher.description || 'Chưa có mô tả'}
+                  </p>
                 </div>
               </div>
             </section>
@@ -670,7 +692,6 @@ const ModalShell = ({ title, children, onClose, narrow = false }: { title: strin
     </div>
   </div>
 );
-
 const DetailCard = ({
   icon,
   title,
@@ -692,12 +713,23 @@ const DetailCard = ({
   } as const;
 
   return (
-    <div className="rounded-[22px] border border-[#E8DED3] bg-white p-4 shadow-[0_8px_22px_rgba(30,30,30,0.04)]">
+    <div className="rounded-[22px] border border-[#E8DED3] bg-white p-5 shadow-[0_12px_30px_rgba(30,30,30,0.03)] transition-all duration-200 hover:shadow-[0_16px_40px_rgba(30,30,30,0.06)]">
       <div className="flex items-center gap-4">
-        <div className={`grid h-14 w-14 shrink-0 place-items-center rounded-2xl ${iconToneClassMap[iconTone]}`}>{icon}</div>
-        <div className="min-w-0">
-          <p className="text-xs font-medium uppercase tracking-[0.16em] text-slate-800">{title}</p>
-          <div className={`mt-1 text-lg font-semibold leading-7 ${valueClassName ?? 'text-[#1E1E1E]'}`}>{value}</div>
+        {/* Giữ nguyên block icon mềm mại */}
+        <div className={`grid h-14 w-14 shrink-0 place-items-center rounded-2xl ${iconToneClassMap[iconTone]}`}>
+          {icon}
+        </div>
+        
+        <div className="flex-1 min-w-0 space-y-0.5">
+          {/* TIÊU ĐỀ: Hạ tông màu xuống xám nhẹ (slate-500), bỏ uppercase bớt kích thước thị giác */}
+          <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-400">
+            {title}
+          </p>
+          
+          {/* NỘI DUNG: Tăng size từ text-lg lên text-xl, dùng font-bold để đẩy độ nổi bật lên hẳn */}
+          <div className={`text-lg  tracking-tight text-slate-900 ${valueClassName ?? ''}`}>
+            {value}
+          </div>
         </div>
       </div>
     </div>
