@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, Link } from 'react-router-dom';
 import { orderApi } from '../api/orderApi';
+import { catalogApi } from '../api/catalogApi';
 import type { OrderResponse, OrderStatus, PaymentStatus } from '../types/order';
 import { toast } from 'sonner';
 import { Package, Clock, CheckCircle, Truck, XCircle } from 'lucide-react';
@@ -67,6 +68,7 @@ export const OrderDetail = () => {
     const [order, setOrder] = useState<OrderResponse | null>(null);
     const [loading, setLoading] = useState(true);
     const [isCancelModalOpen, setIsCancelModalOpen] = useState(false);
+    const [variantProductMap, setVariantProductMap] = useState<Record<string, string>>({});
 
     useEffect(() => {
         if (!orderId) {
@@ -89,6 +91,41 @@ export const OrderDetail = () => {
 
         fetchOrder();
     }, [orderId, navigate]);
+
+    useEffect(() => {
+        if (!order?.items?.length) {
+            return;
+        }
+
+        const loadVariantProducts = async () => {
+            const variantIds = Array.from(new Set(
+                order.items
+                    .filter(item => !item.productId && item.productVariantId)
+                    .map(item => item.productVariantId)
+            ));
+
+            if (variantIds.length === 0) {
+                return;
+            }
+
+            try {
+                const variants = await Promise.all(
+                    variantIds.map(variantId => catalogApi.getVariantById(variantId))
+                );
+                const nextMap = variants.reduce<Record<string, string>>((acc, variant) => {
+                    if (variant?.id && variant?.productId) {
+                        acc[variant.id] = variant.productId;
+                    }
+                    return acc;
+                }, {});
+                setVariantProductMap(prev => ({ ...prev, ...nextMap }));
+            } catch {
+                // Ignore lookup errors
+            }
+        };
+
+        loadVariantProducts();
+    }, [order]);
 
     const confirmCancelOrder = async (reason: string) => {
         if (!order) return;
@@ -195,23 +232,54 @@ export const OrderDetail = () => {
                 <h3 style={{ marginTop: 0, marginBottom: '1rem', fontSize: '1.1rem' }}>Sản phẩm</h3>
 
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                    {order.items?.map(item => (
-                        <div key={item.id} style={{ display: 'flex', gap: '15px', alignItems: 'center' }}>
-                            {item.imageUrl ? (
-                                <img src={item.imageUrl} alt={item.productName} style={{ width: '70px', height: '70px', objectFit: 'cover', borderRadius: '6px' }} />
-                            ) : (
-                                <div style={{ width: '70px', height: '70px', background: '#ddd', borderRadius: '6px' }}></div>
-                            )}
-                            <div style={{ flex: 1 }}>
-                                <h4 style={{ margin: 0, fontSize: '1rem' }}>{item.productName}</h4>
-                                {item.variantName && <p style={{ margin: '2px 0', fontSize: '0.85rem', color: 'var(--color-gray-500)' }}>Phân loại: {item.variantName}</p>}
-                                <p style={{ margin: 0, fontSize: '0.85rem' }}>x{item.quantity}</p>
+                    {order.items?.map(item => {
+                        const resolvedProductId = item.productId || variantProductMap[item.productVariantId];
+                        const productLink = resolvedProductId
+                            ? {
+                                to: `/product/${resolvedProductId}`,
+                                state: { productId: resolvedProductId },
+                            }
+                            : null;
+
+                        return (
+                            <div key={item.id} style={{ display: 'flex', gap: '15px', alignItems: 'center' }}>
+                                {productLink ? (
+                                    <Link
+                                        to={productLink.to}
+                                        state={productLink.state}
+                                        style={{ display: 'flex', gap: '15px', alignItems: 'center', flex: 1, textDecoration: 'none', color: 'inherit' }}
+                                    >
+                                        {item.imageUrl ? (
+                                            <img src={item.imageUrl} alt={item.productName} style={{ width: '70px', height: '70px', objectFit: 'cover', borderRadius: '6px' }} />
+                                        ) : (
+                                            <div style={{ width: '70px', height: '70px', background: '#ddd', borderRadius: '6px' }}></div>
+                                        )}
+                                        <div style={{ flex: 1 }}>
+                                            <h4 style={{ margin: 0, fontSize: '1rem' }}>{item.productName}</h4>
+                                            {item.variantName && <p style={{ margin: '2px 0', fontSize: '0.85rem', color: 'var(--color-gray-500)' }}>Phân loại: {item.variantName}</p>}
+                                            <p style={{ margin: 0, fontSize: '0.85rem' }}>x{item.quantity}</p>
+                                        </div>
+                                    </Link>
+                                ) : (
+                                    <>
+                                        {item.imageUrl ? (
+                                            <img src={item.imageUrl} alt={item.productName} style={{ width: '70px', height: '70px', objectFit: 'cover', borderRadius: '6px' }} />
+                                        ) : (
+                                            <div style={{ width: '70px', height: '70px', background: '#ddd', borderRadius: '6px' }}></div>
+                                        )}
+                                        <div style={{ flex: 1 }}>
+                                            <h4 style={{ margin: 0, fontSize: '1rem' }}>{item.productName}</h4>
+                                            {item.variantName && <p style={{ margin: '2px 0', fontSize: '0.85rem', color: 'var(--color-gray-500)' }}>Phân loại: {item.variantName}</p>}
+                                            <p style={{ margin: 0, fontSize: '0.85rem' }}>x{item.quantity}</p>
+                                        </div>
+                                    </>
+                                )}
+                                <div style={{ fontWeight: 600 }}>
+                                    {formatCurrency(item.totalPrice)}
+                                </div>
                             </div>
-                            <div style={{ fontWeight: 600 }}>
-                                {formatCurrency(item.totalPrice)}
-                            </div>
-                        </div>
-                    ))}
+                        );
+                    })}
                 </div>
 
                 <div style={{ marginTop: '1.5rem', paddingTop: '1rem', borderTop: '1px dashed #e5e7eb', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '1rem', flexWrap: 'wrap' }}>
