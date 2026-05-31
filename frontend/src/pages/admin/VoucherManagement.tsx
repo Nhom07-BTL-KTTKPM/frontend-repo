@@ -11,13 +11,30 @@ type DetailDialogState = {
 } | null;
 
 const formatDateTimeInput = (value: string) => {
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) {
+  if (!value) {
     return '';
   }
 
-  const pad = (input: number) => String(input).padStart(2, '0');
-  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
+  const hasTimezone = /(?:Z|[+-]\d{2}:?\d{2})$/.test(value);
+  if (hasTimezone) {
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) {
+      return '';
+    }
+
+    const pad = (input: number) => String(input).padStart(2, '0');
+    return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
+  }
+
+  return value.slice(0, 16);
+};
+
+const serializeDateTimeLocal = (value: string) => {
+  if (!value) {
+    return value;
+  }
+
+  return value.length === 16 ? `${value}:00` : value.slice(0, 19);
 };
 
 const formatDateTable = (value: string) => {
@@ -31,6 +48,16 @@ const formatDateTable = (value: string) => {
     month: '2-digit',
     year: 'numeric',
   }).format(date);
+};
+
+const formatDateTimeDetail = (value: string) => {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return '--';
+  }
+
+  const pad = (input: number) => String(input).padStart(2, '0');
+  return `${pad(date.getHours())}:${pad(date.getMinutes())} ${pad(date.getDate())}/${pad(date.getMonth() + 1)}/${date.getFullYear()}`;
 };
 
 const formatCurrency = (value?: number | null) => {
@@ -90,6 +117,17 @@ const copyTextToClipboard = async (value: string) => {
 
 const generateVoucherId = () => `voucher-${Math.random().toString(36).slice(2, 10)}-${Date.now()}`;
 
+const parseDateTimeLocal = (value: string) => {
+  const timestamp = new Date(value).getTime();
+  return Number.isNaN(timestamp) ? null : timestamp;
+};
+
+const getRoundedNowForDateTimeLocal = () => {
+  const now = new Date();
+  now.setSeconds(0, 0);
+  return now.getTime();
+};
+
 const parseFormErrors = (form: VoucherFormState) => {
   const errors: Record<string, string> = {};
 
@@ -139,8 +177,17 @@ const parseFormErrors = (form: VoucherFormState) => {
     errors.endDate = 'Vui lòng chọn ngày kết thúc';
   }
 
-  if (form.startDate && form.endDate && new Date(form.endDate) <= new Date(form.startDate)) {
-    errors.endDate = 'Ngày kết thúc phải lớn hơn ngày bắt đầu';
+  const startDateTime = form.startDate ? parseDateTimeLocal(form.startDate) : null;
+  const endDateTime = form.endDate ? parseDateTimeLocal(form.endDate) : null;
+  const nowDateTime = getRoundedNowForDateTimeLocal();
+  const minimumEndDateTime = startDateTime === null ? null : startDateTime + 10 * 60 * 1000;
+
+  if (startDateTime !== null && startDateTime < nowDateTime) {
+    errors.startDate = 'Ngày bắt đầu không được ở trong quá khứ';
+  }
+
+  if (startDateTime !== null && endDateTime !== null && endDateTime <= minimumEndDateTime) {
+    errors.endDate = 'Ngày kết thúc phải sau ngày bắt đầu ít nhất 10 phút';
   }
 
   return errors;
@@ -158,8 +205,8 @@ const createVoucherFromForm = (form: VoucherFormState, id?: string): Voucher => 
   quantity: Number(form.quantity),
   maxUsagePerUser: form.maxUsagePerUser.trim() === '' ? null : Number(form.maxUsagePerUser),
   status: form.status as VoucherStatus,
-  startDate: new Date(form.startDate).toISOString(),
-  endDate: new Date(form.endDate).toISOString(),
+  startDate: serializeDateTimeLocal(form.startDate),
+  endDate: serializeDateTimeLocal(form.endDate),
   createdAt: new Date().toISOString(),
 });
 
@@ -557,12 +604,17 @@ export const VoucherManagement = () => {
                 title="Trạng thái"
                 value={statusToneMap[selectedVoucher.status].label}
                 iconTone="rose"
-                valueClassName="inline-flex rounded-full bg-[#DCF4E1] px-3 py-1 text-sm font-semibold text-[#118A32]"
+                valueClassName={`inline-flex rounded-full px-3 py-1 font-semibold ${statusToneMap[selectedVoucher.status].badgeClass}`}
               />
               <DetailCard
                 icon={<CalendarRange size={22} />}
                 title="Hiệu lực"
-                value={`${formatDateTable(selectedVoucher.startDate)}  →  ${formatDateTable(selectedVoucher.endDate)}`}
+                value={(
+                  <div className="space-y-1 text-base  leading-6 text-[#1E1E1E]">
+                    <div>Bắt đầu: {formatDateTimeDetail(selectedVoucher.startDate)}</div>
+                    <div>Kết thúc: {formatDateTimeDetail(selectedVoucher.endDate)}</div>
+                  </div>
+                )}
                 iconTone="violet"
                 valueClassName="text-[#1E1E1E]"
               />
@@ -573,9 +625,16 @@ export const VoucherManagement = () => {
                 <div className="grid h-14 w-14 shrink-0 place-items-center rounded-2xl bg-[#FFF2D9] text-[#D28B18]">
                   <FileText size={22} />
                 </div>
-                <div className="min-w-0">
-                  <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-800">Mô tả</p>
-                  <p className="mt-2 text-sm leading-6 text-[#1E1E1E]">{selectedVoucher.description || 'Chưa có mô tả'}</p>
+                <div className="flex-1 min-w-0 space-y-0.5">
+                  {/* TIÊU ĐỀ: Hạ tông màu xuống xám nhẹ text-slate-400 để giảm độ cạnh tranh thị giác */}
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-400">
+                    Mô tả
+                  </p>
+                  
+                  {/* NỘI DUNG: Dùng text-sm với font-medium/semibold, màu text-slate-900 giúp đoạn mô tả sắc nét, dễ đọc */}
+                  <p className={`text-base font-medium leading-6 ${selectedVoucher.description ? 'text-slate-900' : 'italic text-slate-400'}`}>
+                    {selectedVoucher.description || 'Chưa có mô tả'}
+                  </p>
                 </div>
               </div>
             </section>
@@ -633,7 +692,6 @@ const ModalShell = ({ title, children, onClose, narrow = false }: { title: strin
     </div>
   </div>
 );
-
 const DetailCard = ({
   icon,
   title,
@@ -655,12 +713,23 @@ const DetailCard = ({
   } as const;
 
   return (
-    <div className="rounded-[22px] border border-[#E8DED3] bg-white p-4 shadow-[0_8px_22px_rgba(30,30,30,0.04)]">
+    <div className="rounded-[22px] border border-[#E8DED3] bg-white p-5 shadow-[0_12px_30px_rgba(30,30,30,0.03)] transition-all duration-200 hover:shadow-[0_16px_40px_rgba(30,30,30,0.06)]">
       <div className="flex items-center gap-4">
-        <div className={`grid h-14 w-14 shrink-0 place-items-center rounded-2xl ${iconToneClassMap[iconTone]}`}>{icon}</div>
-        <div className="min-w-0">
-          <p className="text-xs font-medium uppercase tracking-[0.16em] text-slate-800">{title}</p>
-          <div className={`mt-1 text-lg font-semibold leading-7 ${valueClassName ?? 'text-[#1E1E1E]'}`}>{value}</div>
+        {/* Giữ nguyên block icon mềm mại */}
+        <div className={`grid h-14 w-14 shrink-0 place-items-center rounded-2xl ${iconToneClassMap[iconTone]}`}>
+          {icon}
+        </div>
+        
+        <div className="flex-1 min-w-0 space-y-0.5">
+          {/* TIÊU ĐỀ: Hạ tông màu xuống xám nhẹ (slate-500), bỏ uppercase bớt kích thước thị giác */}
+          <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-400">
+            {title}
+          </p>
+          
+          {/* NỘI DUNG: Tăng size từ text-lg lên text-xl, dùng font-bold để đẩy độ nổi bật lên hẳn */}
+          <div className={`text-lg  tracking-tight text-slate-900 ${valueClassName ?? ''}`}>
+            {value}
+          </div>
         </div>
       </div>
     </div>

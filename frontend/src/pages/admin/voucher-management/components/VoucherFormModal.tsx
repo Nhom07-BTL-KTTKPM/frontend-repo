@@ -1,5 +1,5 @@
 import { CalendarRange, CheckCircle2, FileText, Hash, Info, Percent, Ticket, Truck, UserRound, WalletCards, X } from 'lucide-react';
-import type { FormEvent, ReactNode } from 'react';
+import { useState, type FormEvent, type ReactNode } from 'react';
 import type { VoucherFormState, VoucherStatus } from '../types';
 
 type FieldTooltip = {
@@ -80,6 +80,31 @@ const fieldIconMap: Record<string, FieldIcon> = {
   maxUsagePerUser: <UserRound size={16} />,
   startDate: <CalendarRange size={16} />,
   endDate: <CalendarRange size={16} />,
+};
+
+const parseDateTimeLocal = (value: string) => {
+  const timestamp = new Date(value).getTime();
+  return Number.isNaN(timestamp) ? null : timestamp;
+};
+
+const formatDateTimeLocal = (date: Date) => {
+  const pad = (input: number) => String(input).padStart(2, '0');
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
+};
+
+const getNowForDateTimeLocal = () => {
+  const now = new Date();
+  now.setSeconds(0, 0);
+  return formatDateTimeLocal(now);
+};
+
+const addMinutesForDateTimeLocal = (value: string, minutes: number) => {
+  const timestamp = parseDateTimeLocal(value);
+  if (timestamp === null) {
+    return '';
+  }
+
+  return formatDateTimeLocal(new Date(timestamp + minutes * 60 * 1000));
 };
 
 const segmentMetaMap: Record<'PERCENT' | 'AMOUNT' | 'FREE_SHIPPING', SegmentMeta> = {
@@ -271,6 +296,8 @@ export const VoucherFormModal = ({
   onSubmit: (event: FormEvent<HTMLFormElement>) => void;
   onChange: (patch: Partial<VoucherFormState>) => void;
 }) => {
+  const [attemptedSubmit, setAttemptedSubmit] = useState(false);
+  const [touchedFields, setTouchedFields] = useState<Record<string, boolean>>({});
   const typeValue = formState.type;
   const discountValueLabel =
     typeValue === 'PERCENT'
@@ -281,9 +308,119 @@ export const VoucherFormModal = ({
   const lockAllFields = editPolicy.isLocked;
   const lockExceptQuantityAndEndDate = modalMode === 'edit' && editPolicy.canEditOnlyQuantityAndEndDate;
 
+  const validateDiscount = (value: string) => {
+    const raw = String(value ?? '').trim();
+    if (!raw) return 'Vui lòng nhập giá trị giảm giá.';
+    const n = Number(raw);
+    if (!Number.isFinite(n) || isNaN(n)) return 'Giá trị phải là một số.';
+    if (typeValue === 'PERCENT') {
+      if (n < 1 || n > 100) return 'Giá trị phải là số từ 1 đến 100.';
+    } else {
+      if (n <= 0) return 'Giá trị phải lớn hơn 0.';
+    }
+    return undefined;
+  };
+  const validateField = (field: string, value: any) => {
+    switch (field) {
+      case 'code':
+        return String(value ?? '').trim() ? undefined : 'Vui lòng nhập mã voucher.';
+      case 'name':
+        return String(value ?? '').trim() ? undefined : 'Vui lòng nhập tên voucher.';
+      case 'type':
+        return value ? undefined : 'Vui lòng chọn loại voucher.';
+      case 'discountValue':
+        return validateDiscount(value);
+      case 'minOrderAmount': {
+        const raw = String(value ?? '').trim();
+        if (!raw) return 'Vui lòng nhập đơn hàng tối thiểu.';
+        const n = Number(raw);
+        if (!Number.isFinite(n) || isNaN(n) || n < 0) return 'Đơn hàng tối thiểu phải là số >= 0.';
+        return undefined;
+      }
+      case 'quantity': {
+        const raw = String(value ?? '').trim();
+        if (!raw) return 'Vui lòng nhập số lượng.';
+        const n = Number(raw);
+        if (!Number.isFinite(n) || isNaN(n) || n < 1) return 'Số lượng phải lớn hơn hoặc bằng 1.';
+        return undefined;
+      }
+      case 'startDate':
+        if (!value) return 'Vui lòng chọn ngày bắt đầu.';
+        {
+          const startDateTime = parseDateTimeLocal(value);
+          const nowDateTime = parseDateTimeLocal(getNowForDateTimeLocal());
+          if (startDateTime === null) return 'Ngày bắt đầu không hợp lệ.';
+          if (nowDateTime !== null && startDateTime < nowDateTime) return 'Ngày bắt đầu không được ở trong quá khứ.';
+        }
+        return undefined;
+      case 'endDate':
+        if (!value) return 'Vui lòng chọn ngày kết thúc.';
+        {
+          const endDateTime = parseDateTimeLocal(value);
+          if (endDateTime === null) return 'Ngày kết thúc không hợp lệ.';
+        }
+        if (formState.startDate && value) {
+          const startDateTime = parseDateTimeLocal(formState.startDate);
+          const endDateTime = parseDateTimeLocal(value);
+          if (startDateTime !== null && endDateTime !== null && endDateTime <= startDateTime + 10 * 60 * 1000) {
+            return 'Ngày kết thúc phải sau ngày bắt đầu ít nhất 10 phút.';
+          }
+        }
+        return undefined;
+      case 'status':
+        return value ? undefined : 'Vui lòng chọn trạng thái.';
+      default:
+        return undefined;
+    }
+  };
+
+  const requiredFields = editPolicy.canEditOnlyQuantityAndEndDate && modalMode === 'edit'
+    ? ['quantity', 'endDate']
+    : ['code', 'name', 'type', 'discountValue', 'minOrderAmount', 'quantity', 'startDate', 'endDate', 'status'];
+
+  const localErrors: Record<string, string | undefined> = {
+    code: requiredFields.includes('code') ? validateField('code', formState.code) : undefined,
+    name: requiredFields.includes('name') ? validateField('name', formState.name) : undefined,
+    type: requiredFields.includes('type') ? validateField('type', formState.type) : undefined,
+    discountValue: requiredFields.includes('discountValue') ? validateField('discountValue', formState.discountValue) : undefined,
+    minOrderAmount: requiredFields.includes('minOrderAmount') ? validateField('minOrderAmount', formState.minOrderAmount) : undefined,
+    quantity: requiredFields.includes('quantity') ? validateField('quantity', formState.quantity) : undefined,
+    startDate: requiredFields.includes('startDate') ? validateField('startDate', formState.startDate) : undefined,
+    endDate: requiredFields.includes('endDate') ? validateField('endDate', formState.endDate) : undefined,
+    status: requiredFields.includes('status') ? validateField('status', formState.status) : undefined,
+  };
+
+  const showErrorFor = (field: string) => {
+    const propErr = formErrors[field];
+    const localErr = localErrors[field];
+    return propErr || ((attemptedSubmit || touchedFields[field]) ? localErr : undefined);
+  };
+
+  const hasLocalErrors = Object.values(localErrors).some((v) => Boolean(v));
+
+  const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
+    setAttemptedSubmit(true);
+    setTouchedFields({
+      code: true,
+      name: true,
+      type: true,
+      discountValue: true,
+      minOrderAmount: true,
+      quantity: true,
+      startDate: true,
+      endDate: true,
+      status: true,
+    });
+    if (hasLocalErrors) {
+      event.preventDefault();
+      return;
+    }
+    onSubmit(event);
+  };
+
   return (
     <ModalShell title={title} onClose={onClose}>
-      <form className="grid gap-4" onSubmit={onSubmit}>
+      <form className="grid gap-4" onSubmit={handleSubmit}>
         {editPolicy.statusLabel ? (
           <div className={`rounded-2xl border px-4 py-3 text-sm ${lockAllFields ? 'border-[#F2C7C7] bg-[#FFF4F4] text-[#9A2C2C]' : 'border-[#D9E7F6] bg-[#F3F8FE] text-[#214F7B]'}`}>
             {lockAllFields
@@ -296,20 +433,22 @@ export const VoucherFormModal = ({
 
         <section className="rounded-[18px] border border-[#ECE5DB] bg-white p-4 shadow-[0_1px_0_rgba(30,30,30,0.02)]">
           <div className="grid gap-4 md:grid-cols-2">
-          <Field label="Code *" error={formErrors.code} tooltip={fieldTooltipMap.code} disabled={!isCreateMode && !editPolicy.canEditAll}>
+          <Field label="Code *" error={showErrorFor('code')} tooltip={fieldTooltipMap.code} disabled={!isCreateMode && !editPolicy.canEditAll}>
             <input
               value={formState.code}
               onChange={(event) => onChange({ code: event.target.value.toUpperCase() })}
+              onBlur={() => setTouchedFields((s) => ({ ...s, code: true }))}
               disabled={!isCreateMode && !editPolicy.canEditAll}
               className="h-12 w-full bg-transparent px-4 text-sm font-mono tracking-[0.12em] text-[#1E1E1E] outline-none disabled:cursor-not-allowed disabled:text-slate-400"
               placeholder="SUMMER10"
             />
           </Field>
 
-          <Field label="Tên voucher *" error={formErrors.name} tooltip={fieldTooltipMap.name} disabled={!isCreateMode && !editPolicy.canEditAll}>
+          <Field label="Tên voucher *" error={showErrorFor('name')} tooltip={fieldTooltipMap.name} disabled={!isCreateMode && !editPolicy.canEditAll}>
             <input
               value={formState.name}
               onChange={(event) => onChange({ name: event.target.value })}
+              onBlur={() => setTouchedFields((s) => ({ ...s, name: true }))}
               disabled={!isCreateMode && !editPolicy.canEditAll}
               className="h-12 w-full px-4 text-sm text-[#151515] outline-none disabled:cursor-not-allowed disabled:text-slate-400"
               placeholder="Giảm giá mùa hè 10%"
@@ -332,7 +471,7 @@ export const VoucherFormModal = ({
         </section>
 
         <section className="rounded-[18px] border border-[#ECE5DB] bg-white p-4 shadow-[0_1px_0_rgba(30,30,30,0.02)]">
-          <Field label="Loại voucher *" error={formErrors.type} disabled={!isCreateMode && !editPolicy.canEditAll}>
+          <Field label="Loại voucher *" error={showErrorFor('type')} disabled={!isCreateMode && !editPolicy.canEditAll}>
             <div className="grid gap-3 md:grid-cols-3">
               <Segment
                 active={typeValue === 'PERCENT'}
@@ -340,7 +479,10 @@ export const VoucherFormModal = ({
                 description={segmentMetaMap.PERCENT.description}
                 icon={segmentMetaMap.PERCENT.icon}
                 disabled={!isCreateMode && !editPolicy.canEditAll}
-                onClick={() => onChange({ type: 'PERCENT' })}
+                onClick={() => {
+                  setTouchedFields((s) => ({ ...s, discountValue: false, type: true }));
+                  onChange({ type: 'PERCENT' });
+                }}
               />
               <Segment
                 active={typeValue === 'AMOUNT'}
@@ -348,7 +490,10 @@ export const VoucherFormModal = ({
                 description={segmentMetaMap.AMOUNT.description}
                 icon={segmentMetaMap.AMOUNT.icon}
                 disabled={!isCreateMode && !editPolicy.canEditAll}
-                onClick={() => onChange({ type: 'AMOUNT' })}
+                onClick={() => {
+                  setTouchedFields((s) => ({ ...s, discountValue: false, type: true }));
+                  onChange({ type: 'AMOUNT' });
+                }}
               />
               <Segment
                 active={typeValue === 'FREE_SHIPPING'}
@@ -356,7 +501,10 @@ export const VoucherFormModal = ({
                 description={segmentMetaMap.FREE_SHIPPING.description}
                 icon={segmentMetaMap.FREE_SHIPPING.icon}
                 disabled={!isCreateMode && !editPolicy.canEditAll}
-                onClick={() => onChange({ type: 'FREE_SHIPPING' })}
+                onClick={() => {
+                  setTouchedFields((s) => ({ ...s, discountValue: false, type: true }));
+                  onChange({ type: 'FREE_SHIPPING' });
+                }}
               />
             </div>
           </Field>
@@ -366,16 +514,18 @@ export const VoucherFormModal = ({
           <div className="grid gap-4 md:grid-cols-3">
           <Field
             label={`${discountValueLabel} *`}
-            error={formErrors.discountValue}
+            error={showErrorFor('discountValue')}
             tooltip={fieldTooltipMap.discountValue}
             disabled={!isCreateMode && lockExceptQuantityAndEndDate}
             suffix={typeValue === 'PERCENT' ? '%' : typeValue === 'FREE_SHIPPING' ? 'đ' : 'đ'}
           >
             <input
               type="number"
-              min="0"
+              min={typeValue === 'PERCENT' ? 1 : 0}
+              max={typeValue === 'PERCENT' ? 100 : undefined}
               value={formState.discountValue}
               onChange={(event) => onChange({ discountValue: event.target.value })}
+              onBlur={() => setTouchedFields((s) => ({ ...s, discountValue: true }))}
               disabled={!isCreateMode && lockExceptQuantityAndEndDate}
               className="h-12 w-full bg-transparent px-4 text-sm text-[#1E1E1E] outline-none disabled:cursor-not-allowed disabled:text-slate-400"
               placeholder="10"
@@ -402,7 +552,7 @@ export const VoucherFormModal = ({
 
           <Field
             label="Đơn hàng tối thiểu *"
-            error={formErrors.minOrderAmount}
+            error={showErrorFor('minOrderAmount')}
             tooltip={fieldTooltipMap.minOrderAmount}
             disabled={!isCreateMode && lockExceptQuantityAndEndDate}
             suffix="đ"
@@ -412,6 +562,7 @@ export const VoucherFormModal = ({
               min="0"
               value={formState.minOrderAmount}
               onChange={(event) => onChange({ minOrderAmount: event.target.value })}
+              onBlur={() => setTouchedFields((s) => ({ ...s, minOrderAmount: true }))}
               disabled={!isCreateMode && lockExceptQuantityAndEndDate}
               className="h-12 w-full bg-transparent px-4 text-sm text-[#1E1E1E] outline-none disabled:cursor-not-allowed disabled:text-slate-400"
               placeholder="100000"
@@ -422,12 +573,13 @@ export const VoucherFormModal = ({
 
         <section className="rounded-[18px] border border-[#ECE5DB] bg-white p-4 shadow-[0_1px_0_rgba(30,30,30,0.02)]">
           <div className="grid gap-4 md:grid-cols-3">
-          <Field label="Số lượng *" error={formErrors.quantity} tooltip={fieldTooltipMap.quantity} disabled={!isCreateMode && lockAllFields}>
+          <Field label="Số lượng *" error={showErrorFor('quantity')} tooltip={fieldTooltipMap.quantity} disabled={!isCreateMode && lockAllFields}>
             <input
               type="number"
               min="1"
               value={formState.quantity}
               onChange={(event) => onChange({ quantity: event.target.value })}
+              onBlur={() => setTouchedFields((s) => ({ ...s, quantity: true }))}
               disabled={!isCreateMode && lockAllFields}
               className="h-12 w-full bg-transparent px-4 text-sm text-[#1E1E1E] outline-none disabled:cursor-not-allowed disabled:text-slate-400"
               placeholder="100"
@@ -446,10 +598,11 @@ export const VoucherFormModal = ({
             />
           </Field>
 
-          <Field label="Trạng thái *" error={formErrors.status} disabled={!isCreateMode && !editPolicy.canEditAll}>
+          <Field label="Trạng thái *" error={showErrorFor('status')} disabled={!isCreateMode && !editPolicy.canEditAll}>
             <select
               value={formState.status}
               onChange={(event) => onChange({ status: event.target.value as VoucherStatus })}
+              onBlur={() => setTouchedFields((s) => ({ ...s, status: true }))}
               disabled={!isCreateMode && !editPolicy.canEditAll}
               className="h-12 w-full bg-transparent px-4 text-sm text-[#1E1E1E] outline-none disabled:cursor-not-allowed disabled:text-slate-400"
             >
@@ -465,21 +618,25 @@ export const VoucherFormModal = ({
 
         <section className="rounded-[18px] border border-[#ECE5DB] bg-white p-4 shadow-[0_1px_0_rgba(30,30,30,0.02)]">
           <div className="grid gap-4 md:grid-cols-2">
-          <Field label="Ngày bắt đầu *" error={formErrors.startDate} tooltip={fieldTooltipMap.startDate} icon={fieldIconMap.startDate} disabled={!isCreateMode && !editPolicy.canEditAll}>
+          <Field label="Ngày bắt đầu *" error={showErrorFor('startDate')} tooltip={fieldTooltipMap.startDate} icon={fieldIconMap.startDate} disabled={!isCreateMode && !editPolicy.canEditAll}>
             <input
               type="datetime-local"
+              min={getNowForDateTimeLocal()}
               value={formState.startDate}
               onChange={(event) => onChange({ startDate: event.target.value })}
+              onBlur={() => setTouchedFields((s) => ({ ...s, startDate: true }))}
               disabled={!isCreateMode && !editPolicy.canEditAll}
               className="h-12 w-full bg-transparent px-4 text-sm text-[#1E1E1E] outline-none disabled:cursor-not-allowed disabled:text-slate-400"
             />
           </Field>
 
-          <Field label="Ngày kết thúc *" error={formErrors.endDate} tooltip={fieldTooltipMap.endDate} icon={fieldIconMap.endDate} disabled={lockAllFields}>
+          <Field label="Ngày kết thúc *" error={showErrorFor('endDate')} tooltip={fieldTooltipMap.endDate} icon={fieldIconMap.endDate} disabled={lockAllFields}>
             <input
               type="datetime-local"
+              min={formState.startDate ? addMinutesForDateTimeLocal(formState.startDate, 10) : undefined}
               value={formState.endDate}
               onChange={(event) => onChange({ endDate: event.target.value })}
+              onBlur={() => setTouchedFields((s) => ({ ...s, endDate: true }))}
               disabled={lockAllFields}
               className="h-12 w-full bg-transparent px-4 text-sm text-[#1E1E1E] outline-none disabled:cursor-not-allowed disabled:text-slate-400"
             />
@@ -497,7 +654,7 @@ export const VoucherFormModal = ({
           </button>
           <button
             type="submit"
-            disabled={lockAllFields}
+            disabled={lockAllFields || hasLocalErrors}
             className="inline-flex h-12 items-center justify-center gap-2 rounded-xl bg-[#1E1E1E] px-6 text-sm font-semibold text-[#FAF6F1] transition hover:bg-[#111111] disabled:cursor-not-allowed disabled:bg-[#B9B9B9]"
           >
             <CheckCircle2 size={16} />
