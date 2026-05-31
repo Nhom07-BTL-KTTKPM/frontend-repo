@@ -36,7 +36,7 @@ export const ProductList: React.FC = () => {
 
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
   const [selectedSkinTypes, setSelectedSkinTypes] = useState<string[]>([]);
-  const [selectedRatings, setSelectedRatings] = useState<number[]>([]);
+  const [selectedRating, setSelectedRating] = useState<number | null>(null);
   const [selectedPromotions, setSelectedPromotions] = useState<string[]>([]);
   const [selectedBrands, setSelectedBrands] = useState<string[]>([]);
 
@@ -46,6 +46,39 @@ export const ProductList: React.FC = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const pageSize = 12;
   const [showAllSkinTypes, setShowAllSkinTypes] = useState(false);
+
+  // refs and measurement for precise slider alignment
+  const trackRef = React.useRef<HTMLDivElement | null>(null);
+  const [trackWidth, setTrackWidth] = useState(0);
+
+  React.useEffect(() => {
+    const measure = () => {
+      if (trackRef.current) setTrackWidth(trackRef.current.clientWidth);
+    };
+    measure();
+    window.addEventListener('resize', measure);
+    // also observe element size changes (e.g. when sidebar content changes)
+    let ro: ResizeObserver | null = null;
+    if (typeof ResizeObserver !== 'undefined' && trackRef.current) {
+      ro = new ResizeObserver(() => measure());
+      ro.observe(trackRef.current);
+    }
+    return () => {
+      window.removeEventListener('resize', measure);
+      if (ro && trackRef.current) ro.unobserve(trackRef.current);
+    };
+  }, []);
+
+  const safeMaxForCalc = computedPriceMax || 1;
+  // account for visible thumb size so the colored range doesn't overflow when thumbs sit at edges
+  const THUMB_PX = 16; // adjust if your CSS thumb is a different size
+  const rawLeft = trackWidth ? (priceMin / safeMaxForCalc) * trackWidth : 0;
+  const rawWidth = trackWidth ? ((priceMax - priceMin) / safeMaxForCalc) * trackWidth : 0;
+  let leftPx = Math.max(0, rawLeft - THUMB_PX / 2);
+  let widthPx = Math.max(0, rawWidth + THUMB_PX);
+  if (leftPx + widthPx > trackWidth) {
+    widthPx = Math.max(0, trackWidth - leftPx);
+  }
 
   // Lazy load filter lists only when user interacts with filter area or opens drawer
   const [shouldLoadFilters, setShouldLoadFilters] = useState(false);
@@ -88,8 +121,8 @@ export const ProductList: React.FC = () => {
     if (priceMax > 0) {
       params.maxPrice = priceMax;
     }
-    if (selectedRatings.length > 0) {
-      params.rating = Math.max(...selectedRatings);
+    if (selectedRating != null) {
+      params.rating = selectedRating;
     }
     if (selectedPromotions.length > 0) {
       params.promotions = selectedPromotions;
@@ -105,7 +138,7 @@ export const ProductList: React.FC = () => {
     selectedSkinTypes,
     priceMin,
     priceMax,
-    selectedRatings,
+    selectedRating,
     selectedPromotions,
     sortBy,
   ]);
@@ -200,7 +233,7 @@ export const ProductList: React.FC = () => {
 
   React.useEffect(() => {
     setCurrentPage(1);
-  }, [searchKeyword, selectedCategories, selectedBrands, selectedSkinTypes, selectedRatings, priceMin, priceMax, selectedPromotions, sortBy]);
+  }, [searchKeyword, selectedCategories, selectedBrands, selectedSkinTypes, selectedRating, priceMin, priceMax, selectedPromotions, sortBy]);
 
   // Scroll to top of product list when user navigates pages
   React.useEffect(() => {
@@ -226,7 +259,7 @@ export const ProductList: React.FC = () => {
   };
 
   const toggleRatingFilter = (rating: number) => {
-    setSelectedRatings((prev) => (prev.includes(rating) ? prev.filter((item) => item !== rating) : [...prev, rating]));
+    setSelectedRating((prev) => (prev === rating ? null : rating));
   };
 
   const onSubmitSearch = (event: React.FormEvent<HTMLFormElement>) => {
@@ -245,7 +278,7 @@ export const ProductList: React.FC = () => {
     setSelectedCategories([]);
     setSelectedBrands([]);
     setSelectedSkinTypes([]);
-    setSelectedRatings([]);
+    setSelectedRating(null);
     setSelectedPromotions([]);
     setPriceMin(0);
     setPriceMax(computedPriceMax);
@@ -255,7 +288,7 @@ export const ProductList: React.FC = () => {
   const removeCategory = (value: string) => setSelectedCategories((prev) => prev.filter((v) => v !== value));
   const removeBrand = (value: string) => setSelectedBrands((prev) => prev.filter((v) => v !== value));
   const removeSkinType = (value: string) => setSelectedSkinTypes((prev) => prev.filter((v) => v !== value));
-  const removeRating = (value: number) => setSelectedRatings((prev) => prev.filter((v) => v !== value));
+  const removeRating = () => setSelectedRating(null);
   const removePromotion = (value: string) => setSelectedPromotions((prev) => prev.filter((v) => v !== value));
 
   const hasActiveFilters = React.useMemo(() => {
@@ -267,7 +300,7 @@ export const ProductList: React.FC = () => {
       selectedCategories.length > 0 ||
       selectedBrands.length > 0 ||
       selectedSkinTypes.length > 0 ||
-      selectedRatings.length > 0
+      selectedRating != null
     );
   }, [
     isSearching,
@@ -278,7 +311,7 @@ export const ProductList: React.FC = () => {
     selectedCategories,
     selectedBrands,
     selectedSkinTypes,
-    selectedRatings,
+    selectedRating,
   ]);
 
 
@@ -402,42 +435,39 @@ export const ProductList: React.FC = () => {
         </div>
         
         {/* Khung chứa thanh trượt kép sử dụng Pointer Events */}
-        <div className="relative w-full h-2 bg-gray-100 rounded-full" style={{ padding: '0 12px', boxSizing: 'border-box', width: '100%' }}>
-          {/* ĐƯỜNG NỐI MÀU VÀNG GIỮA MIN VÀ MAX */}
-          <div 
-            className="absolute h-2 bg-[#D4AF37] rounded-full z-10"
-            style={{
-              left: `${(priceMin / (computedPriceMax || 1)) * 100}%`,
-              width: `${((priceMax - priceMin) / (computedPriceMax || 1)) * 100}%`
-            }}
-          />
-          {/* Thanh trượt MIN */}
-          <input
-            type="range"
-            min={0}
-            max={computedPriceMax}
-            value={priceMin}
-            onChange={(e) => setPriceMin(Math.min(Number(e.target.value), priceMax))}
-            style={{ left: 12, width: `calc(100% - 24px)` }}
-            className="absolute h-2 bg-transparent appearance-none top-0 z-20
-                      pointer-events-none accent-[#D4AF37]
-                      [&::-webkit-slider-thumb]:pointer-events-auto [&::-webkit-slider-thumb]:relative [&::-webkit-slider-thumb]:z-30
-                      [&::-moz-range-thumb]:pointer-events-auto [&::-moz-range-thumb]:relative [&::-moz-range-thumb]:z-30"
-          />
-          
-          {/* Thanh trượt MAX */}
-          <input
-            type="range"
-            min={0}
-            max={computedPriceMax}
-            value={priceMax}
-            onChange={(e) => setPriceMax(Math.max(Number(e.target.value), priceMin))}
-            style={{ left: 12, width: `calc(100% - 24px)` }}
-            className="absolute h-2 bg-transparent appearance-none top-0 z-20
-                      pointer-events-none accent-[#D4AF37]
-                      [&::-webkit-slider-thumb]:pointer-events-auto [&::-webkit-slider-thumb]:relative [&::-webkit-slider-thumb]:z-30
-                      [&::-moz-range-thumb]:pointer-events-auto [&::-moz-range-thumb]:relative [&::-moz-range-thumb]:z-30"
-          />
+        <div style={{ padding: '0 12px', boxSizing: 'border-box', width: '100%' }}>
+          <div ref={trackRef} className="relative w-full h-2 bg-gray-100 rounded-full" style={{ boxSizing: 'border-box' }}>
+            {/* ĐƯỜNG NỐI MÀU VÀNG GIỮA MIN VÀ MAX - positioned in pixels to align with thumbs */}
+            <div
+              className="absolute h-2 bg-[#D4AF37] rounded-full z-10"
+              style={{
+                left: `${leftPx}px`,
+                width: `${widthPx}px`
+              }}
+            />
+
+            {/* Thanh trượt MIN */}
+            <input
+              type="range"
+              min={0}
+              max={computedPriceMax}
+              value={priceMin}
+              onChange={(e) => setPriceMin(Math.min(Number(e.target.value), priceMax))}
+              style={{ left: 0, width: '100%' }}
+              className="absolute h-2 bg-transparent appearance-none top-0 z-20 pointer-events-none accent-[#D4AF37] [&::-webkit-slider-thumb]:pointer-events-auto [&::-webkit-slider-thumb]:relative [&::-webkit-slider-thumb]:z-30 [&::-moz-range-thumb]:pointer-events-auto [&::-moz-range-thumb]:relative [&::-moz-range-thumb]:z-30"
+            />
+
+            {/* Thanh trượt MAX */}
+            <input
+              type="range"
+              min={0}
+              max={computedPriceMax}
+              value={priceMax}
+              onChange={(e) => setPriceMax(Math.max(Number(e.target.value), priceMin))}
+              style={{ left: 0, width: '100%' }}
+              className="absolute h-2 bg-transparent appearance-none top-0 z-20 pointer-events-none accent-[#D4AF37] [&::-webkit-slider-thumb]:pointer-events-auto [&::-webkit-slider-thumb]:relative [&::-webkit-slider-thumb]:z-30 [&::-moz-range-thumb]:pointer-events-auto [&::-moz-range-thumb]:relative [&::-moz-range-thumb]:z-30"
+            />
+          </div>
         </div>
       </div>
     </div>
@@ -449,7 +479,7 @@ export const ProductList: React.FC = () => {
       <h3 className="text-sm font-bold text-gray-900 uppercase tracking-wider">Đánh giá</h3>
       <div className="flex flex-col gap-1.5">
         {[4, 3, 2, 1].map((rating) => {
-          const isActive = selectedRatings.includes(rating);
+          const isActive = selectedRating === rating;
           return (
             <button
               key={rating}
@@ -606,14 +636,14 @@ export const ProductList: React.FC = () => {
             </span>
           ))}
 
-          {selectedRatings.map((r) => (
-            <span key={`rating-${r}`} className="chip">
-              {r} sao
-              <button type="button" className="chip__close" onClick={() => removeRating(r)} aria-label={`Xóa ${r} sao`}>
+          {selectedRating != null && (
+            <span key={`rating-${selectedRating}`} className="chip">
+              {selectedRating} sao
+              <button type="button" className="chip__close" onClick={() => removeRating()} aria-label={`Xóa ${selectedRating} sao`}>
                 <X size={12} />
               </button>
             </span>
-          ))}
+          )}
 
           {hasActiveFilters && (
             <div style={{ marginLeft: 'auto' }}>
