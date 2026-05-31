@@ -25,6 +25,7 @@ import { productManagementApi, type ProductOverviewResponse } from '../../api/ad
 import { brandApi } from '../../api/brandApi';
 import { categoryApi } from '../../api/categoryApi';
 import { AdminProductDetail } from './AdminProductDetail';
+import { useIsAdmin } from '../../store/authStore';
 import type {
   BrandRequest,
   BrandResponse,
@@ -665,6 +666,7 @@ const CategoryPanel = ({
   statusUpdatingId?: string | null;
 }) => {
   const isViewing = panelMode === 'view' && Boolean(selectedCategory);
+  const isAdmin = useIsAdmin();
   const [parentCategoryName, setParentCategoryName] = useState<string | null>(null);
   const [parentCategoryLoading, setParentCategoryLoading] = useState(false);
 
@@ -709,14 +711,16 @@ const CategoryPanel = ({
           title="Quản lý danh mục"
           description="Thêm mới, cập nhật thông tin hoặc chuyển trạng thái danh mục nhanh chóng."
         />
-        <button
-          type="button"
-          onClick={onCreateNew}
-          className="inline-flex items-center gap-2 rounded-lg bg-[#c8ab76] px-4 py-2.5 text-sm font-bold text-[#222222] shadow transition hover:opacity-90 hover:shadow-lg"
+        {isAdmin ? (
+          <button
+            type="button"
+            onClick={onCreateNew}
+            className="inline-flex items-center gap-2 rounded-lg bg-[#c8ab76] px-4 py-2.5 text-sm font-bold text-[#222222] shadow transition hover:opacity-90 hover:shadow-lg"
           >
-          <Plus size={16} />
-          Thêm category
-        </button>
+            <Plus size={16} />
+            Thêm category
+          </button>
+        ) : null}
       </div>
 
       <div className="grid gap-6 xl:grid-cols-[1.15fr_0.85fr]">
@@ -812,20 +816,21 @@ const CategoryPanel = ({
                           className="absolute right-4 top-4 flex flex-wrap gap-2"
                           onClick={(event) => event.stopPropagation()}
                         >
-                          
-                          <button
-                            type="button"
-                            onClick={() => onToggleStatus(category)}
-                            disabled={statusUpdatingId === category.id}
-                            className={`inline-flex items-center gap-1 rounded-lg px-3 py-2 text-xs font-bold transition ${
-                              category.isActive
-                                ? 'border border-amber-200 bg-amber-50 text-amber-800 hover:bg-amber-100'
-                                : 'border border-emerald-200 bg-emerald-50 text-emerald-800 hover:bg-emerald-100'
-                            } ${statusUpdatingId === category.id ? 'opacity-60 cursor-not-allowed' : ''}`}
-                          >
-                            <EyeOff size={14} />
-                            {statusUpdatingId === category.id ? 'Đang...' : (category.isActive ? 'Ẩn' : 'Hiện')}
-                          </button>
+                          {isAdmin && (
+                            <button
+                              type="button"
+                              onClick={() => onToggleStatus(category)}
+                              disabled={statusUpdatingId === category.id}
+                              className={`inline-flex items-center gap-1 rounded-lg px-3 py-2 text-xs font-bold transition ${
+                                category.isActive
+                                  ? 'border border-amber-200 bg-amber-50 text-amber-800 hover:bg-amber-100'
+                                  : 'border border-emerald-200 bg-emerald-50 text-emerald-800 hover:bg-emerald-100'
+                              } ${statusUpdatingId === category.id ? 'opacity-60 cursor-not-allowed' : ''}`}
+                            >
+                              <EyeOff size={14} />
+                              {statusUpdatingId === category.id ? 'Đang...' : (category.isActive ? 'Ẩn' : 'Hiện')}
+                            </button>
+                          )}
                         </div>
                       </div>
                     </ResourceListItem>
@@ -856,13 +861,15 @@ const CategoryPanel = ({
               </div>
 
               <div className="flex flex-shrink-0 items-center gap-2">
-                <button
-                  type="button"
-                  onClick={() => onEdit(selectedCategory)}
-                  className="inline-flex items-center gap-2 rounded-lg px-3 py-2 text-xs font-bold text-[#232323] transition "
-                >
-                  <Edit2 size={14} />
-                </button>
+                {isAdmin && (
+                  <button
+                    type="button"
+                    onClick={() => onEdit(selectedCategory)}
+                    className="inline-flex items-center gap-2 rounded-lg px-3 py-2 text-xs font-bold text-[#232323] transition "
+                  >
+                    <Edit2 size={14} />
+                  </button>
+                )}
                 <button
                   type="button"
                   onClick={onCloseView}
@@ -955,6 +962,7 @@ const BrandPanel = ({
   statusUpdatingId?: string | null;
 }) => {
   const isViewing = panelMode === 'view' && Boolean(selectedBrand);
+  const isAdmin = useIsAdmin();
 
   return (
     <section className="grid gap-6 rounded-[32px] border border-slate-200 bg-[#f8f9fa] p-4 shadow-[0_20px_55px_rgba(15,23,42,0.06)] lg:p-6">
@@ -963,14 +971,16 @@ const BrandPanel = ({
           title="Quản lý brand"
           description="Tạo mới, cập nhật và chuyển trạng thái thương hiệu nhanh chóng."
         />
-        <button
-          type="button"
-          onClick={onCreateNew}
-          className="inline-flex items-center gap-2 rounded-lg bg-[#c8ab76] px-4 py-2.5 text-sm font-bold text-[#222222] shadow transition hover:opacity-90 hover:shadow-lg"
-        >
-          <Plus size={16} />
-          Thêm brand
-        </button>
+        {isAdmin ? (
+          <button
+            type="button"
+            onClick={onCreateNew}
+            className="inline-flex items-center gap-2 rounded-lg bg-[#c8ab76] px-4 py-2.5 text-sm font-bold text-[#222222] shadow transition hover:opacity-90 hover:shadow-lg"
+          >
+            <Plus size={16} />
+            Thêm brand
+          </button>
+        ) : null}
       </div>
 
       <div className="grid gap-6 xl:grid-cols-[1.15fr_0.85fr]">
@@ -1078,20 +1088,21 @@ const BrandPanel = ({
                           className="absolute right-4 top-4 flex flex-wrap gap-2"
                           onClick={(event) => event.stopPropagation()}
                         >
-                          
-                          <button
-                            type="button"
-                            onClick={() => onToggleStatus(brand)}
-                            disabled={statusUpdatingId === brand.id}
-                            className={`inline-flex flex-none items-center gap-1 rounded-lg px-3 py-2 text-xs font-bold transition ${
-                              brand.isActive
-                                ? 'border border-amber-200 bg-amber-50 text-amber-800 hover:bg-amber-100'
-                                : 'border border-emerald-200 bg-emerald-50 text-emerald-800 hover:bg-emerald-100'
-                            } ${statusUpdatingId === brand.id ? 'opacity-60 cursor-not-allowed' : ''}`}
-                          >
-                            <EyeOff size={14} />
-                            {statusUpdatingId === brand.id ? 'Đang...' : (brand.isActive ? 'Ẩn' : 'Hiện')}
-                          </button>
+                          {isAdmin && (
+                            <button
+                              type="button"
+                              onClick={() => onToggleStatus(brand)}
+                              disabled={statusUpdatingId === brand.id}
+                              className={`inline-flex flex-none items-center gap-1 rounded-lg px-3 py-2 text-xs font-bold transition ${
+                                brand.isActive
+                                  ? 'border border-amber-200 bg-amber-50 text-amber-800 hover:bg-amber-100'
+                                  : 'border border-emerald-200 bg-emerald-50 text-emerald-800 hover:bg-emerald-100'
+                              } ${statusUpdatingId === brand.id ? 'opacity-60 cursor-not-allowed' : ''}`}
+                            >
+                              <EyeOff size={14} />
+                              {statusUpdatingId === brand.id ? 'Đang...' : (brand.isActive ? 'Ẩn' : 'Hiện')}
+                            </button>
+                          )}
                         </div>
                       </div>
                     </ResourceListItem>
@@ -1122,13 +1133,15 @@ const BrandPanel = ({
                 </div>
 
                 <div className="flex flex-shrink-0 items-center gap-2">
-                  <button
-                    type="button"
-                    onClick={() => onEdit(selectedBrand)}
-                    className="inline-flex items-center gap-2 rounded-lg px-3 py-2 text-xs font-bold text-[#232323] transition hover:bg-slate-50"
-                  >
-                    <Edit2 size={14} />
-                  </button>
+                  {isAdmin && (
+                    <button
+                      type="button"
+                      onClick={() => onEdit(selectedBrand)}
+                      className="inline-flex items-center gap-2 rounded-lg px-3 py-2 text-xs font-bold text-[#232323] transition hover:bg-slate-50"
+                    >
+                      <Edit2 size={14} />
+                    </button>
+                  )}
                   <button
                     type="button"
                     onClick={onCloseView}
